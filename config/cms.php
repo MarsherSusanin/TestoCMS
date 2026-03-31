@@ -1,0 +1,51 @@
+<?php
+
+return [
+    'supported_locales' => array_values(array_filter(array_map('trim', explode(',', env('CMS_SUPPORTED_LOCALES', 'ru,en'))))),
+    'default_locale' => env('CMS_DEFAULT_LOCALE', 'ru'),
+    'post_url_prefix' => env('CMS_POST_URL_PREFIX', 'blog'),
+    'category_url_prefix' => env('CMS_CATEGORY_URL_PREFIX', 'category'),
+    'booking_url_prefix' => env('CMS_BOOKING_URL_PREFIX', 'book'),
+    'seed_demo_content' => filter_var(env('CMS_SEED_DEMO_CONTENT', false), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false,
+    'full_page_cache_ttl' => (int) env('CMS_FULL_PAGE_CACHE_TTL', 300),
+    'slug_cache_ttl' => (int) env('CMS_SLUG_CACHE_TTL', 300),
+    'revision_limit' => (int) env('CMS_REVISION_LIMIT', 10),
+    'default_per_page' => (int) env('CMS_DEFAULT_PER_PAGE', 20),
+    'max_per_page' => (int) env('CMS_MAX_PER_PAGE', 100),
+    'statuses' => [
+        'draft',
+        'review',
+        'scheduled',
+        'published',
+        'archived',
+    ],
+    'blocks' => [
+        'allowed_types' => [
+            'section',
+            'columns',
+            'heading',
+            'rich_text',
+            'image',
+            'video_embed',
+            'gallery',
+            'list',
+            'divider',
+            'cta',
+            'table',
+            'module_widget',
+            'custom_code_embed',
+            'html_embed_restricted',
+            'post_listing',
+            'faq',
+        ],
+        'required_keys' => ['type'],
+    ],
+    'custom_code' => [
+        'advanced_roles' => ['superadmin', 'admin'],
+        'safe_embed_domains' => array_values(array_filter(array_map('trim', explode(',', env('CMS_SAFE_EMBED_DOMAINS', 'youtube.com,youtu.be,vimeo.com,maps.google.com,hbpn.link'))))),
+    ],
+    'content_api' => [
+        'key' => env('CMS_CONTENT_API_KEY', ''),
+        'rate_limit_per_minute' => (int) env('CMS_CONTENT_API_RATE_LIMIT', 120),
+    ],
+];

@@ -1,0 +1,2 @@
+@include('booking-module::public.partials.styles')
+<div class="booking-grid">@forelse($services as $service) @include('booking-module::public.partials.service-card', ['showDescription' => true, 'showPrices' => (bool) ($config['show_prices'] ?? true), 'ctaLabel' => $config['cta_label'] ?? null]) @empty <div class="empty-state">{{ $locale === 'ru' ? 'Нет активных услуг.' : 'No active services.' }}</div> @endforelse</div>

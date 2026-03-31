@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private / commercial contact
+    url: mailto:me@ilindberg.ru
+    about: Use email for private inquiries, commercial discussions, or direct maintainer contact.
+  - name: Security reporting policy
+    url: mailto:me@ilindberg.ru?subject=TestoCMS%20security%20report
+    about: Use private email disclosure for security reports as described in SECURITY.md.

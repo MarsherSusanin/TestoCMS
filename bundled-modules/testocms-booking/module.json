@@ -1,0 +1,49 @@
+{
+    "id": "testocms/booking",
+    "name": "Booking",
+    "version": "1.0.0",
+    "description": "Universal booking and slot management for services, resources and calendar-based reservations.",
+    "author": "TestoCMS",
+    "provider": "TestoCms\\Booking\\ModuleServiceProvider",
+    "autoload": {
+        "psr-4": {
+            "TestoCms\\Booking\\": "src/"
+        }
+    },
+    "admin": {
+        "nav": [
+            {
+                "key": "main",
+                "label": "Booking",
+                "route": "booking.admin.dashboard",
+                "permissions_any": ["booking:read", "booking:write", "booking:manage", "booking:settings"],
+                "icon": "calendar-days",
+                "short_ru": "Br",
+                "short_en": "Bk",
+                "title": "Booking"
+            }
+        ]
+    },
+    "security": {
+        "permissions": ["booking:read", "booking:write", "booking:manage", "booking:settings"],
+        "roles": {
+            "superadmin": ["booking:read", "booking:write", "booking:manage", "booking:settings"],
+            "admin": ["booking:read", "booking:write", "booking:manage", "booking:settings"],
+            "booking_manager": ["booking:read", "booking:write", "booking:manage"]
+        }
+    },
+    "requires": {
+        "cms": ">=1.0.0",
+        "php": ">=8.2"
+    },
+    "capabilities": {
+        "migrations": "database/migrations",
+        "routes": {
+            "admin": "routes/admin.php",
+            "web": "routes/web.php"
+        },
+        "widgets": true,
+        "assets": true
+    },
+    "docs_url": "/admin/modules/docs"
+}

@@ -1,0 +1,170 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build & Package Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, pdo_mysql, intl, gd, bcmath, exif
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan optimize:clear
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Lint
+        run: composer lint
+
+      - name: Test
+        run: composer test
+
+      - name: Install production PHP dependencies
+        run: composer install --prefer-dist --no-dev --no-interaction --optimize-autoloader --no-progress
+
+      - name: Prepare staging directory
+        run: |
+          rm -rf node_modules
+          VERSION=${GITHUB_REF#refs/tags/v}
+          PACKAGE_ROOT="${RUNNER_TEMP}/testocms-v${VERSION}-shared-hosting"
+          ZIP_NAME="testocms-v${VERSION}-shared-hosting.zip"
+          ZIP_PATH="${RUNNER_TEMP}/${ZIP_NAME}"
+
+          mkdir -p "$PACKAGE_ROOT"
+
+          rsync -a ./ "$PACKAGE_ROOT"/ \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.idea/' \
+            --exclude '.vscode/' \
+            --exclude 'node_modules/' \
+            --exclude 'tests/' \
+            --exclude 'storage/logs/*' \
+            --exclude 'storage/framework/cache/*' \
+            --exclude 'storage/framework/sessions/*' \
+            --exclude 'storage/framework/views/*' \
+            --exclude 'bootstrap/cache/*' \
+            --exclude 'docker/' \
+            --exclude 'docker-compose.yml' \
+            --exclude 'docker-compose.vps.yml' \
+            --exclude 'Dockerfile' \
+            --exclude '.env.example' \
+            --exclude '.env.docker.example' \
+            --exclude '.env.vps.example' \
+            --exclude 'phpunit.xml' \
+            --exclude 'package-lock.json' \
+            --exclude 'postcss.config.js' \
+            --exclude 'tailwind.config.js' \
+            --exclude 'vite.config.js'
+
+          mkdir -p \
+            "$PACKAGE_ROOT/storage/app/public" \
+            "$PACKAGE_ROOT/storage/framework/cache" \
+            "$PACKAGE_ROOT/storage/framework/sessions" \
+            "$PACKAGE_ROOT/storage/framework/views" \
+            "$PACKAGE_ROOT/bootstrap/cache"
+
+          (cd "${RUNNER_TEMP}" && zip -r "$ZIP_PATH" "testocms-v${VERSION}-shared-hosting")
+
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_ROOT=$PACKAGE_ROOT" >> $GITHUB_ENV
+          echo "ZIP_PATH=$ZIP_PATH" >> $GITHUB_ENV
+
+      - name: Smoke test shared-hosting package
+        run: |
+          UNPACK_DIR="${RUNNER_TEMP}/release-smoke"
+          rm -rf "$UNPACK_DIR"
+          mkdir -p "$UNPACK_DIR"
+          unzip -q "${ZIP_PATH}" -d "$UNPACK_DIR"
+          PACKAGE_DIR="$UNPACK_DIR/testocms-v${VERSION}-shared-hosting"
+          cp "$PACKAGE_DIR/.env.hosting.example" "$PACKAGE_DIR/.env"
+          (cd "$PACKAGE_DIR" && php artisan key:generate --force && php artisan about > /dev/null)
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata (app)
+        id: meta_app
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/testocms-app
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+
+      - name: Docker metadata (web)
+        id: meta_web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/testocms-web
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+
+      - name: Build and push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          build-args: |
+            COMPOSER_INSTALL_FLAGS=--no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+          tags: ${{ steps.meta_app.outputs.tags }}
+          labels: ${{ steps.meta_app.outputs.labels }}
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/nginx/Dockerfile.vps
+          push: true
+          tags: ${{ steps.meta_web.outputs.tags }}
+          labels: ${{ steps.meta_web.outputs.labels }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: TestoCMS v${{ env.VERSION }}
+          files: ${{ env.ZIP_PATH }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true

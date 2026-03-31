@@ -1,0 +1,22 @@
+{
+    "id": "testocms/accessibility",
+    "name": "Accessibility",
+    "version": "1.0.0",
+    "description": "Low-vision accessibility mode for the public website with contrast, typography, media and browser speech controls.",
+    "author": "TestoCMS",
+    "provider": "TestoCms\\Accessibility\\ModuleServiceProvider",
+    "autoload": {
+        "psr-4": {
+            "TestoCms\\Accessibility\\": "src/"
+        }
+    },
+    "requires": {
+        "cms": ">=1.0.0",
+        "php": ">=8.2"
+    },
+    "capabilities": {
+        "views": true,
+        "assets": true,
+        "migrations": false
+    }
+}

@@ -1,0 +1,4 @@
+<style>
+.booking-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.booking-card{border:1px solid var(--line);border-radius:22px;background:var(--surface);overflow:hidden}.booking-card-body{padding:18px;display:grid;gap:12px}.booking-price{font-weight:700;font-size:1.05rem}.booking-form{display:grid;gap:12px}.booking-form .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.booking-slot-list{display:grid;gap:8px}.booking-slot{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(15,23,42,.03)}.booking-widget-shell{display:grid;gap:14px}.booking-status{padding:10px 12px;border-radius:14px;background:rgba(37,99,235,.08);color:var(--text)}
+@media (max-width: 820px){.booking-form .grid-2{grid-template-columns:1fr}}
+</style>

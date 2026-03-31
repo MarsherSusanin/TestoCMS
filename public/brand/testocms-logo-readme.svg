@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+  <title id="title">TestoCMS README logo</title>
+  <desc id="desc">Wide horizontal TestoCMS logo for README files, documentation, and marketing headers.</desc>
+  <g transform="translate(56 56) scale(0.42)">
+    <path
+      d="M300 140C220 140 160 186 160 248C160 290 177 323 205 350V650C205 735 264 790 348 790H652C736 790 795 735 795 650V350C823 323 840 290 840 248C840 186 780 140 700 140Z"
+      fill="#F4E7D3"
+      stroke="#D9772B"
+      stroke-width="26"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+    <rect x="370" y="338" width="260" height="72" rx="28" fill="#E67E22" />
+    <rect x="457" y="388" width="86" height="232" rx="28" fill="#E67E22" />
+  </g>
+  <text
+    x="515"
+    y="318"
+    font-family="Nunito Sans, Nunito, Manrope, Quicksand, 'Avenir Next Rounded', 'Arial Rounded MT Bold', system-ui, sans-serif"
+    font-size="172"
+    font-weight="700"
+    letter-spacing="-0.01em"
+    dominant-baseline="middle"
+  >
+    <tspan fill="#B8844F">Testo</tspan><tspan fill="#E67E22">CMS</tspan>
+  </text>
+</svg>

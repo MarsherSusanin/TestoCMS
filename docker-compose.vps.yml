@@ -1,0 +1,109 @@
+name: testocms-vps
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COMPOSER_INSTALL_FLAGS: "--no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader"
+    restart: unless-stopped
+    environment:
+      WAIT_FOR_DB: "1"
+      AUTO_MIGRATE: "0"
+      AUTO_SEED: "0"
+      AUTO_STORAGE_LINK: "1"
+      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "0"
+      ALLOW_RUNTIME_COMPOSER_INSTALL: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - storage_data:/var/www/html/storage
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      - modules_data:/var/www/html/modules
+      - module_public_assets:/var/www/html/public/modules
+
+  web:
+    image: ${TESTOCMS_WEB_IMAGE:-ghcr.io/testocms/testocms-web:latest}
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile.vps
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - storage_data:/var/www/html/storage:ro
+      - module_public_assets:/var/www/html/public/modules:ro
+
+  queue:
+    image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
+    restart: unless-stopped
+    environment:
+      WAIT_FOR_DB: "1"
+      AUTO_MIGRATE: "0"
+      AUTO_SEED: "0"
+      AUTO_STORAGE_LINK: "0"
+      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "0"
+      ALLOW_RUNTIME_COMPOSER_INSTALL: "0"
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=120", "--sleep=2"]
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - storage_data:/var/www/html/storage
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      - modules_data:/var/www/html/modules
+      - module_public_assets:/var/www/html/public/modules
+
+  scheduler:
+    image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
+    restart: unless-stopped
+    environment:
+      WAIT_FOR_DB: "1"
+      AUTO_MIGRATE: "0"
+      AUTO_SEED: "0"
+      AUTO_STORAGE_LINK: "0"
+      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "0"
+      ALLOW_RUNTIME_COMPOSER_INSTALL: "0"
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - storage_data:/var/www/html/storage
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      - modules_data:/var/www/html/modules
+      - module_public_assets:/var/www/html/public/modules
+
+volumes:
+  postgres_data:
+  storage_data:
+  bootstrap_cache:
+  modules_data:
+  module_public_assets:
