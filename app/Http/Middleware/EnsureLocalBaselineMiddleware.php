@@ -25,7 +25,7 @@ class EnsureLocalBaselineMiddleware
 
     private function shouldEnsureBaseline(Request $request): bool
     {
-        if (! EnvWriterService::isInstalled()) {
+        if (! EnvWriterService::isInstalled() && ! app()->runningUnitTests()) {
             return false;
         }
 

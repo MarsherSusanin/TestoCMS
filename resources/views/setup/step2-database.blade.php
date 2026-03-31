@@ -4,7 +4,13 @@
     @php
         $defaultConnection = old('db_connection', $auto['has_mysql'] ? 'mysql' : ($auto['has_pgsql'] ? 'pgsql' : 'mysql'));
         $defaultDbConfig = (array) config('database.connections.'.$defaultConnection, []);
-        $defaultHost = old('db_host', (string) (($defaultDbConfig['host'] ?? null) ?: ($defaultConnection === 'pgsql' ? 'db' : 'localhost')));
+        $defaultHost = old('db_host', (string) (
+            $defaultConnection === 'pgsql'
+                ? (($defaultDbConfig['host'] ?? null) && ! in_array((string) $defaultDbConfig['host'], ['127.0.0.1', 'localhost'], true)
+                    ? $defaultDbConfig['host']
+                    : 'db')
+                : (($defaultDbConfig['host'] ?? null) ?: 'localhost')
+        ));
         $defaultPort = old('db_port', $defaultConnection === 'pgsql' ? '5432' : '3306');
         $defaultDatabase = old('db_database', (string) (($defaultDbConfig['database'] ?? null) ?: ($defaultConnection === 'pgsql' ? 'testocms' : '')));
         $defaultUsername = old('db_username', (string) (($defaultDbConfig['username'] ?? null) ?: ($defaultConnection === 'pgsql' ? 'testocms' : '')));
