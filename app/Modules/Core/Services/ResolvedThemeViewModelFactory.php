@@ -7,11 +7,10 @@ class ResolvedThemeViewModelFactory
     public function __construct(
         private readonly ThemeSettingsService $themeSettings,
         private readonly ThemeCssRenderer $themeCssRenderer,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed>|null $siteTheme
+     * @param  array<string, mixed>|null  $siteTheme
      * @return array<string, mixed>
      */
     public function build(?array $siteTheme = null): array

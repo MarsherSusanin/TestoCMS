@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\File;
 
 class CoreUpdateEnvironment
 {
-    public function __construct(private readonly CoreUpdateSettingsService $settings)
-    {
-    }
+    public function __construct(private readonly CoreUpdateSettingsService $settings) {}
 
     public function resolveExecutionMode(): string
     {

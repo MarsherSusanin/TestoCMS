@@ -12,9 +12,7 @@ use Illuminate\View\View;
 
 class AssetCrudController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function index(): View
     {

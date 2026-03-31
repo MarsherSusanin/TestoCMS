@@ -17,8 +17,7 @@ class ThemeController extends Controller
         private readonly ThemeEditorServiceContract $themeEditor,
         private readonly SiteChromeEditorServiceContract $siteChromeEditor,
         private readonly ThemeSettingsService $themeSettings,
-    ) {
-    }
+    ) {}
 
     public function edit(Request $request): View
     {

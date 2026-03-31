@@ -8,9 +8,7 @@ use TestoCms\Booking\Models\BookingService;
 
 class BookingAvailabilityService
 {
-    public function __construct(private readonly BookingSlotProjectionService $projection)
-    {
-    }
+    public function __construct(private readonly BookingSlotProjectionService $projection) {}
 
     public function storeRule(array $payload): BookingAvailabilityRule
     {
@@ -60,4 +58,3 @@ class BookingAvailabilityService
         return $this->projection->rebuildService($service);
     }
 }
-

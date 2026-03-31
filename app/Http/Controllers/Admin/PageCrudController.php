@@ -28,8 +28,7 @@ class PageCrudController extends Controller
         private readonly PageContentServiceContract $pages,
         private readonly PageWorkflowServiceContract $pageWorkflow,
         private readonly ModuleWidgetRegistry $moduleWidgets,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -321,7 +320,7 @@ class PageCrudController extends Controller
     }
 
     /**
-     * @param array<string, array<string, mixed>> $translations
+     * @param  array<string, array<string, mixed>>  $translations
      * @return array<string, object>
      */
     private function toTranslationObjects(array $translations): array

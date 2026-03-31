@@ -614,7 +614,7 @@ return [
 
         // Categories
         'Категория' => 'Category',
-        'Категория #'=> 'Category #',
+        'Категория #' => 'Category #',
         'Категория настроек' => 'Category Settings',
         'Родительская категория' => 'Parent category',
         'Обложка (файл)' => 'Cover asset',

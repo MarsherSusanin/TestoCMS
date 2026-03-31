@@ -60,7 +60,7 @@ class RoleManagementService
     }
 
     /**
-     * @param array<int, string> $permissionNames
+     * @param  array<int, string>  $permissionNames
      */
     public function updateRolePermissions(User $actor, Role $role, array $permissionNames): Role
     {

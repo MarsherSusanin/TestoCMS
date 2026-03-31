@@ -7,9 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class PublicBlogResolverService
 {
-    public function __construct(private readonly PublicResponseSupportService $responseSupport)
-    {
-    }
+    public function __construct(private readonly PublicResponseSupportService $responseSupport) {}
 
     public function render(string $locale, int $forcedPage = 1): Response
     {

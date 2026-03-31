@@ -8,7 +8,7 @@ use App\Models\PageTranslation;
 class PageTranslationPersisterService
 {
     /**
-     * @param array<string, array<string, mixed>> $translations
+     * @param  array<string, array<string, mixed>>  $translations
      */
     public function upsert(Page $page, array $translations): void
     {

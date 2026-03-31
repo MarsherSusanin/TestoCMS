@@ -18,8 +18,7 @@ class ModuleInstallerService
         private readonly ModuleManifestParserService $manifestParser,
         private readonly ModuleCacheService $moduleCache,
         private readonly PageCacheService $pageCacheService,
-    ) {
-    }
+    ) {}
 
     public function installFromZip(UploadedFile $zipFile, ?int $userId = null): CmsModule
     {
@@ -413,7 +412,7 @@ class ModuleInstallerService
 
     private function extractZipSecure(string $archivePath, string $extractDir): void
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $openResult = $zip->open($archivePath);
         if ($openResult !== true) {
             throw new RuntimeException('Unable to open ZIP archive.');
@@ -494,6 +493,7 @@ class ModuleInstallerService
 
             if ($item->isDir()) {
                 File::ensureDirectoryExists($destination);
+
                 continue;
             }
 

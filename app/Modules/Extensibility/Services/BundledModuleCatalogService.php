@@ -7,9 +7,7 @@ use Illuminate\Support\Facades\File;
 
 class BundledModuleCatalogService
 {
-    public function __construct(private readonly ModuleManifestParserService $manifestParser)
-    {
-    }
+    public function __construct(private readonly ModuleManifestParserService $manifestParser) {}
 
     /**
      * @return array<int, array<string, mixed>>

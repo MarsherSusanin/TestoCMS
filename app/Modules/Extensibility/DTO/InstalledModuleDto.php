@@ -20,8 +20,7 @@ class InstalledModuleDto
         public readonly string $status,
         public readonly ?string $lastError,
         public readonly array $metadata,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

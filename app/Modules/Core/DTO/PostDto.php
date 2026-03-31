@@ -22,8 +22,7 @@ class PostDto
         public ?array $robotsDirectives,
         public ?array $structuredData,
         public ?string $publishedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromModels(Post $post, ?PostTranslation $translation): self
     {

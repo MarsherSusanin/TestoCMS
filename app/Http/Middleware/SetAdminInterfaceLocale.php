@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class SetAdminInterfaceLocale
 {
     private const SESSION_KEY = 'admin_ui_locale';
+
     private const COOKIE_KEY = 'testocms_admin_ui_locale';
 
     /**
@@ -58,4 +59,3 @@ class SetAdminInterfaceLocale
         return in_array($normalized, $this->supported, true) ? $normalized : null;
     }
 }
-

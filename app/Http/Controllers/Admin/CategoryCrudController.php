@@ -25,8 +25,7 @@ class CategoryCrudController extends Controller
         private readonly ContentRevisionServiceContract $revisionService,
         private readonly AuditLogger $auditLogger,
         private readonly PageCacheService $pageCacheService,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {
@@ -64,7 +63,7 @@ class CategoryCrudController extends Controller
         $translations = $this->normalizeTranslations($validated['translations'] ?? []);
         $this->assertUniqueTranslationSlugs($translations, 'category_translations', 'category_id', null, 'category');
 
-        $category = DB::transaction(function () use ($request, $validated, $translations): Category {
+        $category = DB::transaction(function () use ($validated, $translations): Category {
             $category = Category::query()->create([
                 'parent_id' => $validated['parent_id'] ?? null,
                 'cover_asset_id' => $validated['cover_asset_id'] ?? null,
@@ -110,7 +109,7 @@ class CategoryCrudController extends Controller
             throw ValidationException::withMessages(['parent_id' => ['Category cannot be its own parent.']]);
         }
 
-        DB::transaction(function () use ($request, $validated, $translations, $category): void {
+        DB::transaction(function () use ($validated, $translations, $category): void {
             $category->fill([
                 'parent_id' => $validated['parent_id'] ?? null,
                 'cover_asset_id' => $validated['cover_asset_id'] ?? null,
@@ -160,7 +159,7 @@ class CategoryCrudController extends Controller
     }
 
     /**
-     * @param array<string, array<string, mixed>> $translationsInput
+     * @param  array<string, array<string, mixed>>  $translationsInput
      * @return array<string, array<string, mixed>>
      */
     private function normalizeTranslations(array $translationsInput): array
@@ -236,7 +235,7 @@ class CategoryCrudController extends Controller
     }
 
     /**
-     * @param array<string, array<string, mixed>> $translations
+     * @param  array<string, array<string, mixed>>  $translations
      */
     private function upsertTranslations(Category $category, array $translations): void
     {

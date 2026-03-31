@@ -15,11 +15,10 @@ class ContentMutationFinalizerService
         private readonly AuditLogger $auditLogger,
         private readonly PageCacheService $pageCacheService,
         private readonly SlugResolverService $slugResolver,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<int, string> $relations
+     * @param  array<int, string>  $relations
      */
     public function finalize(Model $entity, string $entityType, array $relations, User $actor, array $context): Model
     {

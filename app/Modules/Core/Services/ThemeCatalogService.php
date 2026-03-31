@@ -114,7 +114,7 @@ class ThemeCatalogService
     }
 
     /**
-     * @param array<int, string> $fontKeys
+     * @param  array<int, string>  $fontKeys
      */
     public function buildGoogleFontsUrl(array $fontKeys): ?string
     {

@@ -2,20 +2,19 @@
 
 namespace App\Modules\Content\Services;
 
-use App\Modules\Extensibility\Registry\ModuleWidgetRegistry;
 use App\Modules\Core\Contracts\SanitizerContract;
+use App\Modules\Extensibility\Registry\ModuleWidgetRegistry;
 
 class BlockLeafRendererService
 {
     public function __construct(
         private readonly SanitizerContract $sanitizer,
         private readonly ModuleWidgetRegistry $moduleWidgets,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<int|string, mixed> $data
-     * @param array<string, mixed> $context
+     * @param  array<int|string, mixed>  $data
+     * @param  array<string, mixed>  $context
      */
     public function render(string $type, array $data, array $context = []): string
     {
@@ -39,7 +38,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderHeading(array $data): string
     {
@@ -51,7 +50,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderRichText(array $data): string
     {
@@ -59,7 +58,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderImage(array $data): string
     {
@@ -72,7 +71,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderVideo(array $data): string
     {
@@ -85,7 +84,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderGallery(array $data): string
     {
@@ -109,7 +108,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderList(array $data): string
     {
@@ -129,7 +128,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderCta(array $data): string
     {
@@ -154,7 +153,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderTable(array $data): string
     {
@@ -180,7 +179,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderRestrictedHtml(array $data): string
     {
@@ -188,7 +187,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderCustomCodeEmbed(array $data): string
     {
@@ -205,8 +204,8 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
-     * @param array<string, mixed> $context
+     * @param  array<int|string, mixed>  $data
+     * @param  array<string, mixed>  $context
      */
     private function renderModuleWidget(array $data, array $context): string
     {
@@ -376,7 +375,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderPostListing(array $data): string
     {
@@ -387,7 +386,7 @@ class BlockLeafRendererService
     }
 
     /**
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     private function renderFaq(array $data): string
     {

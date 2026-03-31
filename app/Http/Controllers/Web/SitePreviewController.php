@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SitePreviewController extends Controller
 {
-    public function __construct(private readonly PublicPreviewService $previewService)
-    {
-    }
+    public function __construct(private readonly PublicPreviewService $previewService) {}
 
     public function __invoke(Request $request, string $token): Response
     {

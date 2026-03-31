@@ -16,8 +16,7 @@ class LocalBaselineBootstrapService
         private readonly DefaultAdminBootstrapService $defaultAdminBootstrap,
         private readonly PageCacheService $pageCacheService,
         private readonly SlugResolverService $slugResolverService,
-    ) {
-    }
+    ) {}
 
     public function ensureBaseline(): void
     {

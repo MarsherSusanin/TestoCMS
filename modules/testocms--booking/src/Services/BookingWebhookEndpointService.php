@@ -12,7 +12,7 @@ class BookingWebhookEndpointService
      */
     public function create(array $payload): BookingWebhookEndpoint
     {
-        $endpoint = new BookingWebhookEndpoint();
+        $endpoint = new BookingWebhookEndpoint;
         $endpoint->fill($this->normalizePayload($payload));
         if (blank($endpoint->secret)) {
             $endpoint->secret = $this->generateSecret();

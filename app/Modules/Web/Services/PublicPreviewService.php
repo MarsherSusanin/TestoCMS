@@ -13,8 +13,7 @@ class PublicPreviewService
     public function __construct(
         private readonly PublicPageResolverService $pageResolver,
         private readonly PublicPostResolverService $postResolver,
-    ) {
-    }
+    ) {}
 
     public function render(Request $request, string $token): Response
     {

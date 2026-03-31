@@ -202,7 +202,7 @@ class CoreUpdatesAdminTest extends TestCase
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         $zipPath = storage_path('framework/testing/core-release-'.uniqid('', true).'.zip');
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             $this->fail('Failed to create ZIP');
         }

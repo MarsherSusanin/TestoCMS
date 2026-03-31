@@ -8,7 +8,7 @@ use App\Models\PostTranslation;
 class PostTranslationPersisterService
 {
     /**
-     * @param array<string, array<string, mixed>> $translations
+     * @param  array<string, array<string, mixed>>  $translations
      */
     public function upsert(Post $post, array $translations): void
     {

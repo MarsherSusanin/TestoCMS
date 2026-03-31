@@ -10,20 +10,20 @@ class SystemCheckService
     public function runAll(): array
     {
         return [
-            'php_version'    => $this->checkPhpVersion(),
-            'pdo_database'   => $this->checkDatabaseDriverSupport(),
-            'mbstring'       => $this->checkExtension('mbstring', 'Mbstring'),
-            'intl'           => $this->checkExtension('intl', 'Intl'),
-            'gd'             => $this->checkExtension('gd', 'GD'),
-            'bcmath'         => $this->checkExtension('bcmath', 'BCMath'),
-            'zip'            => $this->checkExtension('zip', 'Zip'),
-            'exif'           => $this->checkExtension('exif', 'Exif'),
-            'openssl'        => $this->checkExtension('openssl', 'OpenSSL'),
-            'curl'           => $this->checkExtension('curl', 'cURL'),
-            'fileinfo'       => $this->checkExtension('fileinfo', 'Fileinfo'),
-            'storage_writable'   => $this->checkWritable(storage_path(), 'storage/'),
-            'bootstrap_cache'    => $this->checkWritable(base_path('bootstrap/cache'), 'bootstrap/cache/'),
-            'env_writable'       => $this->checkEnvWritable(),
+            'php_version' => $this->checkPhpVersion(),
+            'pdo_database' => $this->checkDatabaseDriverSupport(),
+            'mbstring' => $this->checkExtension('mbstring', 'Mbstring'),
+            'intl' => $this->checkExtension('intl', 'Intl'),
+            'gd' => $this->checkExtension('gd', 'GD'),
+            'bcmath' => $this->checkExtension('bcmath', 'BCMath'),
+            'zip' => $this->checkExtension('zip', 'Zip'),
+            'exif' => $this->checkExtension('exif', 'Exif'),
+            'openssl' => $this->checkExtension('openssl', 'OpenSSL'),
+            'curl' => $this->checkExtension('curl', 'cURL'),
+            'fileinfo' => $this->checkExtension('fileinfo', 'Fileinfo'),
+            'storage_writable' => $this->checkWritable(storage_path(), 'storage/'),
+            'bootstrap_cache' => $this->checkWritable(base_path('bootstrap/cache'), 'bootstrap/cache/'),
+            'env_writable' => $this->checkEnvWritable(),
         ];
     }
 
@@ -59,14 +59,14 @@ class SystemCheckService
         $scheme = $isHttps ? 'https' : 'http';
 
         return [
-            'php_version'       => PHP_VERSION,
-            'server_software'   => $_SERVER['SERVER_SOFTWARE'] ?? 'unknown',
-            'https'             => $isHttps,
-            'app_url'           => $scheme . '://' . $host,
-            'timezone'          => date_default_timezone_get(),
-            'has_pgsql'         => $this->hasExtension('pdo_pgsql'),
-            'has_mysql'         => $this->hasExtension('pdo_mysql'),
-            'queue_connection'  => 'sync',
+            'php_version' => PHP_VERSION,
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'unknown',
+            'https' => $isHttps,
+            'app_url' => $scheme.'://'.$host,
+            'timezone' => date_default_timezone_get(),
+            'has_pgsql' => $this->hasExtension('pdo_pgsql'),
+            'has_mysql' => $this->hasExtension('pdo_mysql'),
+            'queue_connection' => 'sync',
         ];
     }
 
@@ -76,7 +76,7 @@ class SystemCheckService
 
         return [
             'passed' => $passed,
-            'label'  => 'PHP ≥ 8.2',
+            'label' => 'PHP ≥ 8.2',
             'detail' => PHP_VERSION,
             'optional' => false,
         ];
@@ -86,7 +86,7 @@ class SystemCheckService
     {
         return [
             'passed' => $this->hasExtension($ext),
-            'label'  => $label,
+            'label' => $label,
             'detail' => $this->extensionDetail($ext),
             'optional' => false,
         ];
@@ -115,7 +115,7 @@ class SystemCheckService
 
         return [
             'passed' => $writable,
-            'label'  => $label . ' writable',
+            'label' => $label.' writable',
             'detail' => $writable ? 'OK' : 'not writable',
             'optional' => false,
         ];
@@ -127,7 +127,7 @@ class SystemCheckService
 
         return [
             'passed' => $writable,
-            'label'  => '.env writable',
+            'label' => '.env writable',
             'detail' => $writable ? 'OK' : 'not writable',
             'optional' => false,
         ];

@@ -51,7 +51,7 @@ class SiteChromeNormalizerService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
     public function normalizeForSave(array $input): array
@@ -128,8 +128,7 @@ class SiteChromeNormalizerService
     }
 
     /**
-     * @param mixed $items
-     * @param array<int, string> $locales
+     * @param  array<int, string>  $locales
      * @return array<int, array<string, mixed>>
      */
     private function normalizeLinkItems(mixed $items, int $max, array $locales, bool $withStyle = false): array
@@ -177,7 +176,6 @@ class SiteChromeNormalizerService
     }
 
     /**
-     * @param mixed $value
      * @return array<string, int|string>|null
      */
     private function normalizeLinkTarget(mixed $value): ?array
@@ -200,8 +198,7 @@ class SiteChromeNormalizerService
     }
 
     /**
-     * @param mixed $value
-     * @param array<int, string> $locales
+     * @param  array<int, string>  $locales
      * @return array<string, string>
      */
     private function normalizeTranslationsMap(mixed $value, array $locales): array

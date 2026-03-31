@@ -26,4 +26,3 @@ class BookingWebhookEndpoint extends Model
         return $this->hasMany(BookingWebhookDelivery::class, 'webhook_endpoint_id');
     }
 }
-

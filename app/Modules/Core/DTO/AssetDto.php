@@ -17,8 +17,7 @@ class AssetDto
         public ?string $alt,
         public ?string $title,
         public ?string $caption,
-    ) {
-    }
+    ) {}
 
     public static function fromModel(Asset $asset): self
     {

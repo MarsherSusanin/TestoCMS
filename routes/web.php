@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AdminRuntimeController;
+use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\AssetCrudController;
 use App\Http\Controllers\Admin\AuditLogController;
-use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryCrudController;
+use App\Http\Controllers\Admin\ContentTemplateController;
 use App\Http\Controllers\Admin\CoreUpdateController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ContentTemplateController;
 use App\Http\Controllers\Admin\ModuleController;
-use App\Http\Controllers\Admin\PageStagePreviewController;
 use App\Http\Controllers\Admin\PageCrudController;
+use App\Http\Controllers\Admin\PageStagePreviewController;
 use App\Http\Controllers\Admin\PostCrudController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -123,9 +123,9 @@ Route::prefix('admin')->group(function (): void {
         Route::get('/settings', [SettingsController::class, 'edit'])->name('admin.settings.edit');
         Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
         Route::get('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'edit'])->name('admin.settings.seo.edit');
-    Route::put('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'update'])->name('admin.settings.seo.update');
+        Route::put('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'update'])->name('admin.settings.seo.update');
 
-    Route::get('/updates', [CoreUpdateController::class, 'index'])->name('admin.updates.index');
+        Route::get('/updates', [CoreUpdateController::class, 'index'])->name('admin.updates.index');
         Route::get('/updates/logs', [CoreUpdateController::class, 'logs'])->name('admin.updates.logs');
         Route::post('/updates/settings', [CoreUpdateController::class, 'saveSettings'])->name('admin.updates.settings');
         Route::post('/updates/check', [CoreUpdateController::class, 'check'])->name('admin.updates.check');

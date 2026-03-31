@@ -18,7 +18,7 @@ class AppServiceProviderTest extends TestCase
         $app = new Application(base_path());
         Facade::clearResolvedInstances();
         Facade::setFacadeApplication($app);
-        $app->instance('log', new NullLogger());
+        $app->instance('log', new NullLogger);
 
         try {
             $provider = new AppServiceProvider($app);

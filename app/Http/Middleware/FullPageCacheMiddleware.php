@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class FullPageCacheMiddleware
 {
-    public function __construct(private readonly PageCacheService $pageCacheService)
-    {
-    }
+    public function __construct(private readonly PageCacheService $pageCacheService) {}
 
     public function handle(Request $request, Closure $next): Response
     {

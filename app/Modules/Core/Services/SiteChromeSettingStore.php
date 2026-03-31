@@ -29,7 +29,7 @@ class SiteChromeSettingStore
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function savePayload(array $payload, ?int $actorId = null): ThemeSetting
     {

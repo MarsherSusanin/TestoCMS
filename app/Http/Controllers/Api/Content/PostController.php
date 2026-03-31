@@ -36,7 +36,7 @@ class PostController extends Controller
 
         $paginator = $query->orderByDesc('published_at')->paginate($perPage)->withQueryString();
 
-        $items = collect($paginator->items())->map(function (Post $post) use ($locale): array {
+        $items = collect($paginator->items())->map(function (Post $post): array {
             $translation = $post->translations->first() ?? $post->translations()->where('locale', config('cms.default_locale'))->first();
             $dto = PostDto::fromModels($post, $translation);
 

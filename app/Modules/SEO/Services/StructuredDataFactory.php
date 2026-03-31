@@ -68,8 +68,7 @@ class StructuredDataFactory
     }
 
     /**
-     * @param array<int, array<string, string>> $crumbs
-     *
+     * @param  array<int, array<string, string>>  $crumbs
      * @return array<string, mixed>
      */
     public function breadcrumbs(array $crumbs): array
@@ -93,8 +92,7 @@ class StructuredDataFactory
     }
 
     /**
-     * @param array<int, array{question: string, answer: string}> $items
-     *
+     * @param  array<int, array{question: string, answer: string}>  $items
      * @return array<string, mixed>
      */
     public function faq(array $items): array

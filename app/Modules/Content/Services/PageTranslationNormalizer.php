@@ -16,12 +16,11 @@ class PageTranslationNormalizer
         private readonly BlockSchemaValidator $blockSchemaValidator,
         private readonly PageLayoutNormalizer $pageLayoutNormalizer,
         private readonly BlockRendererContract $blockRenderer,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<int|string, mixed> $translationsInput
-     * @param array<string, mixed> $options
+     * @param  array<int|string, mixed>  $translationsInput
+     * @param  array<string, mixed>  $options
      * @return array<string, array<string, mixed>>
      */
     public function normalize(array $translationsInput, array $options = []): array
@@ -167,7 +166,7 @@ class PageTranslationNormalizer
     }
 
     /**
-     * @param array<int, mixed> $blocks
+     * @param  array<int, mixed>  $blocks
      */
     private function hasMeaningfulBlocks(array $blocks): bool
     {
@@ -246,6 +245,7 @@ class PageTranslationNormalizer
         }
         if ($type === 'list') {
             $items = $data['items'] ?? [];
+
             return is_array($items) && count(array_filter($items, static fn (mixed $value): bool => trim((string) $value) !== '')) > 0;
         }
         if ($type === 'cta') {

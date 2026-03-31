@@ -20,9 +20,7 @@ class BookingWebhookService
         'booking.rescheduled',
     ];
 
-    public function __construct(private readonly BookingSettingsService $settings)
-    {
-    }
+    public function __construct(private readonly BookingSettingsService $settings) {}
 
     /**
      * @return array<int, string>

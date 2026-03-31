@@ -13,8 +13,7 @@ class WidgetController extends Controller
     public function __construct(
         private readonly BookingCatalogService $catalog,
         private readonly BookingSettingsService $settings,
-    ) {
-    }
+    ) {}
 
     public function show(Request $request, string $locale, string $widget): Response
     {

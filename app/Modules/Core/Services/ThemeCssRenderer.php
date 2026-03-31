@@ -7,8 +7,8 @@ class ThemeCssRenderer
     private ?string $baseCssCache = null;
 
     /**
-     * @param array<string, string> $themeColors
-     * @param array<string, string> $themeFonts
+     * @param  array<string, string>  $themeColors
+     * @param  array<string, string>  $themeFonts
      */
     public function render(array $themeColors, array $themeFonts): string
     {
@@ -28,8 +28,8 @@ class ThemeCssRenderer
     }
 
     /**
-     * @param array<string, string> $themeColors
-     * @param array<string, string> $themeFonts
+     * @param  array<string, string>  $themeColors
+     * @param  array<string, string>  $themeFonts
      */
     private function dynamicCss(array $themeColors, array $themeFonts): string
     {

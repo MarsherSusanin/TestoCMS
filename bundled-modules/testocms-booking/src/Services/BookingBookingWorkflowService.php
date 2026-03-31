@@ -13,9 +13,7 @@ class BookingBookingWorkflowService
     public function __construct(
         private readonly BookingWebhookService $webhooks,
         private readonly BookingSettingsService $settings,
-    )
-    {
-    }
+    ) {}
 
     public function confirm(BookingBooking $booking): BookingBooking
     {

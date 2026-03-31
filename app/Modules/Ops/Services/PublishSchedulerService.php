@@ -13,8 +13,7 @@ class PublishSchedulerService
     public function __construct(
         private readonly PageCacheService $pageCacheService,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function runDue(): int
     {

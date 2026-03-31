@@ -13,11 +13,10 @@ class FilesystemUpdateDriver
         private readonly CoreBackupService $backupService,
         private readonly CorePackageApplier $packageApplier,
         private readonly CoreUpdateHealthCheckService $healthChecks,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $package
+     * @param  array<string, mixed>  $package
      * @return array<string, mixed>
      */
     public function apply(array $package, ?int $actorId = null): array

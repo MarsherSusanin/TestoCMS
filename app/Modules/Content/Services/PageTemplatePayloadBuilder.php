@@ -13,11 +13,10 @@ class PageTemplatePayloadBuilder
     public function __construct(
         private readonly PageLayoutNormalizer $pageLayoutNormalizer,
         private readonly SlugUniquenessService $slugUniqueness,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     public function normalizePayload(array $payload): array

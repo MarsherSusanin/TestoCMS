@@ -16,8 +16,7 @@ class PostContentRendererService
 
     public function __construct(
         private readonly SanitizerContract $sanitizer,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{content_html:string,content_plain:string}
@@ -94,8 +93,8 @@ class PostContentRendererService
             'html_input' => 'allow',
             'allow_unsafe_links' => false,
         ]);
-        $environment->addExtension(new CommonMarkCoreExtension());
-        $environment->addExtension(new GithubFlavoredMarkdownExtension());
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new GithubFlavoredMarkdownExtension);
 
         return $this->markdownConverter = new MarkdownConverter($environment);
     }
@@ -141,6 +140,7 @@ class PostContentRendererService
             $value = $parsed[$field] ?? null;
             if ($value === null || is_array($value) || is_object($value)) {
                 $frontMatter[$field] = null;
+
                 continue;
             }
 

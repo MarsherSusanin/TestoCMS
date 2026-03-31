@@ -26,8 +26,7 @@ class AvailabilityController extends Controller
         private readonly BookingAvailabilityService $availability,
         private readonly BookingSlotProjectionService $projection,
         private readonly AuditLogger $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

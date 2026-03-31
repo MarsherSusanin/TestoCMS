@@ -5,8 +5,8 @@ namespace App\Modules\Core\DTO;
 class SeoMetaDto
 {
     /**
-     * @param array<string, mixed>|null $robotsDirectives
-     * @param array<int, array<string, mixed>>|null $structuredData
+     * @param  array<string, mixed>|null  $robotsDirectives
+     * @param  array<int, array<string, mixed>>|null  $structuredData
      */
     public function __construct(
         public ?string $metaTitle,
@@ -14,8 +14,7 @@ class SeoMetaDto
         public ?string $canonicalUrl,
         public ?array $robotsDirectives,
         public ?array $structuredData,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

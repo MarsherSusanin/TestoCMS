@@ -15,8 +15,7 @@ class ContentTemplateController extends Controller
     public function __construct(
         private readonly ContentTemplateService $templates,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

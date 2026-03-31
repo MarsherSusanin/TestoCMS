@@ -18,8 +18,7 @@ class UserController extends Controller
     public function __construct(
         private readonly UserManagementService $users,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

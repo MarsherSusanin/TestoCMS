@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetLocaleFromRoute
 {
-    public function __construct(private readonly LocaleResolver $localeResolver)
-    {
-    }
+    public function __construct(private readonly LocaleResolver $localeResolver) {}
 
     public function handle(Request $request, Closure $next): Response
     {

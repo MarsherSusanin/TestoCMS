@@ -31,4 +31,3 @@ class BookingWebhookDelivery extends Model
         return $this->belongsTo(BookingWebhookEndpoint::class, 'webhook_endpoint_id');
     }
 }
-

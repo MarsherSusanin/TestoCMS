@@ -76,7 +76,7 @@ class ModuleManifestParserService
             if (! Str::endsWith($prefix, '\\')) {
                 throw new RuntimeException(sprintf('PSR-4 prefix "%s" must end with \\.', $prefix));
             }
-            if ($path === '' || Str::startsWith($path, ['/','\\']) || str_contains($path, '..')) {
+            if ($path === '' || Str::startsWith($path, ['/', '\\']) || str_contains($path, '..')) {
                 throw new RuntimeException(sprintf('Invalid PSR-4 path "%s" in module.json.', $path));
             }
             $autoloadPsr4[$prefix] = $path;
@@ -155,6 +155,7 @@ class ModuleManifestParserService
                 if ((int) explode('.', $actualVersion)[0] !== $major || version_compare($actualVersion, $base, '<')) {
                     throw new RuntimeException(sprintf('%s version %s does not satisfy %s', $label, $actualVersion, $constraint));
                 }
+
                 continue;
             }
 
@@ -164,6 +165,7 @@ class ModuleManifestParserService
                 if (! version_compare($actualVersion, $target, $op)) {
                     throw new RuntimeException(sprintf('%s version %s does not satisfy %s', $label, $actualVersion, $constraint));
                 }
+
                 continue;
             }
 

@@ -9,8 +9,7 @@ class RobotsDirectivesDto
         public bool $follow = true,
         public bool $noarchive = false,
         public bool $nosnippet = false,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(?array $input): self
     {

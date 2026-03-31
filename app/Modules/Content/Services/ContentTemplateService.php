@@ -8,13 +8,13 @@ use App\Models\User;
 class ContentTemplateService
 {
     public const ENTITY_PAGE = 'page';
+
     public const ENTITY_POST = 'post';
 
     public function __construct(
         private readonly PageTemplatePayloadBuilder $pageTemplatePayloadBuilder,
         private readonly PostTemplatePayloadBuilder $postTemplatePayloadBuilder,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<int, string>

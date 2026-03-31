@@ -9,10 +9,13 @@ use Illuminate\Support\Facades\Schema;
 class CoreUpdateSettingsService
 {
     private const SETTINGS_KEY = 'core_updates';
+
     private const STATE_KEY = 'core_update_state';
 
     private ?array $resolvedCache = null;
+
     private ?array $stateCache = null;
+
     private ?bool $themeTableExistsCache = null;
 
     /**
@@ -48,8 +51,7 @@ class CoreUpdateSettingsService
     }
 
     /**
-     * @param array<string, mixed> $input
-     *
+     * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
     public function normalizeForSave(array $input): array
@@ -135,7 +137,7 @@ class CoreUpdateSettingsService
     }
 
     /**
-     * @param array<string, mixed> $state
+     * @param  array<string, mixed>  $state
      */
     public function saveState(array $state, ?int $actorId = null): ?ThemeSetting
     {

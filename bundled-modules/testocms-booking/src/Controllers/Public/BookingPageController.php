@@ -16,8 +16,7 @@ class BookingPageController extends Controller
         private readonly BookingSettingsService $settings,
         private readonly SeoResolverContract $seoResolver,
         private readonly PublicResponseSupportService $responseSupport,
-    ) {
-    }
+    ) {}
 
     public function index(string $locale): Response
     {

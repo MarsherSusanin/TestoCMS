@@ -19,8 +19,7 @@ class CoreUpdateService
         private readonly CorePackageApplier $packageApplier,
         private readonly DeployHookUpdateDriver $deployHookDriver,
         private readonly FilesystemUpdateDriver $filesystemDriver,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -67,7 +66,7 @@ class CoreUpdateService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      */
     public function saveSettings(array $input, ?int $actorId = null): void
     {
@@ -286,7 +285,7 @@ class CoreUpdateService
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     private function logAction(
         string $action,

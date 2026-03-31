@@ -23,11 +23,10 @@ class ContentBulkActionService
         private readonly PostContentServiceContract $postContent,
         private readonly PageWorkflowServiceContract $pageWorkflow,
         private readonly PostWorkflowServiceContract $postWorkflow,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<int, int> $ids
+     * @param  array<int, int>  $ids
      * @return array<string, mixed>
      */
     public function applyPages(User $actor, string $action, array $ids): array
@@ -82,7 +81,7 @@ class ContentBulkActionService
     }
 
     /**
-     * @param array<int, int> $ids
+     * @param  array<int, int>  $ids
      * @return array<string, mixed>
      */
     public function applyPosts(User $actor, string $action, array $ids): array
@@ -139,10 +138,10 @@ class ContentBulkActionService
     /**
      * @template T of object
      *
-     * @param array<int, int> $ids
-     * @param callable(int): (T|null) $resolve
-     * @param callable(T, string): void $execute
-     * @param callable(User, T, string): bool $allowed
+     * @param  array<int, int>  $ids
+     * @param  callable(int): (T|null)  $resolve
+     * @param  callable(T, string): void  $execute
+     * @param  callable(User, T, string): bool  $allowed
      * @return array<string, mixed>
      */
     private function applyBulk(

@@ -17,8 +17,7 @@ class LocalizedSiteRouterService
         private readonly PublicPageResolverService $pageResolver,
         private readonly PublicPostResolverService $postResolver,
         private readonly PublicCategoryResolverService $categoryResolver,
-    ) {
-    }
+    ) {}
 
     public function dispatch(Request $request, string $locale, ?string $slug = null): Response
     {

@@ -12,8 +12,7 @@ class AdminShellViewModelFactory
     public function __construct(
         private readonly ModuleCacheService $moduleCache,
         private readonly CoreUpdateSettingsService $coreUpdateSettings,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

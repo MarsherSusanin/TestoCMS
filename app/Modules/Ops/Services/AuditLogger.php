@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class AuditLogger
 {
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function log(string $action, ?Model $entity = null, array $context = [], ?Request $request = null, ?int $actorId = null): void
     {

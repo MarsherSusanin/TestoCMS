@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SiteSearchController extends Controller
 {
-    public function __construct(private readonly PublicSearchService $searchService)
-    {
-    }
+    public function __construct(private readonly PublicSearchService $searchService) {}
 
     public function __invoke(Request $request, string $locale): Response
     {

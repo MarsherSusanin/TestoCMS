@@ -12,8 +12,7 @@ class CoreBackupService
     public function __construct(
         private readonly CoreUpdateSettingsService $settings,
         private readonly CoreUpdateEnvironment $environment,
-    ) {
-    }
+    ) {}
 
     public function createBackup(string $fromVersion, string $toVersion, ?int $actorId = null): CoreBackup
     {
@@ -239,8 +238,8 @@ class CoreBackupService
     }
 
     /**
-     * @param array<int, string> $command
-     * @param array<string, string> $env
+     * @param  array<int, string>  $command
+     * @param  array<string, string>  $env
      */
     private function runProcess(array $command, array $env, string $errorPrefix): void
     {

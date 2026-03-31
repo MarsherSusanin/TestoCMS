@@ -14,8 +14,7 @@ class PublicPostResolverService
         private readonly SeoResolverContract $seoResolver,
         private readonly StructuredDataFactory $structuredDataFactory,
         private readonly PublicResponseSupportService $responseSupport,
-    ) {
-    }
+    ) {}
 
     public function render(string $locale, Post $post, PostTranslation $translation, bool $isPreview = false): Response
     {

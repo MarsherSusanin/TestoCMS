@@ -13,8 +13,7 @@ class UpdateManifestClient
         private readonly CoreUpdateSettingsService $settings,
         private readonly CoreUpdateEnvironment $environment,
         private readonly CorePackageApplier $packageApplier,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -64,7 +63,7 @@ class UpdateManifestClient
     }
 
     /**
-     * @param array<string, mixed> $manifest
+     * @param  array<string, mixed>  $manifest
      * @return array<string, mixed>
      */
     public function downloadCloudPackage(array $manifest): array

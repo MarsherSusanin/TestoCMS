@@ -9,9 +9,7 @@ use ZipArchive;
 
 class CorePackageApplier
 {
-    public function __construct(private readonly CoreUpdateEnvironment $environment)
-    {
-    }
+    public function __construct(private readonly CoreUpdateEnvironment $environment) {}
 
     /**
      * @return array<string, mixed>
@@ -154,7 +152,7 @@ class CorePackageApplier
 
     private function extractZipSecure(string $archivePath, string $extractDir): void
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $openResult = $zip->open($archivePath);
         if ($openResult !== true) {
             throw new RuntimeException('Unable to open ZIP archive.');

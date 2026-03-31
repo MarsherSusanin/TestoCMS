@@ -22,8 +22,7 @@ class PageDto
         public ?array $robotsDirectives,
         public ?array $structuredData,
         public ?string $publishedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromModels(Page $page, ?PageTranslation $translation): self
     {

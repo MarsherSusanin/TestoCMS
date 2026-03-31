@@ -23,8 +23,7 @@ class ModuleController extends Controller
         private readonly ModuleInstallerService $moduleInstaller,
         private readonly BundledModuleCatalogService $bundledCatalog,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

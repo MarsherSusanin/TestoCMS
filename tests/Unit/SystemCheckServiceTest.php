@@ -62,9 +62,7 @@ class SystemCheckServiceTest extends TestCase
             /**
              * @param  array<string, bool>  $extensions
              */
-            public function __construct(private readonly array $extensions)
-            {
-            }
+            public function __construct(private readonly array $extensions) {}
 
             protected function hasExtension(string $ext): bool
             {

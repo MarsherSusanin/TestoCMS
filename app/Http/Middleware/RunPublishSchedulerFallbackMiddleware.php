@@ -10,9 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RunPublishSchedulerFallbackMiddleware
 {
-    public function __construct(private readonly PublishSchedulerService $publishSchedulerService)
-    {
-    }
+    public function __construct(private readonly PublishSchedulerService $publishSchedulerService) {}
 
     public function handle(Request $request, Closure $next): Response
     {

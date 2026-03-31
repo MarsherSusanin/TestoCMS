@@ -12,9 +12,7 @@ class EnabledModulePublicRoutesLoader
      */
     private static array $loadedPathsByCollection = [];
 
-    public function __construct(private readonly ModuleCacheService $moduleCache)
-    {
-    }
+    public function __construct(private readonly ModuleCacheService $moduleCache) {}
 
     public function load(): void
     {

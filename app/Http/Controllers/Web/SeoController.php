@@ -125,7 +125,7 @@ class SeoController extends Controller
             if (! empty($settings->llms_txt_intro)) {
                 echo $settings->llms_txt_intro."\n\n";
             } else {
-                echo "# ".config('app.name')." LLM Overview\n\n";
+                echo '# '.config('app.name')." LLM Overview\n\n";
             }
 
             echo "## Recent Posts\n\n";
@@ -143,9 +143,9 @@ class SeoController extends Controller
                 $url = url('/'.$locale.'/'.$postPrefix.'/'.$translation->slug);
                 $title = str_replace(["\r", "\n"], ' ', (string) $translation->title);
                 $desc = str_replace(["\r", "\n"], ' ', (string) $translation->meta_description);
-                echo sprintf("- [%s](%s)", $title, $url);
+                echo sprintf('- [%s](%s)', $title, $url);
                 if (! empty($desc)) {
-                    echo ": ".$desc;
+                    echo ': '.$desc;
                 }
                 echo "\n";
             }
@@ -162,9 +162,9 @@ class SeoController extends Controller
                 $url = url('/'.$locale.'/'.$translation->slug);
                 $title = str_replace(["\r", "\n"], ' ', (string) $translation->title);
                 $desc = str_replace(["\r", "\n"], ' ', (string) $translation->meta_description);
-                echo sprintf("- [%s](%s)", $title, $url);
+                echo sprintf('- [%s](%s)', $title, $url);
                 if (! empty($desc)) {
-                    echo ": ".$desc;
+                    echo ': '.$desc;
                 }
                 echo "\n";
             }

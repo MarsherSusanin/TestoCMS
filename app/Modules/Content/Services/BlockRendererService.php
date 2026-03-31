@@ -10,8 +10,7 @@ class BlockRendererService implements BlockRendererContract
     public function __construct(
         private readonly BlockLeafRendererService $leafRenderer,
         private readonly BlockPreviewInstrumentationService $previewInstrumentation,
-    ) {
-    }
+    ) {}
 
     public function render(array $blocks, array $context = []): string
     {
@@ -19,8 +18,8 @@ class BlockRendererService implements BlockRendererContract
     }
 
     /**
-     * @param array<int, mixed> $nodes
-     * @param array<string, mixed> $context
+     * @param  array<int, mixed>  $nodes
+     * @param  array<string, mixed>  $context
      */
     private function renderNodes(array $nodes, array $context): string
     {
@@ -40,10 +39,12 @@ class BlockRendererService implements BlockRendererContract
             $data = Arr::wrap($node['data'] ?? []);
             if ($type === 'section') {
                 $html[] = $this->renderSection($node, $context);
+
                 continue;
             }
             if ($type === 'columns') {
                 $html[] = $this->renderColumns($node, $context);
+
                 continue;
             }
 
@@ -55,8 +56,8 @@ class BlockRendererService implements BlockRendererContract
     }
 
     /**
-     * @param array<string, mixed> $node
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $context
      */
     private function renderSection(array $node, array $context): string
     {
@@ -110,8 +111,8 @@ class BlockRendererService implements BlockRendererContract
     }
 
     /**
-     * @param array<string, mixed> $node
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $context
      */
     private function renderColumns(array $node, array $context): string
     {

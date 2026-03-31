@@ -14,8 +14,7 @@ class BookingApiController extends Controller
     public function __construct(
         private readonly BookingCatalogService $catalog,
         private readonly BookingReservationService $reservations,
-    ) {
-    }
+    ) {}
 
     public function services(string $locale): JsonResponse
     {

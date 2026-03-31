@@ -10,11 +10,10 @@ class CmsLayoutViewModelFactory
         private readonly ResolvedThemeViewModelFactory $resolvedThemeViewModelFactory,
         private readonly ResolvedChromeViewModelFactory $resolvedChromeViewModelFactory,
         private readonly PublicChromeRegistry $publicChromeRegistry,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $viewData
+     * @param  array<string, mixed>  $viewData
      * @return array<string, mixed>
      */
     public function build(array $viewData): array

@@ -19,8 +19,7 @@ class ModuleRuntimeService
         private readonly ModuleCacheService $moduleCache,
         private readonly AdminNavigationRegistry $adminNavigation,
         private readonly ModuleSecuritySyncService $moduleSecuritySync,
-    ) {
-    }
+    ) {}
 
     public function registerEnabledProvidersFromCache(Application $app): void
     {

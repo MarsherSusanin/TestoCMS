@@ -35,4 +35,3 @@ class BookingResource extends Model
             ->withTimestamps();
     }
 }
-

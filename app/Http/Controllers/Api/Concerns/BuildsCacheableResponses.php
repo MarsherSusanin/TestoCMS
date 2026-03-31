@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 trait BuildsCacheableResponses
 {
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     protected function cacheableJson(Request $request, array $payload, ?CarbonInterface $lastModified = null, int $maxAge = 120): JsonResponse
     {

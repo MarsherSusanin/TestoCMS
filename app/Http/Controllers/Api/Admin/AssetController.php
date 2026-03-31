@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AssetController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function index(Request $request): JsonResponse
     {

@@ -29,7 +29,7 @@ class ThemeSettingStore
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function saveDefaultPayload(array $payload, ?int $actorId = null): ThemeSetting
     {

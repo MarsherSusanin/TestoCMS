@@ -20,8 +20,7 @@ class PostContentService implements PostContentServiceContract
         private readonly SlugUniquenessService $slugUniqueness,
         private readonly PostTranslationPersisterService $translationPersister,
         private readonly ContentMutationFinalizerService $mutationFinalizer,
-    ) {
-    }
+    ) {}
 
     public function createFromValidated(array $validated, User $actor, array $context = []): Post
     {

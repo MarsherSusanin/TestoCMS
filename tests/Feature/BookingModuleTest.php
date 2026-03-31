@@ -965,7 +965,7 @@ class BookingModuleTest extends TestCase
     private function makeModuleZipFromDirectory(string $sourcePath, string $filename = 'booking-module.zip'): string
     {
         $zipPath = storage_path('framework/testing/'.uniqid($filename.'-', true).'.zip');
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             $this->fail('Failed to create module ZIP archive.');
@@ -985,6 +985,7 @@ class BookingModuleTest extends TestCase
 
             if ($item->isDir()) {
                 $zip->addEmptyDir(str_replace(DIRECTORY_SEPARATOR, '/', $relative));
+
                 continue;
             }
 

@@ -25,8 +25,7 @@ class BookingController extends Controller
         private readonly BookingReservationService $reservations,
         private readonly BookingBookingWorkflowService $workflow,
         private readonly AuditLogger $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

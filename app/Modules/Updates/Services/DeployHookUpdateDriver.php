@@ -7,13 +7,11 @@ use RuntimeException;
 
 class DeployHookUpdateDriver
 {
-    public function __construct(private readonly CoreUpdateSettingsService $settings)
-    {
-    }
+    public function __construct(private readonly CoreUpdateSettingsService $settings) {}
 
     /**
-     * @param array<string, mixed>|null $pending
-     * @param array<string, mixed>|null $available
+     * @param  array<string, mixed>|null  $pending
+     * @param  array<string, mixed>|null  $available
      * @return array<string, mixed>
      */
     public function apply(?array $pending, ?array $available, ?int $actorId = null): array

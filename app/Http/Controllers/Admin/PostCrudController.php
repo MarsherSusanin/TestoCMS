@@ -14,10 +14,10 @@ use App\Modules\Content\Contracts\PostContentServiceContract;
 use App\Modules\Content\Contracts\PostWorkflowServiceContract;
 use App\Modules\Content\Services\ContentBulkActionService;
 use App\Modules\Content\Services\ContentTemplateService;
-use Illuminate\Support\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -30,8 +30,7 @@ class PostCrudController extends Controller
         private readonly ContentTemplateService $templates,
         private readonly PostContentServiceContract $posts,
         private readonly PostWorkflowServiceContract $postWorkflow,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -367,7 +366,7 @@ class PostCrudController extends Controller
     }
 
     /**
-     * @param array<string, array<string, mixed>> $translations
+     * @param  array<string, array<string, mixed>>  $translations
      * @return array<string, object>
      */
     private function toTranslationObjects(array $translations): array

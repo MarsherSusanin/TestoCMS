@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Models\CategoryTranslation;
 use App\Models\PageTranslation;
 use App\Models\PostTranslation;
 use App\Models\RedirectRule;

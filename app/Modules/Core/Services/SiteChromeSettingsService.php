@@ -9,8 +9,7 @@ class SiteChromeSettingsService
     public function __construct(
         private readonly SiteChromeNormalizerService $normalizer,
         private readonly SiteChromeSettingStore $store,
-    ) {
-    }
+    ) {}
 
     private ?array $cachedResolvedChrome = null;
 
@@ -50,7 +49,7 @@ class SiteChromeSettingsService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
     public function normalizeForSave(array $input): array
@@ -59,7 +58,7 @@ class SiteChromeSettingsService
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function save(array $payload, ?int $actorId = null): ThemeSetting
     {

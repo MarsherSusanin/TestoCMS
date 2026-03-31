@@ -7,8 +7,7 @@ class BookingWidgetCatalogService
     public function __construct(
         private readonly BookingCatalogService $catalog,
         private readonly BookingWidgetRenderService $renderer,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, array<string, mixed>>
@@ -59,4 +58,3 @@ class BookingWidgetCatalogService
         ];
     }
 }
-

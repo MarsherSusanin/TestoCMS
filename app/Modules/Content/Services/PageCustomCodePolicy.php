@@ -7,12 +7,10 @@ use App\Modules\Core\Contracts\SanitizerContract;
 
 class PageCustomCodePolicy
 {
-    public function __construct(private readonly SanitizerContract $sanitizer)
-    {
-    }
+    public function __construct(private readonly SanitizerContract $sanitizer) {}
 
     /**
-     * @param array<string, mixed>|null $customCode
+     * @param  array<string, mixed>|null  $customCode
      * @return array<string, mixed>|null
      */
     public function prepare(?array $customCode, ?User $actor): ?array

@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 class PublicResponseSupportService
 {
     /**
-     * @param iterable<int, object> $translations
+     * @param  iterable<int, object>  $translations
      * @return array<string, string>
      */
     public function buildHreflangs(iterable $translations, callable $pathBuilder): array

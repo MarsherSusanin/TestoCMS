@@ -15,8 +15,7 @@ class ApiIntegrationKeyService
 
     public function __construct(
         private readonly ApiAbilityCatalogService $abilityCatalog,
-    ) {
-    }
+    ) {}
 
     /**
      * @return Collection<int, PersonalAccessToken>
@@ -104,7 +103,6 @@ class ApiIntegrationKeyService
     }
 
     /**
-     * @param  mixed  $abilities
      * @return array<int, string>
      */
     private function normalizeTokenAbilities(mixed $abilities): array

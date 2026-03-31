@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 class SettingsController extends Controller
 {
     private const SESSION_KEY = 'admin_ui_locale';
+
     private const COOKIE_KEY = 'testocms_admin_ui_locale';
 
     /**
@@ -21,9 +22,7 @@ class SettingsController extends Controller
      */
     private array $supportedLocales = ['ru', 'en'];
 
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function edit(Request $request): View
     {

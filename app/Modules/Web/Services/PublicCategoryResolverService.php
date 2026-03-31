@@ -13,8 +13,7 @@ class PublicCategoryResolverService
     public function __construct(
         private readonly SeoResolverContract $seoResolver,
         private readonly PublicResponseSupportService $responseSupport,
-    ) {
-    }
+    ) {}
 
     public function render(string $locale, Category $category, CategoryTranslation $translation): Response
     {

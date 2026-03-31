@@ -16,8 +16,7 @@ class BookingReservationService
     public function __construct(
         private readonly BookingSettingsService $settings,
         private readonly BookingWebhookService $webhooks,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload

@@ -12,11 +12,10 @@ class ResolvedChromeViewModelFactory
     public function __construct(
         private readonly SiteChromeSettingsService $siteChromeSettings,
         private readonly Request $request,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $viewData
+     * @param  array<string, mixed>  $viewData
      * @return array<string, mixed>
      */
     public function build(array $viewData): array
@@ -39,7 +38,7 @@ class ResolvedChromeViewModelFactory
                 'made_with' => 'SEO-first CMS на Laravel',
                 'switch_language' => 'Язык',
                 'search_submit' => 'Найти',
-              ]
+            ]
             : [
                 'home' => 'Home',
                 'blog' => 'Blog',
@@ -48,7 +47,7 @@ class ResolvedChromeViewModelFactory
                 'made_with' => 'SEO-first CMS on Laravel',
                 'switch_language' => 'Language',
                 'search_submit' => 'Search',
-              ];
+            ];
 
         $chromeHeader = is_array($siteChrome['header'] ?? null) ? $siteChrome['header'] : [];
         $chromeFooter = is_array($siteChrome['footer'] ?? null) ? $siteChrome['footer'] : [];
@@ -212,8 +211,8 @@ class ResolvedChromeViewModelFactory
     }
 
     /**
-     * @param array<int, mixed>|null $items
-     * @param array<int, string> $supportedLocales
+     * @param  array<int, mixed>|null  $items
+     * @param  array<int, string>  $supportedLocales
      * @return array<int, array<string, mixed>>
      */
     private function mapChromeLinks(?array $items, string $locale, array $supportedLocales, string $blogPrefix, string $categoryPrefix): array
@@ -251,8 +250,8 @@ class ResolvedChromeViewModelFactory
     }
 
     /**
-     * @param mixed $target
-     * @param array<int, string> $supportedLocales
+     * @param  mixed  $target
+     * @param  array<int, string>  $supportedLocales
      * @return array<string, mixed>|null
      */
     private function resolveEntityLink($target, string $requestedLocale, array $supportedLocales, string $blogPrefix, string $categoryPrefix): ?array
@@ -345,7 +344,7 @@ class ResolvedChromeViewModelFactory
     }
 
     /**
-     * @param array<string, mixed> $link
+     * @param  array<string, mixed>  $link
      * @return array<string, mixed>
      */
     private function decorateLink(array $link): array
@@ -366,7 +365,7 @@ class ResolvedChromeViewModelFactory
     }
 
     /**
-     * @param array<string, mixed> $link
+     * @param  array<string, mixed>  $link
      * @return array<string, mixed>
      */
     private function decorateNavLink(

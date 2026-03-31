@@ -9,8 +9,7 @@ class ThemeSettingsService
     public function __construct(
         private readonly ThemeCatalogService $catalog,
         private readonly ThemeSettingStore $store,
-    ) {
-    }
+    ) {}
 
     private ?array $cachedResolvedTheme = null;
 
@@ -88,7 +87,7 @@ class ThemeSettingsService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
     public function normalizeForSave(array $input): array
@@ -117,7 +116,7 @@ class ThemeSettingsService
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function save(array $payload, ?int $actorId = null): ThemeSetting
     {

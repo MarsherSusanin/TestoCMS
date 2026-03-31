@@ -14,8 +14,7 @@ class PageController extends Controller
     public function __construct(
         private readonly PageContentServiceContract $pages,
         private readonly PageWorkflowServiceContract $pageWorkflow,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -141,5 +140,4 @@ class PageController extends Controller
             'translations.*.structured_data' => 'nullable|array',
         ]);
     }
-
 }

@@ -18,8 +18,7 @@ class PageWorkflowService implements PageWorkflowServiceContract
         private readonly AuditLogger $auditLogger,
         private readonly PageCacheService $pageCacheService,
         private readonly SlugResolverService $slugResolver,
-    ) {
-    }
+    ) {}
 
     public function destroy(Page $page, Request $request, array $context = []): void
     {
@@ -129,7 +128,7 @@ class PageWorkflowService implements PageWorkflowServiceContract
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
     private function resolveScheduleAuditContext(PublishSchedule $schedule, string $action, string $dueAt, array $context): array

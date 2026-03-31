@@ -41,7 +41,7 @@ class UserManagementService
     }
 
     /**
-     * @param array<int, string> $requestedRoles
+     * @param  array<int, string>  $requestedRoles
      * @return array<int, string>
      */
     public function normalizeAndValidateRoleAssignment(User $actor, array $requestedRoles): array
@@ -73,8 +73,8 @@ class UserManagementService
     }
 
     /**
-     * @param array<string, mixed> $data
-     * @param array<int, string> $roles
+     * @param  array<string, mixed>  $data
+     * @param  array<int, string>  $roles
      */
     public function createUser(User $actor, array $data, array $roles): User
     {
@@ -102,8 +102,8 @@ class UserManagementService
     }
 
     /**
-     * @param array<string, mixed> $data
-     * @param array<int, string> $roles
+     * @param  array<string, mixed>  $data
+     * @param  array<int, string>  $roles
      */
     public function updateUser(User $actor, User $target, array $data, array $roles): User
     {
@@ -159,7 +159,7 @@ class UserManagementService
     }
 
     /**
-     * @param array<int, string> $nextRoles
+     * @param  array<int, string>  $nextRoles
      */
     private function assertSuperadminGuards(User $target, array $nextRoles, string $nextStatus): void
     {

@@ -27,8 +27,7 @@ class ServiceController extends Controller
         private readonly BookingCatalogService $catalog,
         private readonly BookingSlotProjectionService $projection,
         private readonly AuditLogger $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

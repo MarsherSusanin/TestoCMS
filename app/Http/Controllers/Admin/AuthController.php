@@ -12,8 +12,7 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly LocalBaselineBootstrapService $localBaselineBootstrap,
-    ) {
-    }
+    ) {}
 
     public function showLogin()
     {
@@ -37,6 +36,7 @@ class AuthController extends Controller
 
         if (! Auth::attempt($credentials, (bool) $request->boolean('remember'))) {
             $isEn = str_starts_with((string) app()->getLocale(), 'en');
+
             return back()->withErrors([
                 'email' => $isEn ? 'Invalid email or password.' : 'Неверный email или пароль.',
             ])->onlyInput('email');

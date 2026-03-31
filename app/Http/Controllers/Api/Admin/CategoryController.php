@@ -18,8 +18,7 @@ class CategoryController extends Controller
         private readonly ContentRevisionServiceContract $revisionService,
         private readonly AuditLogger $auditLogger,
         private readonly PageCacheService $pageCacheService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -130,7 +129,7 @@ class CategoryController extends Controller
     }
 
     /**
-     * @param array<int, array<string, mixed>> $translations
+     * @param  array<int, array<string, mixed>>  $translations
      */
     private function upsertTranslations(Category $category, array $translations): void
     {

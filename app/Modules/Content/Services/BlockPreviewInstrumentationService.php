@@ -5,8 +5,8 @@ namespace App\Modules\Content\Services;
 class BlockPreviewInstrumentationService
 {
     /**
-     * @param array<string, mixed> $node
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $context
      */
     public function wrapLeafNode(string $html, array $node, array $context): string
     {
@@ -25,8 +25,8 @@ class BlockPreviewInstrumentationService
     }
 
     /**
-     * @param array<string, mixed> $node
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $node
+     * @param  array<string, mixed>  $context
      */
     public function nodeAttributes(array $node, string $type, array $context): string
     {
@@ -43,9 +43,9 @@ class BlockPreviewInstrumentationService
     }
 
     /**
-     * @param array<string, mixed> $ownerNode
-     * @param array<string, mixed> $column
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $ownerNode
+     * @param  array<string, mixed>  $column
+     * @param  array<string, mixed>  $context
      */
     public function columnAttributes(array $ownerNode, array $column, array $context): string
     {
@@ -68,7 +68,7 @@ class BlockPreviewInstrumentationService
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function isEnabled(array $context): bool
     {

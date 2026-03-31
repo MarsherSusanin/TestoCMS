@@ -12,13 +12,11 @@ class PostTranslationNormalizer
     use LocalizedContentHelpers;
     use TranslationInputMappingHelpers;
 
-    public function __construct(private readonly PostContentRendererService $contentRenderer)
-    {
-    }
+    public function __construct(private readonly PostContentRendererService $contentRenderer) {}
 
     /**
-     * @param array<int|string, mixed> $translationsInput
-     * @param array<string, mixed> $options
+     * @param  array<int|string, mixed>  $translationsInput
+     * @param  array<string, mixed>  $options
      * @return array<string, array<string, mixed>>
      */
     public function normalize(array $translationsInput, array $options = []): array

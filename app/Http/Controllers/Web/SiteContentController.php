@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SiteContentController extends Controller
 {
-    public function __construct(private readonly LocalizedSiteRouterService $router)
-    {
-    }
+    public function __construct(private readonly LocalizedSiteRouterService $router) {}
 
     public function __invoke(Request $request, string $locale, ?string $slug = null): Response
     {

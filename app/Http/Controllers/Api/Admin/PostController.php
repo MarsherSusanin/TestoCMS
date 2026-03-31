@@ -15,8 +15,7 @@ class PostController extends Controller
     public function __construct(
         private readonly PostContentServiceContract $posts,
         private readonly PostWorkflowServiceContract $postWorkflow,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -160,5 +159,4 @@ class PostController extends Controller
 
         return $validated;
     }
-
 }

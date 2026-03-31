@@ -14,9 +14,7 @@ class LocationController extends Controller
 {
     use EnsuresBookingPermissions;
 
-    public function __construct(private readonly AuditLogger $audit)
-    {
-    }
+    public function __construct(private readonly AuditLogger $audit) {}
 
     public function index(Request $request): View
     {

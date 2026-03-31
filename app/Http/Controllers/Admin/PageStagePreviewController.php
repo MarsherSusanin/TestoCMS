@@ -19,8 +19,7 @@ class PageStagePreviewController extends Controller
         private readonly PageContentServiceContract $pages,
         private readonly ThemeSettingsService $themeSettings,
         private readonly SiteChromeSettingsService $siteChromeSettings,
-    ) {
-    }
+    ) {}
 
     public function render(Request $request): Response
     {

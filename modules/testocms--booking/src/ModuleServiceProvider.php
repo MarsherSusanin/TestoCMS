@@ -3,11 +3,10 @@
 namespace TestoCms\Booking;
 
 use App\Modules\Extensibility\Registry\ModuleWidgetRegistry;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
 use TestoCms\Booking\Console\BookingMaintenanceCommand;
 use TestoCms\Booking\Services\BookingWidgetCatalogService;
-use TestoCms\Booking\Services\BookingWidgetRenderService;
 
 class ModuleServiceProvider extends ServiceProvider
 {

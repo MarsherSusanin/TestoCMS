@@ -5,6 +5,7 @@ namespace App\Modules\Auth\Services;
 class ApiAbilityCatalogService
 {
     public const SURFACE_ADMIN = 'admin';
+
     public const SURFACE_CONTENT = 'content';
 
     /**
@@ -138,4 +139,3 @@ class ApiAbilityCatalogService
         return array_values(array_unique($all));
     }
 }
-

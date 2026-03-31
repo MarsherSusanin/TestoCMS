@@ -11,9 +11,7 @@ use Illuminate\View\View;
 
 class SeoSettingsController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger)
-    {
-    }
+    public function __construct(private readonly AuditLogger $auditLogger) {}
 
     public function edit(Request $request): View
     {
@@ -37,8 +35,8 @@ class SeoSettingsController extends Controller
         $settings->update($validated);
 
         $this->auditLogger->log('admin.settings.seo.update', null, [
-            'has_custom_robots' => !empty($validated['robots_txt_custom']),
-            'has_custom_llms' => !empty($validated['llms_txt_intro']),
+            'has_custom_robots' => ! empty($validated['robots_txt_custom']),
+            'has_custom_llms' => ! empty($validated['llms_txt_intro']),
         ], $request);
 
         return redirect()

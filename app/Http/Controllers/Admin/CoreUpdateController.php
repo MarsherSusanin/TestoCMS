@@ -17,8 +17,7 @@ class CoreUpdateController extends Controller
     public function __construct(
         private readonly CoreUpdateService $updates,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

@@ -19,8 +19,7 @@ class ModuleManagerService
         private readonly EnabledModulePublicRoutesLoader $publicRoutesLoader,
         private readonly ModuleSecuritySyncService $moduleSecuritySync,
         private readonly PageCacheService $pageCacheService,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<int, InstalledModuleDto>

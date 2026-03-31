@@ -18,8 +18,7 @@ class RoleController extends Controller
     public function __construct(
         private readonly RoleManagementService $roles,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {

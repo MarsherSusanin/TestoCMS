@@ -5,14 +5,14 @@ namespace TestoCms\Booking\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Modules\Ops\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use TestoCms\Booking\Controllers\Admin\Concerns\EnsuresBookingPermissions;
 use TestoCms\Booking\Models\BookingWebhookDelivery;
 use TestoCms\Booking\Models\BookingWebhookEndpoint;
-use TestoCms\Booking\Services\BookingWebhookEndpointService;
 use TestoCms\Booking\Services\BookingSettingsService;
+use TestoCms\Booking\Services\BookingWebhookEndpointService;
 use TestoCms\Booking\Services\BookingWebhookService;
 
 class SettingsController extends Controller
@@ -24,8 +24,7 @@ class SettingsController extends Controller
         private readonly BookingWebhookService $webhooks,
         private readonly BookingWebhookEndpointService $endpointManager,
         private readonly AuditLogger $audit,
-    ) {
-    }
+    ) {}
 
     public function edit(Request $request): View
     {

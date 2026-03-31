@@ -9,7 +9,7 @@ class BlockSchemaValidator
     private const MAX_DEPTH = 3;
 
     /**
-     * @param array<int, array<string, mixed>> $blocks
+     * @param  array<int, array<string, mixed>>  $blocks
      */
     public function validateOrFail(array $blocks): void
     {
@@ -24,8 +24,8 @@ class BlockSchemaValidator
     }
 
     /**
-     * @param array<int, mixed> $nodes
-     * @param array<int, string> $errors
+     * @param  array<int, mixed>  $nodes
+     * @param  array<int, string>  $errors
      */
     private function validateNodes(array $nodes, string $path, int $depth, bool $insideColumn, array &$errors): void
     {
@@ -33,6 +33,7 @@ class BlockSchemaValidator
 
         if ($depth > self::MAX_DEPTH) {
             $errors[] = "Block schema path {$path} exceeds maximum nesting depth (".self::MAX_DEPTH.').';
+
             return;
         }
 
@@ -41,35 +42,41 @@ class BlockSchemaValidator
 
             if (! is_array($node)) {
                 $errors[] = "Block schema path {$nodePath} must be an object.";
+
                 continue;
             }
 
             $type = $node['type'] ?? null;
             if (! is_string($type) || $type === '') {
                 $errors[] = "Block schema path {$nodePath} must contain a non-empty type.";
+
                 continue;
             }
 
             if (! in_array($type, $allowedTypes, true)) {
                 $errors[] = "Block schema path {$nodePath} has unsupported type '{$type}'.";
+
                 continue;
             }
 
             $data = $node['data'] ?? [];
             if (! is_array($data)) {
                 $errors[] = "Block schema path {$nodePath}.data must be an object.";
+
                 continue;
             }
 
             if ($type === 'section') {
                 if ($insideColumn) {
                     $errors[] = "Block schema path {$nodePath} cannot contain 'section' inside a column.";
+
                     continue;
                 }
 
                 $children = $node['children'] ?? null;
                 if (! is_array($children)) {
                     $errors[] = "Block schema path {$nodePath}.children must be an array.";
+
                     continue;
                 }
 
@@ -87,12 +94,14 @@ class BlockSchemaValidator
                 }
 
                 $this->validateNodes($children, "{$nodePath}.children", $depth + 1, false, $errors);
+
                 continue;
             }
 
             if ($type === 'columns') {
                 if ($insideColumn) {
                     $errors[] = "Block schema path {$nodePath} cannot contain nested 'columns' inside a column.";
+
                     continue;
                 }
 
@@ -108,6 +117,7 @@ class BlockSchemaValidator
                 $columns = $data['columns'] ?? null;
                 if (! is_array($columns)) {
                     $errors[] = "Block schema path {$nodePath}.data.columns must be an array.";
+
                     continue;
                 }
 
@@ -121,6 +131,7 @@ class BlockSchemaValidator
                     $colPath = "{$nodePath}.data.columns[{$colIndex}]";
                     if (! is_array($column)) {
                         $errors[] = "Block schema path {$colPath} must be an object.";
+
                         continue;
                     }
 
@@ -133,6 +144,7 @@ class BlockSchemaValidator
                     $children = $column['children'] ?? null;
                     if (! is_array($children)) {
                         $errors[] = "Block schema path {$colPath}.children must be an array.";
+
                         continue;
                     }
 
@@ -161,6 +173,7 @@ class BlockSchemaValidator
                 if (array_key_exists('children', $node)) {
                     $errors[] = "Block schema path {$nodePath} type '{$type}' does not support children.";
                 }
+
                 continue;
             }
 

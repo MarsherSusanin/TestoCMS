@@ -5,7 +5,6 @@ namespace App\Modules\Content\Services;
 class PageLayoutNormalizer
 {
     /**
-     * @param mixed $nodes
      * @return array<int, array<string, mixed>>
      */
     public function normalize(mixed $nodes, bool $seedEmptySection = true): array
@@ -32,7 +31,7 @@ class PageLayoutNormalizer
     }
 
     /**
-     * @param array<int, mixed> $nodes
+     * @param  array<int, mixed>  $nodes
      */
     public function containsStructuredLayout(array $nodes): bool
     {
@@ -81,7 +80,7 @@ class PageLayoutNormalizer
     }
 
     /**
-     * @param array<int, array<string, mixed>> $leafNodes
+     * @param  array<int, array<string, mixed>>  $leafNodes
      * @return array<string, mixed>
      */
     private function wrapLeafNodesInSection(array $leafNodes): array
@@ -90,7 +89,7 @@ class PageLayoutNormalizer
     }
 
     /**
-     * @param array<int, array<string, mixed>> $children
+     * @param  array<int, array<string, mixed>>  $children
      * @return array<string, mixed>
      */
     private function makeSection(array $children): array

@@ -62,4 +62,3 @@ class BookingBooking extends Model
         return $this->belongsTo(BookingSlotOccurrence::class, 'slot_occurrence_id');
     }
 }
-

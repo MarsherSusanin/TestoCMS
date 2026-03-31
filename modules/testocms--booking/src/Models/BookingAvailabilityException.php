@@ -30,4 +30,3 @@ class BookingAvailabilityException extends Model
         return $this->belongsTo(BookingService::class, 'service_id');
     }
 }
-

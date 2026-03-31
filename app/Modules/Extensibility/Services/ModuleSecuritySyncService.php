@@ -83,7 +83,6 @@ class ModuleSecuritySyncService
     }
 
     /**
-     * @param  mixed  $permissions
      * @return array<int, string>
      */
     private function normalizePermissionList(mixed $permissions): array

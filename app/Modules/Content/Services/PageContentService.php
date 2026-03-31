@@ -21,8 +21,7 @@ class PageContentService implements PageContentServiceContract
         private readonly SlugUniquenessService $slugUniqueness,
         private readonly PageTranslationPersisterService $translationPersister,
         private readonly ContentMutationFinalizerService $mutationFinalizer,
-    ) {
-    }
+    ) {}
 
     public function createFromValidated(array $validated, User $actor, array $context = []): Page
     {
@@ -147,7 +146,7 @@ class PageContentService implements PageContentServiceContract
     }
 
     /**
-     * @param array<string, mixed>|null $customCode
+     * @param  array<string, mixed>|null  $customCode
      * @return array<string, mixed>|null
      */
     public function prepareCustomCode(?array $customCode, ?User $actor): ?array

@@ -43,4 +43,3 @@ class BookingAvailabilityRule extends Model
         return $this->belongsTo(BookingResource::class, 'resource_id');
     }
 }
-

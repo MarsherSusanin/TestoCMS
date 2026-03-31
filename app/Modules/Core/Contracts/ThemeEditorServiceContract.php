@@ -13,7 +13,7 @@ interface ThemeEditorServiceContract
     public function editData(Request $request): array;
 
     /**
-     * @param array<string, mixed> $validated
+     * @param  array<string, mixed>  $validated
      */
     public function save(array $validated, Request $request): ThemeSetting;
 

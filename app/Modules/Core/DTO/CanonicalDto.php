@@ -4,9 +4,7 @@ namespace App\Modules\Core\DTO;
 
 class CanonicalDto
 {
-    public function __construct(public string $url)
-    {
-    }
+    public function __construct(public string $url) {}
 
     /**
      * @return array<string, string>

@@ -14,8 +14,7 @@ class ThemeEditorService implements ThemeEditorServiceContract
         private readonly ThemeSettingsService $themeSettings,
         private readonly PageCacheService $pageCacheService,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function editData(Request $request): array
     {
@@ -69,7 +68,7 @@ class ThemeEditorService implements ThemeEditorServiceContract
     }
 
     /**
-     * @param array<string, mixed> $theme
+     * @param  array<string, mixed>  $theme
      * @return array<string, mixed>
      */
     private function currentThemeFromRequest(Request $request, array $theme): array

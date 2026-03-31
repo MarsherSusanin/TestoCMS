@@ -16,8 +16,7 @@ class SiteChromeEditorService implements SiteChromeEditorServiceContract
         private readonly ChromeLinkTargetCatalogService $linkTargetCatalog,
         private readonly PageCacheService $pageCacheService,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function editData(Request $request): array
     {

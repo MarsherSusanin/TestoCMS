@@ -3,6 +3,22 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/marsherSusanin/TestoCMS/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/marsherSusanin/TestoCMS/ci.yml?branch=main&label=build"></a>
+  <a href="https://www.php.net/releases/8.2/en.php"><img alt="PHP 8.2+" src="https://img.shields.io/badge/php-8.2%2B-777BB4?logo=php&logoColor=white"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/marsherSusanin/TestoCMS"></a>
+  <a href="docs/docker-vps.md"><img alt="Docker / GHCR" src="https://img.shields.io/badge/docker-GHCR%20images-2496ED?logo=docker&logoColor=white"></a>
+  <a href="docs/deployment.md"><img alt="Platform" src="https://img.shields.io/badge/platform-linux%20%7C%20macOS%20%7C%20windows-4B5563"></a>
+</p>
+
+<p align="center">
+  <a href="docs/shared-hosting-deploy.md"><img alt="Shared hosting" src="https://img.shields.io/badge/shared%20hosting-first-16A34A"></a>
+  <a href="docs/deployment.md"><img alt="Self-hosted" src="https://img.shields.io/badge/self--hosted-yes-15803D"></a>
+  <a href="https://opensource.org/licenses/Apache-2.0"><img alt="Open source" src="https://img.shields.io/badge/open%20source-yes-DC2626"></a>
+  <a href="https://laravel.com"><img alt="Laravel 11" src="https://img.shields.io/badge/laravel-11-F55247?logo=laravel&logoColor=white"></a>
+  <a href="openapi/openapi.yaml"><img alt="API" src="https://img.shields.io/badge/api-openapi-0F766E"></a>
+</p>
+
+<p align="center">
   Modern, SEO-first CMS built on Laravel 11 with a modular monolith architecture.
 </p>
 

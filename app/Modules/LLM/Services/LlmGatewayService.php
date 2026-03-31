@@ -10,15 +10,12 @@ use Throwable;
 class LlmGatewayService
 {
     /**
-     * @param array<string, LlmProviderContract> $providers
+     * @param  array<string, LlmProviderContract>  $providers
      */
-    public function __construct(private readonly array $providers)
-    {
-    }
+    public function __construct(private readonly array $providers) {}
 
     /**
-     * @param array<string, mixed> $payload
-     *
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     public function generate(string $operation, array $payload, ?int $userId = null): array
@@ -84,8 +81,7 @@ class LlmGatewayService
     }
 
     /**
-     * @param array<string, mixed> $payload
-     *
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function sanitizePayload(array $payload): array

@@ -32,4 +32,3 @@ class BookingLocation extends Model
         return $this->hasMany(BookingResource::class, 'location_id');
     }
 }
-

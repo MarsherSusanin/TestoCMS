@@ -71,4 +71,3 @@ class BookingCatalogService
         return $translations->first();
     }
 }
-

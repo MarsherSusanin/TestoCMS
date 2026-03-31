@@ -26,8 +26,7 @@ class ModuleManifestDto
         public readonly array $capabilities,
         public readonly ?string $docsUrl,
         public readonly array $raw,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

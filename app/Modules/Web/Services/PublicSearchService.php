@@ -15,8 +15,7 @@ class PublicSearchService
     public function __construct(
         private readonly SiteChromeSettingsService $siteChromeSettings,
         private readonly PublicResponseSupportService $responseSupport,
-    ) {
-    }
+    ) {}
 
     public function render(Request $request, string $locale): Response
     {

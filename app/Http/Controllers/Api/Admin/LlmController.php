@@ -23,8 +23,7 @@ class LlmController extends Controller
         private readonly BlockRendererContract $blockRenderer,
         private readonly ContentRevisionServiceContract $revisionService,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function generatePost(Request $request): JsonResponse
     {
@@ -163,7 +162,7 @@ class LlmController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $output
+     * @param  array<string, mixed>  $output
      */
     private function extractText(array $output): string
     {

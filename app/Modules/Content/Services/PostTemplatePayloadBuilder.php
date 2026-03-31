@@ -10,12 +10,10 @@ class PostTemplatePayloadBuilder
 {
     use LocalizedContentHelpers;
 
-    public function __construct(private readonly SlugUniquenessService $slugUniqueness)
-    {
-    }
+    public function __construct(private readonly SlugUniquenessService $slugUniqueness) {}
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     public function normalizePayload(array $payload): array

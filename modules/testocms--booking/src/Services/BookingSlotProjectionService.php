@@ -12,9 +12,7 @@ use TestoCms\Booking\Models\BookingSlotOccurrence;
 
 class BookingSlotProjectionService
 {
-    public function __construct(private readonly BookingSettingsService $settings)
-    {
-    }
+    public function __construct(private readonly BookingSettingsService $settings) {}
 
     public function rebuildService(BookingService $service): int
     {
@@ -63,11 +61,13 @@ class BookingSlotProjectionService
                     while ($slotStart->addMinutes($duration)->lessThanOrEqualTo($windowEnd)) {
                         if ($slotStart->lessThan(CarbonImmutable::now($timezone)->addMinutes($leadMinutes))) {
                             $slotStart = $slotStart->addMinutes($step);
+
                             continue;
                         }
 
                         if ($this->isBlockedByException($service, $rule, $slotStart, $slotStart->addMinutes($duration))) {
                             $slotStart = $slotStart->addMinutes($step);
+
                             continue;
                         }
 

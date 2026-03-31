@@ -27,7 +27,7 @@ trait LocalizedContentHelpers
     }
 
     /**
-     * @param iterable<int, object> $translations
+     * @param  iterable<int, object>  $translations
      * @return array<string, object>
      */
     protected function translationsByLocale(iterable $translations): array
@@ -44,8 +44,8 @@ trait LocalizedContentHelpers
     }
 
     /**
-     * @param array<string, array<string, mixed>> $translations
-     * @param array<int, string> $fields
+     * @param  array<string, array<string, mixed>>  $translations
+     * @param  array<int, string>  $fields
      */
     protected function requireDefaultLocaleTranslation(array $translations, array $fields = ['title', 'slug']): void
     {
@@ -95,7 +95,7 @@ trait LocalizedContentHelpers
     }
 
     /**
-     * @param array<string, mixed>|null $robotsInput
+     * @param  array<string, mixed>|null  $robotsInput
      * @return array<string, bool>|null
      */
     protected function normalizeRobots(?array $robotsInput): ?array
@@ -208,7 +208,7 @@ trait LocalizedContentHelpers
     }
 
     /**
-     * @param iterable<int, mixed> $items
+     * @param  iterable<int, mixed>  $items
      * @return array<int, mixed>
      */
     protected function values(iterable $items): array
@@ -217,7 +217,7 @@ trait LocalizedContentHelpers
     }
 
     /**
-     * @param array<string, array<string, mixed>> $translations
+     * @param  array<string, array<string, mixed>>  $translations
      */
     protected function assertUniqueTranslationSlugs(
         array $translations,

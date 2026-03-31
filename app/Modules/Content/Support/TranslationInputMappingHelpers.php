@@ -5,7 +5,7 @@ namespace App\Modules\Content\Support;
 trait TranslationInputMappingHelpers
 {
     /**
-     * @param array<int|string, mixed> $translationsInput
+     * @param  array<int|string, mixed>  $translationsInput
      * @return array<string, array<string, mixed>>
      */
     protected function translationsInputByLocale(array $translationsInput): array
@@ -42,8 +42,8 @@ trait TranslationInputMappingHelpers
     }
 
     /**
-     * @param array<int|string, mixed> $translationsInput
-     * @param array<string, array<string, mixed>> $inputByLocale
+     * @param  array<int|string, mixed>  $translationsInput
+     * @param  array<string, array<string, mixed>>  $inputByLocale
      * @return array<int, string>
      */
     protected function resolveLocalesForInput(array $translationsInput, array $inputByLocale): array
@@ -56,7 +56,7 @@ trait TranslationInputMappingHelpers
     }
 
     /**
-     * @param array<int|string, mixed> $translationsInput
+     * @param  array<int|string, mixed>  $translationsInput
      */
     protected function shouldRequireDefaultLocale(array $translationsInput): bool
     {

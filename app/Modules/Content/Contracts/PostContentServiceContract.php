@@ -9,31 +9,31 @@ use App\Models\User;
 interface PostContentServiceContract
 {
     /**
-     * @param array<string, mixed> $validated
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $context
      */
     public function createFromValidated(array $validated, User $actor, array $context = []): Post;
 
     /**
-     * @param array<string, mixed> $validated
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $context
      */
     public function updateFromValidated(Post $post, array $validated, User $actor, array $context = []): Post;
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function duplicate(Post $post, User $actor, array $context = []): Post;
 
     /**
-     * @param array<int|string, mixed> $translationsInput
-     * @param array<string, mixed> $options
+     * @param  array<int|string, mixed>  $translationsInput
+     * @param  array<string, mixed>  $options
      * @return array<string, array<string, mixed>>
      */
     public function normalizeTranslations(array $translationsInput, array $options = []): array;
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     public function normalizeTemplatePayload(array $payload): array;

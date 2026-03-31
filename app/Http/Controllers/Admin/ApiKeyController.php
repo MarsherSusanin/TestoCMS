@@ -21,8 +21,7 @@ class ApiKeyController extends Controller
         private readonly ApiIntegrationKeyService $apiKeys,
         private readonly ApiAbilityCatalogService $abilityCatalog,
         private readonly AuditLogger $auditLogger,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -168,4 +167,3 @@ class ApiKeyController extends Controller
         abort_unless($user && ($user->hasRole('superadmin') || $user->can('settings:write')), 403);
     }
 }
-

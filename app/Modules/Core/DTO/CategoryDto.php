@@ -17,8 +17,7 @@ class CategoryDto
         public ?string $metaDescription,
         public ?string $canonicalUrl,
         public ?array $robotsDirectives,
-    ) {
-    }
+    ) {}
 
     public static function fromModels(Category $category, ?CategoryTranslation $translation): self
     {

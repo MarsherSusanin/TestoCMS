@@ -18,8 +18,7 @@ class SetupFinalizationService
         private readonly AdminProvisionerService $adminProvisioner,
         private readonly PageCacheService $pageCacheService,
         private readonly SlugResolverService $slugResolverService,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data

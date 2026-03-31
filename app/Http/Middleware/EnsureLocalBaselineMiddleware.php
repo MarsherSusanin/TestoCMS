@@ -12,8 +12,7 @@ class EnsureLocalBaselineMiddleware
 {
     public function __construct(
         private readonly LocalBaselineBootstrapService $localBaselineBootstrap,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {

@@ -43,7 +43,7 @@ class FeedController extends Controller
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, Post> $posts
+     * @param  \Illuminate\Support\Collection<int, Post>  $posts
      */
     private function renderFeed($posts, string $locale, string $title): Response
     {

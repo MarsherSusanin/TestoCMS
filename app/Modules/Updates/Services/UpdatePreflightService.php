@@ -9,11 +9,10 @@ class UpdatePreflightService
     public function __construct(
         private readonly CoreUpdateSettingsService $settings,
         private readonly CoreUpdateEnvironment $environment,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $package
+     * @param  array<string, mixed>  $package
      * @return array<string, mixed>
      */
     public function run(string $targetVersion, array $package): array
@@ -105,6 +104,7 @@ class UpdatePreflightService
                 if ((int) explode('.', $actualVersion)[0] !== $major || version_compare($actualVersion, $base, '<')) {
                     return false;
                 }
+
                 continue;
             }
 
@@ -114,6 +114,7 @@ class UpdatePreflightService
                 if (! version_compare($actualVersion, $target, $op)) {
                     return false;
                 }
+
                 continue;
             }
 

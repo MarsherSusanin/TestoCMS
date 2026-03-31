@@ -13,8 +13,7 @@ class DefaultAdminBootstrapService
 
     public function __construct(
         private readonly AdminProvisionerService $adminProvisioner,
-    ) {
-    }
+    ) {}
 
     public function ensureDefaultAdminExists(): void
     {
