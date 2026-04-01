@@ -1,6 +1,6 @@
 # TestoCMS Brand Assets
 
-The canonical public brand pack lives in `html_public/brand`.
+This directory contains the canonical public SVG brand pack derived from the selected TestoCMS toast mark concept.
 
 Files:
 
@@ -11,4 +11,4 @@ Files:
 
 The browser favicon asset lives at:
 
-- `html_public/favicon.svg`
+- `../favicon.svg`

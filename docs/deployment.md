@@ -23,6 +23,7 @@ The repository also includes a separate local Docker stack for development only.
 ### Apache
 
 - Use mod_rewrite for Laravel front controller
+- On shared hosting, treat `html_public/` as the canonical web root source and sync its contents into the host-managed `public_html/`
 - Add compression (gzip/brotli) and static asset cache headers
 
 ## Application cache
@@ -52,4 +53,5 @@ The repository also includes a separate local Docker stack for development only.
 - Generate unique `APP_KEY` and `CMS_CONTENT_API_KEY`
 - Create your own admin credentials during setup and rotate any bootstrap passwords after first login
 - Back up both uploaded files and the database before updates
+- Shared hosting profile expects `LARAVEL_PUBLIC_PATH=../public_html`
 - Treat `docker-compose.yml` as local-only and `docker-compose.vps.yml` as the Docker/VPS production recipe

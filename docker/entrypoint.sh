@@ -13,7 +13,7 @@ mkdir -p \
   storage/framework/sessions \
   storage/framework/views \
   bootstrap/cache \
-  public/modules
+  html_public/modules
 
 if [ "$ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP" = "1" ] && [ ! -f .env ] && [ -f .env.docker ]; then
   cp .env.docker .env
@@ -79,7 +79,7 @@ if [ "${AUTO_STORAGE_LINK:-1}" = "1" ]; then
   php artisan storage:link || true
 fi
 
-mkdir -p public/modules
+mkdir -p html_public/modules
 
 if [ "${AUTO_MIGRATE:-1}" = "1" ]; then
   echo "[entrypoint] running migrations"

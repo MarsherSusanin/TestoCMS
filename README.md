@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/brand/testocms-logo-readme.svg" alt="TestoCMS" width="760">
+  <img src="html_public/brand/testocms-logo-readme.svg" alt="TestoCMS" width="760">
 </p>
 
 <p align="center">
@@ -57,11 +57,12 @@ TestoCMS supports shared hosting as the primary production path, Docker on VPS a
 Recommended production path for v1.
 
 1. Download the latest `testocms-vX.Y.Z-shared-hosting.zip` from GitHub Releases.
-2. Upload and unpack it above `public_html`.
-3. Point your domain document root to the `public/` directory.
-4. Create an empty database and database user in your hosting control panel.
-5. Open the site in a browser and complete the setup wizard.
-6. Add a cron job for `php artisan schedule:run`.
+2. Upload and unpack it above `public_html` so the application lives in `~/testocms`.
+3. Copy the contents of `html_public/` into `public_html/` or make `public_html` a symlink to `~/testocms/html_public`.
+4. If the application directory is not named `testocms`, update `public_html/bootstrap_path.php` with the absolute app path.
+5. Create an empty database and database user in your hosting control panel.
+6. Open the site in a browser and complete the setup wizard.
+7. Add a cron job for `php artisan schedule:run`.
 
 > 📚 For a full step-by-step generic guide including cron jobs and optimization, see [docs/shared-hosting-deploy.md](docs/shared-hosting-deploy.md).
 
@@ -217,4 +218,4 @@ TestoCMS source code is commercially usable under the [Apache-2.0 license](LICEN
 
 The `TestoCMS` name, logo, and branding are governed separately by [TRADEMARKS.md](TRADEMARKS.md). Public forks and redistributions should preserve attribution notices and use factual wording such as `Based on TestoCMS` rather than presenting themselves as the official TestoCMS product.
 
-Official SVG brand assets used by this repository live in [`public/brand`](public/brand) together with [`public/favicon.svg`](public/favicon.svg).
+Official SVG brand assets used by this repository live in [`html_public/brand`](html_public/brand) together with [`html_public/favicon.svg`](html_public/favicon.svg).

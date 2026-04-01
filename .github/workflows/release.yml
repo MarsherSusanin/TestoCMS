@@ -57,7 +57,7 @@ jobs:
         run: |
           rm -rf node_modules
           VERSION=${GITHUB_REF#refs/tags/v}
-          PACKAGE_ROOT="${RUNNER_TEMP}/testocms-v${VERSION}-shared-hosting"
+          PACKAGE_ROOT="${RUNNER_TEMP}/testocms"
           ZIP_NAME="testocms-v${VERSION}-shared-hosting.zip"
           ZIP_PATH="${RUNNER_TEMP}/${ZIP_NAME}"
 
@@ -79,6 +79,7 @@ jobs:
             --exclude 'docker-compose.yml' \
             --exclude 'docker-compose.vps.yml' \
             --exclude 'Dockerfile' \
+            --exclude 'public/' \
             --exclude '.env.example' \
             --exclude '.env.docker.example' \
             --exclude '.env.vps.example' \
@@ -95,7 +96,7 @@ jobs:
             "$PACKAGE_ROOT/storage/framework/views" \
             "$PACKAGE_ROOT/bootstrap/cache"
 
-          (cd "${RUNNER_TEMP}" && zip -r "$ZIP_PATH" "testocms-v${VERSION}-shared-hosting")
+          (cd "${RUNNER_TEMP}" && zip -r "$ZIP_PATH" "testocms")
 
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -108,7 +109,8 @@ jobs:
           rm -rf "$UNPACK_DIR"
           mkdir -p "$UNPACK_DIR"
           unzip -q "${ZIP_PATH}" -d "$UNPACK_DIR"
-          PACKAGE_DIR="$UNPACK_DIR/testocms-v${VERSION}-shared-hosting"
+          PACKAGE_DIR="$UNPACK_DIR/testocms"
+          test -f "$PACKAGE_DIR/html_public/index.php"
           cp "$PACKAGE_DIR/.env.hosting.example" "$PACKAGE_DIR/.env"
           (cd "$PACKAGE_DIR" && php artisan key:generate --force && php artisan about > /dev/null)
 

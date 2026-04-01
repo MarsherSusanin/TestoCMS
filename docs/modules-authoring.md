@@ -104,7 +104,7 @@ class ModuleServiceProvider extends ServiceProvider
 ## 5. Routes / Views / Assets
 - Routes: храните в `routes/admin.php` и защищайте `auth`.
 - Views: регистрируйте namespace через `loadViewsFrom`.
-- Assets: файлы из `public/` модуля автоматически публикуются в `public/modules/{vendor--name}` при установке/обновлении.
+- Assets: файлы из `public/` модуля автоматически публикуются в активный public root приложения по пути `modules/{vendor--name}`. В стандартной repo-layout это `html_public/modules/{vendor--name}`.
 - `admin.nav[].icon` опционален. Если имя иконки неизвестно sidebar-реестру, интерфейс автоматически вернётся к `short_ru` / `short_en`.
 - Для глобальных публичных UI-элементов используйте `App\Modules\Extensibility\Registry\PublicChromeRegistry`. Он поддерживает зоны `head_bootstrap`, `head`, `body_start`, `header_actions`, чтобы модуль добавлял public controls без правки core theme views.
 

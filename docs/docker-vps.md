@@ -32,6 +32,7 @@ This profile uses:
 - `CMS_SEED_DEMO_CONTENT=false`
 - `QUEUE_CONNECTION=database`
 - `CACHE_STORE=file`
+- `LARAVEL_PUBLIC_PATH=html_public`
 
 ## 2. Start the stack
 
@@ -63,6 +64,7 @@ docker compose -f docker-compose.vps.yml exec app php artisan view:cache
 
 - This compose file does **not** run auto-migrate or auto-seed on boot.
 - It does **not** use source bind mounts.
+- Nginx serves `/var/www/html/html_public`, and public runtime assets land in `html_public/storage` plus `html_public/modules`.
 - Runtime state is persisted via named volumes for:
   - PostgreSQL data
   - `storage/`

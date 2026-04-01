@@ -18,22 +18,35 @@ Shared hosting — основной production path для TestoCMS v1.
 
 ### 2. Загрузка на хостинг
 
-Загрузите и распакуйте архив через SFTP/SSH в каталог **выше** `public_html`:
+Загрузите и распакуйте архив через SFTP/SSH в каталог **выше** `public_html`.
 
+Release-пакет рассчитан на такое дерево:
+
+```text
+~/testocms/     ← весь проект
+~/public_html/  ← реальный web root хостинга
 ```
-~/testocms/    ← весь проект
+
+### 3. Разместить web root в `public_html`
+
+Канонический web root проекта — `html_public/`. На shared hosting основной сценарий такой: код живёт в `~/testocms`, а содержимое `~/testocms/html_public/` попадает в `~/public_html/`.
+
+**Вариант A — Копирование / синхронизация в фиксированный `public_html` (основной сценарий):**
+
+```bash
+rsync -a ~/testocms/html_public/ ~/public_html/
 ```
 
-### 3. Настройка document root
+Если SSH недоступен, сделайте то же самое через файловый менеджер панели: копировать нужно **содержимое** `html_public/`, а не сам каталог целиком.
 
-**Вариант A — Симлинк (рекомендуется):**
+По умолчанию `public_html/index.php` автоматически ищет приложение в `../testocms`. Если вы распаковали код в другой каталог, откройте `~/public_html/bootstrap_path.php` и верните абсолютный путь к директории приложения.
+
+**Вариант Б — Симлинк, если хостинг его разрешает:**
+
 ```bash
 rm -rf ~/public_html
-ln -s ~/testocms/public ~/public_html
+ln -s ~/testocms/html_public ~/public_html
 ```
-
-**Вариант Б — Изменить document root в cPanel:**
-Если хостинг поддерживает — указать `public_html` → `~/testocms/public`
 
 ### 4. Создать базу данных
 
@@ -64,7 +77,7 @@ php artisan cms:setup
 
 Через cPanel → «SSL/TLS» → Let's Encrypt: выпустить сертификат для домена.
 
-После настройки SSL раскомментировать HSTS в `public/.htaccess`:
+После настройки SSL раскомментировать HSTS в `public_html/.htaccess`:
 ```apache
 Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 ```
@@ -82,6 +95,7 @@ Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains
 
 ```bash
 cd ~/testocms
+php artisan storage:link
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -103,10 +117,12 @@ php artisan cms:setup --redo
 
 1. Сделать бэкап БД
 2. Скачать новый shared-hosting архив из GitHub Releases
-3. Загрузить новые файлы поверх текущего релиза
-4. Через SSH:
+3. Загрузить новые файлы поверх `~/testocms`
+4. Повторно синхронизировать `~/testocms/html_public/` → `~/public_html/`
+5. Через SSH:
 ```bash
 cd ~/testocms
+php artisan storage:link
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache

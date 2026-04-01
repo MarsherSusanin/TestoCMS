@@ -39,7 +39,7 @@ services:
       - storage_data:/var/www/html/storage
       - bootstrap_cache:/var/www/html/bootstrap/cache
       - modules_data:/var/www/html/modules
-      - module_public_assets:/var/www/html/public/modules
+      - module_public_assets:/var/www/html/html_public/modules
 
   web:
     image: ${TESTOCMS_WEB_IMAGE:-ghcr.io/testocms/testocms-web:latest}
@@ -53,7 +53,7 @@ services:
       - "80:80"
     volumes:
       - storage_data:/var/www/html/storage:ro
-      - module_public_assets:/var/www/html/public/modules:ro
+      - module_public_assets:/var/www/html/html_public/modules:ro
 
   queue:
     image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
@@ -76,7 +76,7 @@ services:
       - storage_data:/var/www/html/storage
       - bootstrap_cache:/var/www/html/bootstrap/cache
       - modules_data:/var/www/html/modules
-      - module_public_assets:/var/www/html/public/modules
+      - module_public_assets:/var/www/html/html_public/modules
 
   scheduler:
     image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
@@ -99,7 +99,7 @@ services:
       - storage_data:/var/www/html/storage
       - bootstrap_cache:/var/www/html/bootstrap/cache
       - modules_data:/var/www/html/modules
-      - module_public_assets:/var/www/html/public/modules
+      - module_public_assets:/var/www/html/html_public/modules
 
 volumes:
   postgres_data:

@@ -9,22 +9,24 @@ class DeploymentProfileService
     public const DOCKER_VPS = 'docker_vps';
 
     /**
-     * @return array<string, array{label: string, description: string, queue_connection: string, cache_store: string}>
+     * @return array<string, array{label: string, description: string, queue_connection: string, cache_store: string, public_path: string}>
      */
     public function all(): array
     {
         return [
             self::SHARED_HOSTING => [
                 'label' => 'Shared hosting (рекомендуется)',
-                'description' => 'Классический PHP-хостинг с document root на public/ и cron для schedule:run.',
+                'description' => 'Классический PHP-хостинг с фиксированным public_html и cron для schedule:run.',
                 'queue_connection' => 'sync',
                 'cache_store' => 'file',
+                'public_path' => '../public_html',
             ],
             self::DOCKER_VPS => [
                 'label' => 'Docker / VPS',
                 'description' => 'Выделенный сервер с отдельными app, web, queue и scheduler сервисами.',
                 'queue_connection' => 'database',
                 'cache_store' => 'file',
+                'public_path' => 'html_public',
             ],
         ];
     }
@@ -43,7 +45,7 @@ class DeploymentProfileService
     }
 
     /**
-     * @return array{label: string, description: string, queue_connection: string, cache_store: string}
+     * @return array{label: string, description: string, queue_connection: string, cache_store: string, public_path: string}
      */
     public function resolve(?string $profile): array
     {

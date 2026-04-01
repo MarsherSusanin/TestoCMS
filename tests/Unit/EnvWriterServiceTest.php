@@ -30,6 +30,7 @@ class EnvWriterServiceTest extends TestCase
         $this->assertStringContainsString("CMS_DEPLOYMENT_PROFILE=shared_hosting\n", $content);
         $this->assertStringContainsString("QUEUE_CONNECTION=sync\n", $content);
         $this->assertStringContainsString("CACHE_STORE=file\n", $content);
+        $this->assertStringContainsString("LARAVEL_PUBLIC_PATH=../public_html\n", $content);
     }
 
     public function test_generated_env_uses_database_queue_for_docker_vps_profile(): void
@@ -56,5 +57,6 @@ class EnvWriterServiceTest extends TestCase
         $this->assertStringContainsString("CMS_DEPLOYMENT_PROFILE=docker_vps\n", $content);
         $this->assertStringContainsString("QUEUE_CONNECTION=database\n", $content);
         $this->assertStringContainsString("CACHE_STORE=file\n", $content);
+        $this->assertStringContainsString("LARAVEL_PUBLIC_PATH=html_public\n", $content);
     }
 }

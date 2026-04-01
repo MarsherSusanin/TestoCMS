@@ -45,7 +45,7 @@ On startup, `app` container automatically:
 - waits for PostgreSQL
 - runs migrations
 - runs seeders (roles/permissions/admin user + demo content for local use)
-- creates storage symlink (`public/storage`)
+- creates storage symlink (`html_public/storage`)
 
 ## 3. Open CMS
 

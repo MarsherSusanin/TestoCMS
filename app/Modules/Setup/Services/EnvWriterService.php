@@ -34,6 +34,7 @@ class EnvWriterService
             'APP_DEBUG' => 'false',
             'APP_TIMEZONE' => $data['timezone'] ?? 'UTC',
             'APP_URL' => rtrim($data['app_url'] ?? 'https://localhost', '/'),
+            'LARAVEL_PUBLIC_PATH' => $profileConfig['public_path'],
             '',
             'APP_LOCALE' => $defaultLocale,
             'APP_FALLBACK_LOCALE' => 'en',

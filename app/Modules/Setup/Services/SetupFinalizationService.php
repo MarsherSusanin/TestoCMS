@@ -42,6 +42,7 @@ class SetupFinalizationService
             $envContent = $this->envWriter->buildEnvContent($data);
             $this->envWriter->writeEnvFile($envContent);
             $this->syncProcessEnvironmentFromEnvContent($envContent);
+            $this->applyRuntimePublicPathConfiguration();
         })) {
             return $this->result($steps, $errors);
         }
@@ -204,6 +205,14 @@ class SetupFinalizationService
         }
     }
 
+    private function applyRuntimePublicPathConfiguration(): void
+    {
+        $configuredPath = trim((string) ($_ENV['LARAVEL_PUBLIC_PATH'] ?? $_SERVER['LARAVEL_PUBLIC_PATH'] ?? ''));
+        $publicPath = $configuredPath !== '' ? $configuredPath : 'html_public';
+
+        app()->usePublicPath($this->absolutePath(base_path(), $publicPath));
+    }
+
     /**
      * @param  array<string, string>  $resolved
      */
@@ -229,6 +238,21 @@ class SetupFinalizationService
 
             return $current === false ? '' : (string) $current;
         }, $value);
+    }
+
+    private function absolutePath(string $basePath, string $path): string
+    {
+        if ($this->isAbsolutePath($path)) {
+            return rtrim($path, DIRECTORY_SEPARATOR);
+        }
+
+        return rtrim($basePath.DIRECTORY_SEPARATOR.ltrim($path, DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR);
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, DIRECTORY_SEPARATOR)
+            || preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1;
     }
 
     /**
