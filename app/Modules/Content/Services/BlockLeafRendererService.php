@@ -2,6 +2,7 @@
 
 namespace App\Modules\Content\Services;
 
+use App\Models\PostTranslation;
 use App\Modules\Core\Contracts\SanitizerContract;
 use App\Modules\Extensibility\Registry\ModuleWidgetRegistry;
 
@@ -24,6 +25,7 @@ class BlockLeafRendererService
             'image' => $this->renderImage($data),
             'video_embed' => $this->renderVideo($data),
             'gallery' => $this->renderGallery($data),
+            'carousel' => $this->renderCarousel($data),
             'list' => $this->renderList($data),
             'divider' => '<hr class="cms-divider" />',
             'cta' => $this->renderCta($data),
@@ -31,7 +33,7 @@ class BlockLeafRendererService
             'module_widget' => $this->renderModuleWidget($data, $context),
             'custom_code_embed' => $this->renderCustomCodeEmbed($data),
             'html_embed_restricted' => $this->renderRestrictedHtml($data),
-            'post_listing' => $this->renderPostListing($data),
+            'post_listing' => $this->renderPostListing($data, $context),
             'faq' => $this->renderFaq($data),
             default => '',
         };
@@ -105,6 +107,97 @@ class BlockLeafRendererService
         }
 
         return '<div class="cms-gallery">'.implode('', $images).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderCarousel(array $data): string
+    {
+        $height = (string) ($data['height'] ?? 'lg');
+        if (! in_array($height, ['md', 'lg', 'xl'], true)) {
+            $height = 'lg';
+        }
+
+        $align = (string) ($data['overlay_align'] ?? 'left');
+        if (! in_array($align, ['left', 'center', 'right'], true)) {
+            $align = 'left';
+        }
+
+        $theme = (string) ($data['overlay_theme'] ?? 'gradient');
+        if (! in_array($theme, ['gradient', 'dark', 'light'], true)) {
+            $theme = 'gradient';
+        }
+
+        $autoplay = (bool) ($data['autoplay'] ?? false);
+        $interval = max(1500, min(30000, (int) ($data['interval_ms'] ?? 5000)));
+        $showArrows = ($data['show_arrows'] ?? true) !== false;
+        $showDots = ($data['show_dots'] ?? true) !== false;
+        $slides = is_array($data['slides'] ?? null) ? $data['slides'] : [];
+
+        $renderedSlides = [];
+        $dotButtons = [];
+
+        foreach ($slides as $index => $slide) {
+            if (! is_array($slide)) {
+                continue;
+            }
+
+            $src = trim((string) ($slide['src'] ?? ''));
+            if ($src === '') {
+                continue;
+            }
+
+            $title = trim((string) ($slide['title'] ?? ''));
+            $text = trim((string) ($slide['text'] ?? ''));
+            $ctaLabel = trim((string) ($slide['cta_label'] ?? ''));
+            $ctaUrl = trim((string) ($slide['cta_url'] ?? ''));
+            $targetBlank = (bool) ($slide['target_blank'] ?? false);
+            $nofollow = (bool) ($slide['nofollow'] ?? false);
+
+            $ctaHtml = '';
+            if ($ctaLabel !== '') {
+                $relParts = [];
+                if ($targetBlank) {
+                    $relParts[] = 'noopener';
+                    $relParts[] = 'noreferrer';
+                }
+                if ($nofollow) {
+                    $relParts[] = 'nofollow';
+                }
+                $targetAttr = $targetBlank ? ' target="_blank"' : '';
+                $relAttr = $relParts !== [] ? ' rel="'.e(implode(' ', array_values(array_unique($relParts)))).'"' : '';
+                $ctaHtml = '<a class="cms-cta" href="'.e($this->safeLinkUrl($ctaUrl)).'"'.$targetAttr.$relAttr.'>'.e($ctaLabel).'</a>';
+            }
+
+            $overlayParts = array_filter([
+                $title !== '' ? '<h3 class="cms-carousel-title">'.e($title).'</h3>' : '',
+                $text !== '' ? '<p class="cms-carousel-text">'.e($text).'</p>' : '',
+                $ctaHtml,
+            ]);
+            $overlayHtml = $overlayParts !== []
+                ? '<div class="cms-carousel-overlay"><div class="cms-carousel-copy">'.implode('', $overlayParts).'</div></div>'
+                : '';
+
+            $renderedSlides[] = '<article class="cms-carousel-slide'.($renderedSlides === [] ? ' is-active' : '').'" data-cms-carousel-slide>'
+                .'<img src="'.e($src).'" alt="'.e((string) ($slide['alt'] ?? '')).'" loading="lazy" />'
+                .$overlayHtml
+                .'</article>';
+            $dotButtons[] = '<button type="button" class="cms-carousel-dot'.($renderedSlides !== [] && count($renderedSlides) === 1 ? ' is-active' : '').'" data-cms-carousel-dot="'.count($dotButtons).'" aria-label="'.e($title !== '' ? $title : 'Слайд '.(count($dotButtons) + 1)).'"></button>';
+        }
+
+        if ($renderedSlides === []) {
+            return '';
+        }
+
+        $arrowsHtml = $showArrows && count($renderedSlides) > 1
+            ? '<div class="cms-carousel-arrows"><button type="button" class="cms-carousel-arrow prev" data-cms-carousel-prev aria-label="Предыдущий слайд">‹</button><button type="button" class="cms-carousel-arrow next" data-cms-carousel-next aria-label="Следующий слайд">›</button></div>'
+            : '';
+        $dotsHtml = $showDots && count($renderedSlides) > 1
+            ? '<div class="cms-carousel-dots" data-cms-carousel-dots>'.implode('', $dotButtons).'</div>'
+            : '';
+
+        return '<div class="cms-carousel cms-carousel--height-'.e($height).' cms-carousel--align-'.e($align).' cms-carousel--theme-'.e($theme).'" data-cms-carousel data-autoplay="'.($autoplay ? 'true' : 'false').'" data-interval-ms="'.e((string) $interval).'"><div class="cms-carousel-track">'.implode('', $renderedSlides).'</div>'.$arrowsHtml.$dotsHtml.'</div>';
     }
 
     /**
@@ -377,12 +470,52 @@ class BlockLeafRendererService
     /**
      * @param  array<int|string, mixed>  $data
      */
-    private function renderPostListing(array $data): string
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $context
+     */
+    private function renderPostListing(array $data, array $context = []): string
     {
-        $category = e((string) ($data['category_slug'] ?? ''));
+        $categorySlug = trim((string) ($data['category_slug'] ?? ''));
         $limit = max(1, min(100, (int) ($data['limit'] ?? 10)));
+        $locale = strtolower((string) ($context['locale'] ?? config('cms.default_locale', 'en')));
+        $postPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
 
-        return "<div class=\"cms-post-listing\" data-category=\"{$category}\" data-limit=\"{$limit}\"></div>";
+        $items = PostTranslation::query()
+            ->where('locale', $locale)
+            ->whereHas('post', function ($query) use ($categorySlug, $locale): void {
+                $query->published();
+                if ($categorySlug !== '') {
+                    $query->whereHas('categories.translations', function ($categoryQuery) use ($categorySlug, $locale): void {
+                        $categoryQuery->where('locale', $locale)->where('slug', $categorySlug);
+                    });
+                }
+            })
+            ->latest('id')
+            ->limit($limit)
+            ->get(['id', 'post_id', 'locale', 'slug', 'title', 'excerpt', 'meta_description']);
+
+        $attrs = 'data-category="'.e($categorySlug).'" data-limit="'.$limit.'"';
+
+        if ($items->isEmpty()) {
+            return '<div class="cms-post-listing" '.$attrs.'></div>';
+        }
+
+        $html = '<ul class="cms-post-listing" '.$attrs.'>';
+        foreach ($items as $translation) {
+            $url = e(url('/'.$locale.'/'.$postPrefix.'/'.$translation->slug));
+            $title = e((string) $translation->title);
+            $excerpt = trim((string) ($translation->excerpt ?: $translation->meta_description ?: ''));
+
+            $html .= '<li class="cms-post-listing__item"><a class="cms-post-listing__link" href="'.$url.'">'.$title.'</a>';
+            if ($excerpt !== '') {
+                $html .= '<p class="cms-post-listing__excerpt">'.e($excerpt).'</p>';
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+
+        return $html;
     }
 
     /**
