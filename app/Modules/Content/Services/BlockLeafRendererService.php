@@ -68,8 +68,23 @@ class BlockLeafRendererService
         $alt = e((string) ($data['alt'] ?? ''));
         $caption = (string) ($data['caption'] ?? '');
         $captionHtml = $caption !== '' ? '<figcaption>'.e($caption).'</figcaption>' : '';
+        $dimensions = $this->imageDimensionAttrs($data);
 
-        return "<figure><img src=\"{$src}\" alt=\"{$alt}\" loading=\"lazy\" />{$captionHtml}</figure>";
+        return "<figure><img src=\"{$src}\" alt=\"{$alt}\"{$dimensions} loading=\"lazy\" decoding=\"async\" />{$captionHtml}</figure>";
+    }
+
+    /**
+     * Emit intrinsic width/height attributes when known so the browser can
+     * reserve space and avoid layout shift (CLS).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function imageDimensionAttrs(array $data): string
+    {
+        $width = (int) ($data['width'] ?? 0);
+        $height = (int) ($data['height'] ?? 0);
+
+        return ($width > 0 && $height > 0) ? " width=\"{$width}\" height=\"{$height}\"" : '';
     }
 
     /**
@@ -130,7 +145,8 @@ class BlockLeafRendererService
 
             $src = e((string) ($item['src'] ?? ''));
             $alt = e((string) ($item['alt'] ?? ''));
-            $images[] = "<img src=\"{$src}\" alt=\"{$alt}\" loading=\"lazy\" />";
+            $dimensions = $this->imageDimensionAttrs($item);
+            $images[] = "<img src=\"{$src}\" alt=\"{$alt}\"{$dimensions} loading=\"lazy\" decoding=\"async\" />";
         }
 
         return '<div class="cms-gallery">'.implode('', $images).'</div>';
