@@ -104,6 +104,25 @@ class AdminAssetInlineUploadTest extends TestCase
             ->assertSee('/admin/runtime/asset-selector.js', false);
     }
 
+    public function test_upload_rejects_disallowed_file_types(): void
+    {
+        Storage::fake('public');
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $superadmin = $this->makeUser('asset-upload-reject@testocms.local', 'superadmin');
+        $token = $superadmin->createToken('asset-upload', ['assets:write'])->plainTextToken;
+
+        foreach (['evil.svg', 'shell.php', 'page.html'] as $name) {
+            $this->withHeader('Authorization', 'Bearer '.$token)
+                ->postJson('/api/admin/v1/assets', [
+                    'file' => UploadedFile::fake()->createWithContent($name, '<svg onload="alert(1)"></svg>'),
+                    'title' => 'Bad',
+                ])
+                ->assertStatus(422);
+        }
+
+        $this->assertSame(0, Asset::query()->count());
+    }
+
     private function makeUser(string $email, string $role): User
     {
         $user = User::query()->create([

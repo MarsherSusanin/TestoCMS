@@ -28,6 +28,7 @@ return [
             'image',
             'video_embed',
             'gallery',
+            'carousel',
             'list',
             'divider',
             'cta',
@@ -47,5 +48,19 @@ return [
     'content_api' => [
         'key' => env('CMS_CONTENT_API_KEY', ''),
         'rate_limit_per_minute' => (int) env('CMS_CONTENT_API_RATE_LIMIT', 120),
+    ],
+    'admin_api' => [
+        'rate_limit_per_minute' => (int) env('CMS_ADMIN_API_RATE_LIMIT', 120),
+    ],
+    'uploads' => [
+        'max_kb' => (int) env('CMS_UPLOAD_MAX_KB', 51200),
+        // Allowlist of upload extensions. Executable/markup types (php, phtml,
+        // html, svg, js, …) are deliberately excluded — SVG can carry script and
+        // is an XSS vector when served same-origin. Validated against file
+        // content via Laravel's mimes rule, so a renamed .php is rejected too.
+        'allowed_extensions' => array_values(array_filter(array_map('trim', explode(',', env(
+            'CMS_UPLOAD_ALLOWED_EXTENSIONS',
+            'jpg,jpeg,png,gif,webp,avif,bmp,ico,pdf,mp4,webm,ogg,mp3,wav,woff,woff2,ttf,otf,doc,docx,xls,xlsx,ppt,pptx,csv,txt'
+        ))))),
     ],
 ];

@@ -16,7 +16,7 @@ use App\Models\Post;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('content/v1')
-    ->middleware('content_api_key')
+    ->middleware(['content_api_key', 'throttle:content-api'])
     ->group(function (): void {
         Route::get('/posts', [ContentPostController::class, 'index']);
         Route::get('/posts/{slug}', [ContentPostController::class, 'show']);
@@ -31,7 +31,7 @@ Route::prefix('content/v1')
     });
 
 Route::prefix('admin/v1')
-    ->middleware('auth:sanctum')
+    ->middleware(['auth:sanctum', 'throttle:admin-api'])
     ->group(function (): void {
         Route::get('/posts', [AdminPostController::class, 'index'])->middleware(['can:viewAny,'.Post::class, 'ability:posts:read']);
         Route::post('/posts', [AdminPostController::class, 'store'])->middleware(['can:create,'.Post::class, 'abilities:posts:write']);
@@ -63,7 +63,7 @@ Route::prefix('admin/v1')
         Route::match(['put', 'patch'], '/assets/{asset}', [AdminAssetController::class, 'update'])->middleware(['can:update,asset', 'abilities:assets:write']);
         Route::delete('/assets/{asset}', [AdminAssetController::class, 'destroy'])->middleware(['can:delete,asset', 'abilities:assets:write']);
 
-        Route::post('/llm/generate-post', [LlmController::class, 'generatePost'])->middleware(['permission:llm:generate', 'abilities:llm:generate']);
-        Route::post('/llm/generate-page', [LlmController::class, 'generatePage'])->middleware(['permission:llm:generate', 'abilities:llm:generate']);
-        Route::post('/llm/generate-seo', [LlmController::class, 'generateSeo'])->middleware(['permission:llm:generate', 'abilities:llm:generate']);
+        Route::post('/llm/generate-post', [LlmController::class, 'generatePost'])->middleware(['permission:llm:generate', 'abilities:llm:generate', 'throttle:llm']);
+        Route::post('/llm/generate-page', [LlmController::class, 'generatePage'])->middleware(['permission:llm:generate', 'abilities:llm:generate', 'throttle:llm']);
+        Route::post('/llm/generate-seo', [LlmController::class, 'generateSeo'])->middleware(['permission:llm:generate', 'abilities:llm:generate', 'throttle:llm']);
     });
