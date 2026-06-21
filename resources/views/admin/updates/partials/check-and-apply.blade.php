@@ -37,9 +37,15 @@
 <form method="POST" action="{{ route('admin.updates.upload') }}" enctype="multipart/form-data">
     @csrf
     <div class="field">
-        <label for="release-zip">ZIP релиза ядра</label>
+        <label for="release-zip">Updater ZIP ядра</label>
         <input id="release-zip" type="file" name="release_zip" accept=".zip" required>
-        <small>Архив должен содержать <span class="mono">release.json</span> в корне пакета.</small>
+        <small>Загружайте пакет вида <span class="mono">testocms-vX.Y.Z-updater.zip</span> с <span class="mono">release.json</span> и артефактом <span class="mono">core-updater</span>. Shared-hosting ZIP нужен только для ручного деплоя.</small>
+    </div>
+    <div class="field">
+        <label for="release-sig">Подпись релиза</label>
+        <input id="release-sig" type="file" name="release_sig" accept=".sig,.txt">
+        <textarea id="release-signature" name="release_signature" rows="2" class="mono" placeholder="…или вставьте base64-подпись (.sig)"></textarea>
+        <small>Обязательно. Detached Ed25519-подпись ZIP, выданная издателем релиза. Пакет без действительной подписи к ключу из настроек отклоняется.</small>
     </div>
     <button type="submit" class="btn">Загрузить пакет</button>
 </form>

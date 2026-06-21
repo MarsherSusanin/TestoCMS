@@ -13,6 +13,7 @@ class UpdateManifestClient
         private readonly CoreUpdateSettingsService $settings,
         private readonly CoreUpdateEnvironment $environment,
         private readonly CorePackageApplier $packageApplier,
+        private readonly PackageSignatureVerifier $signatureVerifier,
     ) {}
 
     /**
@@ -59,6 +60,10 @@ class UpdateManifestClient
             throw new RuntimeException('Manifest version is empty.');
         }
 
+        if (trim((string) ($manifest['sha256'] ?? '')) === '') {
+            throw new RuntimeException('Manifest is missing a package checksum (sha256).');
+        }
+
         return $manifest;
     }
 
@@ -98,7 +103,10 @@ class UpdateManifestClient
 
         $sha256 = strtolower(trim((string) ($manifest['sha256'] ?? '')));
         $actualSha = strtolower((string) hash_file('sha256', $zipPath));
-        if ($sha256 !== '' && ! hash_equals($sha256, $actualSha)) {
+        if ($sha256 === '') {
+            throw new RuntimeException('Manifest is missing a package checksum (sha256).');
+        }
+        if (! hash_equals($sha256, $actualSha)) {
             throw new RuntimeException('Package checksum mismatch.');
         }
 
@@ -118,7 +126,7 @@ class UpdateManifestClient
             throw new RuntimeException('Public key is required for cloud update verification.');
         }
 
-        if (! $this->verifyDetachedSignature($zipPath, $signature, $publicKey)) {
+        if (! $this->signatureVerifier->verifyFile($zipPath, $signature, $publicKey)) {
             throw new RuntimeException('Cloud package signature verification failed.');
         }
 
@@ -137,43 +145,5 @@ class UpdateManifestClient
             'manifest' => $manifest,
             'downloaded_at' => now()->toIso8601String(),
         ];
-    }
-
-    private function verifyDetachedSignature(string $filePath, string $signatureRaw, string $publicKeyRaw): bool
-    {
-        if (! function_exists('sodium_crypto_sign_verify_detached')) {
-            throw new RuntimeException('Sodium extension is required for signature verification.');
-        }
-
-        $signature = $this->decodeBase64($signatureRaw);
-        $publicKey = $this->decodeBase64($publicKeyRaw);
-        if ($signature === '' || $publicKey === '') {
-            return false;
-        }
-
-        $payload = file_get_contents($filePath);
-        if ($payload === false) {
-            return false;
-        }
-
-        try {
-            return sodium_crypto_sign_verify_detached($signature, $payload, $publicKey);
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    private function decodeBase64(string $input): string
-    {
-        $normalized = trim($input);
-        $normalized = str_replace(['-', '_'], ['+', '/'], $normalized);
-        $padding = strlen($normalized) % 4;
-        if ($padding !== 0) {
-            $normalized .= str_repeat('=', 4 - $padding);
-        }
-
-        $decoded = base64_decode($normalized, true);
-
-        return $decoded !== false ? $decoded : '';
     }
 }

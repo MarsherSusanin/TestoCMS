@@ -30,9 +30,25 @@ class UpdatePreflightService
 
         foreach ($allowlist as $relative) {
             $target = $basePath.DIRECTORY_SEPARATOR.$relative;
-            $checkPath = file_exists($target) ? $target : dirname($target);
+            $checkPath = is_dir($target) ? $target : dirname($target);
             if (! is_writable($checkPath)) {
                 $issues[] = sprintf('Path is not writable: %s', $relative);
+            }
+        }
+
+        $publicRoot = $this->environment->activePublicRootPath();
+        foreach ($this->environment->managedPublicPaths() as $relative) {
+            $target = $publicRoot.DIRECTORY_SEPARATOR.$relative;
+            $checkPath = is_dir($target) ? $target : dirname($target);
+            if (! is_writable($checkPath)) {
+                $issues[] = sprintf('Managed public path is not writable: %s', $relative);
+            }
+        }
+
+        foreach (['storage', 'modules'] as $relative) {
+            $checkPath = dirname($publicRoot.DIRECTORY_SEPARATOR.$relative);
+            if (! is_writable($checkPath)) {
+                $issues[] = sprintf('Public runtime path is not writable: %s', $relative);
             }
         }
 
@@ -57,6 +73,12 @@ class UpdatePreflightService
             $issues[] = sprintf('Installed CMS version %s is below required %s', $currentVersion, $cmsFrom);
         }
 
+        // Downgrade / replay protection: never apply a package older than the
+        // currently installed version, regardless of source.
+        if ($targetVersion !== '' && version_compare($targetVersion, $currentVersion, '<')) {
+            $issues[] = sprintf('Refusing downgrade: target %s is older than installed %s', $targetVersion, $currentVersion);
+        }
+
         $enabledModules = CmsModule::query()->where('enabled', true)->get(['module_key', 'metadata']);
         foreach ($enabledModules as $module) {
             $metadata = is_array($module->metadata) ? $module->metadata : [];
@@ -69,10 +91,12 @@ class UpdatePreflightService
             }
         }
 
-        if (($package['source'] ?? '') === 'cloud') {
+        // A signing public key is mandatory for any package whose authenticity
+        // is established by signature (cloud download and manual upload alike).
+        if (in_array((string) ($package['source'] ?? ''), ['cloud', 'manual'], true)) {
             $publicKey = trim((string) ($resolved['public_key'] ?? ''));
             if ($publicKey === '') {
-                $issues[] = 'Public key is required for cloud update signature verification.';
+                $issues[] = 'Public key is required for update signature verification.';
             }
         }
 

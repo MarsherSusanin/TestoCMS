@@ -3,6 +3,8 @@
 return [
     'current_version' => env('CMS_VERSION', '1.0.0'),
 
+    'package_artifact' => env('CMS_UPDATE_PACKAGE_ARTIFACT', 'core-updater'),
+
     'default_channel' => env('CMS_UPDATE_CHANNEL', 'stable'),
 
     'mode' => env('CMS_UPDATE_MODE', 'auto'), // auto|filesystem-updater|deploy-hook
@@ -26,8 +28,10 @@ return [
     'allowlist_paths' => [
         'app',
         'bootstrap',
+        'bundled-modules',
         'config',
         'database',
+        'html_public',
         'lang',
         'public',
         'resources',
@@ -35,6 +39,17 @@ return [
         'artisan',
         'composer.json',
         'composer.lock',
+        'vendor',
+    ],
+
+    'managed_public_paths' => [
+        '.htaccess',
+        'bootstrap_path.php',
+        'index.php',
+        'favicon.ico',
+        'favicon.svg',
+        'robots.txt',
+        'brand',
     ],
 
     'forbidden_paths' => [
@@ -50,5 +65,17 @@ return [
 
     'http_timeout' => (int) env('CMS_UPDATE_HTTP_TIMEOUT', 15),
 
-    'health_check_path' => env('CMS_UPDATE_HEALTH_PATH', '/healthz'),
+    'health_check_path' => env('CMS_UPDATE_HEALTH_PATH', '/up'),
+
+    // Optional absolute URL used by the post-apply health check to verify the
+    // freshly-applied code boots over HTTP. When empty it is derived from
+    // APP_URL + health_check_path.
+    'health_check_url' => env('CMS_UPDATE_HEALTH_URL', ''),
+
+    'health_check_timeout' => (int) env('CMS_UPDATE_HEALTH_TIMEOUT', 10),
+
+    // Hard limits for update-package extraction (zip-bomb protection).
+    'max_uncompressed_mb' => (int) env('CMS_UPDATE_MAX_UNCOMPRESSED_MB', 1024),
+
+    'max_archive_entries' => (int) env('CMS_UPDATE_MAX_ARCHIVE_ENTRIES', 20000),
 ];
