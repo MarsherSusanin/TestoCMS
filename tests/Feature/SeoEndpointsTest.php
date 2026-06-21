@@ -30,7 +30,9 @@ class SeoEndpointsTest extends TestCase
 
         $this->get('/robots.txt')
             ->assertOk()
-            ->assertSee('Sitemap:', false);
+            ->assertSee('Sitemap:', false)
+            ->assertSee('User-agent: GPTBot', false)
+            ->assertSee('User-agent: ClaudeBot', false);
 
         $this->get('/sitemap-index.xml')
             ->assertOk()

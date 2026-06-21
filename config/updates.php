@@ -48,7 +48,6 @@ return [
         'index.php',
         'favicon.ico',
         'favicon.svg',
-        'robots.txt',
         'brand',
     ],
 

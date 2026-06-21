@@ -2,6 +2,18 @@
 
 return [
     'canonical_auto' => true,
+    // AI / generative-engine crawler control. Defaults to allowing them so the
+    // site can be cited by answer engines (the product's GEO goal); set
+    // SEO_ALLOW_AI_BOTS=false to emit explicit Disallow blocks for them.
+    'ai_bots' => [
+        'allow' => (bool) env('SEO_ALLOW_AI_BOTS', true),
+        'agents' => [
+            'GPTBot', 'ChatGPT-User', 'OAI-SearchBot',
+            'ClaudeBot', 'Claude-Web', 'anthropic-ai',
+            'PerplexityBot', 'Google-Extended', 'Applebot-Extended',
+            'CCBot', 'Bytespider', 'Amazonbot',
+        ],
+    ],
     'default_robots' => [
         'index' => true,
         'follow' => true,

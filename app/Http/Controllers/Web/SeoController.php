@@ -23,8 +23,23 @@ class SeoController extends Controller
         $lines = [
             'User-agent: *',
             'Allow: /',
-            'Sitemap: '.url('/sitemap-index.xml'),
+            '',
         ];
+
+        // Explicit AI / generative-engine crawler policy.
+        $aiAgents = (array) config('seo.ai_bots.agents', []);
+        $aiDirective = (bool) config('seo.ai_bots.allow', true) ? 'Allow: /' : 'Disallow: /';
+        foreach ($aiAgents as $agent) {
+            $agent = trim((string) $agent);
+            if ($agent === '') {
+                continue;
+            }
+            $lines[] = 'User-agent: '.$agent;
+            $lines[] = $aiDirective;
+            $lines[] = '';
+        }
+
+        $lines[] = 'Sitemap: '.url('/sitemap-index.xml');
 
         return response(implode("\n", $lines)."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
