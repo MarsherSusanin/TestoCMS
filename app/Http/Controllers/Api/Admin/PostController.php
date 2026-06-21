@@ -8,6 +8,7 @@ use App\Modules\Content\Contracts\PostContentServiceContract;
 use App\Modules\Content\Contracts\PostWorkflowServiceContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PostController extends Controller
@@ -129,7 +130,7 @@ class PostController extends Controller
             'status' => 'nullable|string|in:draft,review,scheduled,published,archived',
             'featured_asset_id' => 'nullable|integer|exists:assets,id',
             'translations' => 'required|array|min:1',
-            'translations.*.locale' => 'required|string|max:8',
+            'translations.*.locale' => ['required', 'string', 'max:8', Rule::in(array_map(static fn ($l) => strtolower(trim((string) $l)), (array) config('cms.supported_locales', ['en'])))],
             'translations.*.title' => 'required|string|max:255',
             'translations.*.slug' => 'required|string|max:255',
             'translations.*.content_format' => 'nullable|string|in:html,markdown',

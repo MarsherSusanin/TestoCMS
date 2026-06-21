@@ -8,6 +8,7 @@ use App\Modules\Content\Contracts\PageContentServiceContract;
 use App\Modules\Content\Contracts\PageWorkflowServiceContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PageController extends Controller
 {
@@ -129,7 +130,7 @@ class PageController extends Controller
             'page_type' => 'nullable|string|max:32',
             'custom_code' => 'nullable|array',
             'translations' => 'required|array|min:1',
-            'translations.*.locale' => 'required|string|max:8',
+            'translations.*.locale' => ['required', 'string', 'max:8', Rule::in(array_map(static fn ($l) => strtolower(trim((string) $l)), (array) config('cms.supported_locales', ['en'])))],
             'translations.*.title' => 'required|string|max:255',
             'translations.*.slug' => 'required|string|max:255',
             'translations.*.content_blocks' => 'nullable|array',

@@ -32,5 +32,13 @@ class PageTranslationPersisterService
                 ]
             );
         }
+
+        // Prune locales that are no longer part of the submitted set so a
+        // removed translation stops resolving publicly (and its slug frees up).
+        $keep = array_keys($translations);
+        if ($keep !== []) {
+            $page->translations()->whereNotIn('locale', $keep)->get()
+                ->each(static fn (PageTranslation $translation) => $translation->delete());
+        }
     }
 }

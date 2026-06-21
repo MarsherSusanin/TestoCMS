@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\I18n\Services\LocaleResolver;
 
 class HomeRedirectController extends Controller
 {
-    public function __invoke()
+    public function __invoke(LocaleResolver $localeResolver)
     {
-        $locale = config('cms.default_locale', 'en');
-
-        return redirect('/'.$locale);
+        return redirect('/'.$localeResolver->effectiveDefault());
     }
 }
