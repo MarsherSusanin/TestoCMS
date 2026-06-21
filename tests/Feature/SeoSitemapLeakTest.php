@@ -39,7 +39,7 @@ class SeoSitemapLeakTest extends TestCase
         $this->publishedPage('noindexed', translation: ['robots_directives' => ['index' => false, 'follow' => true]]);
         $this->publishedPage('embargoed', overrides: ['published_at' => now()->addDay()]);
 
-        $xml = $this->get("/sitemaps/en.xml")->assertOk()->streamedContent();
+        $xml = $this->get('/sitemaps/en.xml')->assertOk()->streamedContent();
 
         $this->assertStringContainsString('/en/visible', $xml);
         $this->assertStringNotContainsString('/en/noindexed', $xml);
@@ -54,7 +54,7 @@ class SeoSitemapLeakTest extends TestCase
         $this->publishedPage('llms-noindexed', translation: ['robots_directives' => ['index' => false, 'follow' => true]]);
         $this->publishedPage('llms-embargoed', overrides: ['published_at' => now()->addDay()]);
 
-        $txt = $this->get("/llms.txt")->assertOk()->streamedContent();
+        $txt = $this->get('/llms.txt')->assertOk()->streamedContent();
 
         $this->assertStringContainsString('/en/llms-visible', $txt);
         $this->assertStringNotContainsString('/en/llms-noindexed', $txt);
