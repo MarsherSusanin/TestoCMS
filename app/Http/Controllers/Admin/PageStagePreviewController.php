@@ -93,6 +93,7 @@ class PageStagePreviewController extends Controller
         ], [
             'require_default_locale' => false,
             'assert_unique' => false,
+            'allow_custom_code' => (bool) $request->user()?->hasAnyRole(config('cms.custom_code.advanced_roles', ['superadmin', 'admin'])),
             'render_context' => [
                 'builder_stage_preview' => true,
                 'instrument_nodes' => (bool) ($renderPayload['instrument'] ?? true),

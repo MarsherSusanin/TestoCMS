@@ -29,6 +29,7 @@ class PageContentService implements PageContentServiceContract
             'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
             'owner_id' => null,
             'assert_unique' => true,
+            'allow_custom_code' => $context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor),
         ]);
 
         $page = DB::transaction(function () use ($validated, $translations, $actor): Page {
@@ -64,6 +65,7 @@ class PageContentService implements PageContentServiceContract
             'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
             'owner_id' => (int) $page->id,
             'assert_unique' => true,
+            'allow_custom_code' => $context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor),
         ]);
 
         DB::transaction(function () use ($page, $validated, $translations, $actor): void {
@@ -127,6 +129,8 @@ class PageContentService implements PageContentServiceContract
         return $this->createFromValidated($validated, $actor, $context + [
             'require_default_locale' => false,
             'audit_action' => $context['audit_action'] ?? null,
+            // Duplicating copies already-persisted, previously-authorized content.
+            'allow_custom_code' => true,
         ]);
     }
 

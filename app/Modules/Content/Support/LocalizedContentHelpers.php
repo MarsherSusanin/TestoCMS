@@ -2,6 +2,7 @@
 
 namespace App\Modules\Content\Support;
 
+use App\Models\User;
 use App\Modules\Core\Services\SiteChromeSettingsService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -283,5 +284,54 @@ trait LocalizedContentHelpers
         ];
 
         return array_values(array_unique(array_filter($candidates, static fn (string $value): bool => $value !== '')));
+    }
+
+    /**
+     * Whether the acting user may author raw custom code — per-translation
+     * custom_head_html and the custom_code_embed / html_embed_restricted block
+     * types. Mirrors the advanced-role gate used by PageCustomCodePolicy so the
+     * raw-output XSS sinks are restricted to the same trusted roles.
+     */
+    protected function actorMayUseCustomCode(?User $actor): bool
+    {
+        $allowedRoles = config('cms.custom_code.advanced_roles', ['superadmin', 'admin']);
+
+        return (bool) $actor?->hasAnyRole($allowedRoles);
+    }
+
+    /**
+     * Recursively determine whether a normalized block tree contains any
+     * custom-code embed block type that injects author-controlled markup/scripts.
+     *
+     * @param  array<int, mixed>  $blocks
+     */
+    protected function containsRestrictedCodeBlocks(array $blocks): bool
+    {
+        foreach ($blocks as $node) {
+            if (! is_array($node)) {
+                continue;
+            }
+
+            $type = trim((string) ($node['type'] ?? ''));
+            if ($type === 'custom_code_embed' || $type === 'html_embed_restricted') {
+                return true;
+            }
+
+            if (isset($node['children']) && is_array($node['children']) && $this->containsRestrictedCodeBlocks($node['children'])) {
+                return true;
+            }
+
+            $columns = $node['data']['columns'] ?? null;
+            if (is_array($columns)) {
+                foreach ($columns as $column) {
+                    $children = is_array($column) ? ($column['children'] ?? null) : null;
+                    if (is_array($children) && $this->containsRestrictedCodeBlocks($children)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 }
