@@ -30,10 +30,7 @@ class CmsLayoutViewModelFactory
         $structuredDataJson = is_array($structuredData) && $structuredData !== []
             ? json_encode($structuredData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)
             : null;
-        $canonicalUrl = trim((string) ($seo['canonical_url'] ?? ''));
-        $canonicalHref = $canonicalUrl !== ''
-            ? (str_starts_with($canonicalUrl, 'http') ? $canonicalUrl : url($canonicalUrl))
-            : null;
+        $canonicalHref = $this->safeCanonicalHref(trim((string) ($seo['canonical_url'] ?? '')));
         $robotsDirectives = is_array($seo['robots_directives'] ?? null) ? $seo['robots_directives'] : [];
         $robotsContent = collect([
             ($robotsDirectives['index'] ?? true) ? 'index' : 'noindex',
@@ -61,5 +58,33 @@ class CmsLayoutViewModelFactory
         ];
 
         return $resolved;
+    }
+
+    /**
+     * Build a safe canonical URL. A relative value is resolved against the app
+     * URL; an absolute value pointing off-site is rewritten to the app host
+     * (keeping path + query) so a stored/overridden canonical can neither
+     * deindex the page towards another domain nor act as an open canonical.
+     */
+    private function safeCanonicalHref(string $canonicalUrl): ?string
+    {
+        if ($canonicalUrl === '') {
+            return null;
+        }
+
+        if (! str_starts_with($canonicalUrl, 'http')) {
+            return url($canonicalUrl);
+        }
+
+        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        $canonicalHost = parse_url($canonicalUrl, PHP_URL_HOST);
+        if (is_string($appHost) && is_string($canonicalHost) && strcasecmp($appHost, $canonicalHost) === 0) {
+            return $canonicalUrl;
+        }
+
+        $path = (string) (parse_url($canonicalUrl, PHP_URL_PATH) ?: '/');
+        $query = parse_url($canonicalUrl, PHP_URL_QUERY);
+
+        return url($path.(is_string($query) && $query !== '' ? '?'.$query : ''));
     }
 }
