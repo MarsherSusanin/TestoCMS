@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
 use App\Models\CategoryTranslation;
+use App\Models\Page;
 use App\Models\PageTranslation;
+use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Modules\Auth\Services\AdminProvisionerService;
 use App\Modules\Auth\Services\DefaultAdminBootstrapService;
@@ -41,6 +44,7 @@ use App\Modules\LLM\Providers\OpenAiProvider;
 use App\Modules\LLM\Services\LlmGatewayService;
 use App\Modules\SEO\Services\SeoResolverService;
 use App\Modules\Setup\Services\SetupFinalizationService;
+use App\Observers\ContentEntityCleanupObserver;
 use App\Observers\TranslationSlugObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -100,6 +104,10 @@ class CmsServiceProvider extends ServiceProvider
         PostTranslation::observe(TranslationSlugObserver::class);
         PageTranslation::observe(TranslationSlugObserver::class);
         CategoryTranslation::observe(TranslationSlugObserver::class);
+
+        Page::observe(ContentEntityCleanupObserver::class);
+        Post::observe(ContentEntityCleanupObserver::class);
+        Category::observe(ContentEntityCleanupObserver::class);
 
         View::composer('cms.layout', function ($view): void {
             $view->with('siteTheme', $this->app->make(ThemeSettingsService::class)->resolvedTheme());
