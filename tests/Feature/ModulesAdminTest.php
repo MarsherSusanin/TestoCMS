@@ -47,6 +47,31 @@ class ModulesAdminTest extends TestCase
             ->assertDontSee('&lt;h1&gt;TestoCMS Modules Authoring Guide&lt;/h1&gt;', false);
     }
 
+    public function test_settings_write_user_cannot_install_modules(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        // A non-superadmin who has been delegated settings:write may view the
+        // modules page, but must NOT be able to install/activate code.
+        $user = User::query()->create([
+            'name' => 'Ops',
+            'login' => 'ops',
+            'email' => 'ops@testocms.local',
+            'password' => Hash::make('password'),
+        ]);
+        $user->givePermissionTo('settings:write');
+
+        $this->actingAs($user)
+            ->get('/admin/modules')
+            ->assertOk();
+
+        $this->actingAs($user)
+            ->post('/admin/modules/install-bundled/testocms--booking', ['activate_now' => 1])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('cms_modules', ['module_key' => 'testocms/booking']);
+    }
+
     private function makeUser(string $email, string $role): User
     {
         $user = User::query()->create([
