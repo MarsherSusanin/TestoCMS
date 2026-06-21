@@ -28,7 +28,7 @@ class CmsLayoutViewModelFactory
         $customHeadHtml = is_string($viewData['customHeadHtml'] ?? null) ? trim((string) $viewData['customHeadHtml']) : null;
         $structuredData = $viewData['structuredData'] ?? null;
         $structuredDataJson = is_array($structuredData) && $structuredData !== []
-            ? json_encode($structuredData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ? json_encode($structuredData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)
             : null;
         $canonicalUrl = trim((string) ($seo['canonical_url'] ?? ''));
         $canonicalHref = $canonicalUrl !== ''

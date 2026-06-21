@@ -8,7 +8,7 @@
     "require": {
         "php": "^8.2",
         "ezyang/htmlpurifier": "^4.19",
-        "laravel/framework": "^11.31",
+        "laravel/framework": "^12.61.1",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.9",
         "opis/json-schema": "^2.6",
@@ -72,6 +72,9 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform": {
+            "php": "8.2.0"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
