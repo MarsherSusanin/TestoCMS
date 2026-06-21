@@ -77,12 +77,39 @@ class BlockLeafRendererService
      */
     private function renderVideo(array $data): string
     {
-        $url = (string) ($data['url'] ?? '');
-        if ($url === '') {
+        $url = trim((string) ($data['url'] ?? ''));
+        if ($url === '' || ! $this->isAllowedEmbedUrl($url)) {
             return '';
         }
 
-        return '<div class="cms-video"><iframe src="'.e($url).'" loading="lazy" referrerpolicy="no-referrer" allowfullscreen></iframe></div>';
+        return '<div class="cms-video"><iframe src="'.e($url).'" title="'.e((string) ($data['title'] ?? 'Embedded video')).'" loading="lazy" referrerpolicy="no-referrer" allowfullscreen></iframe></div>';
+    }
+
+    /**
+     * Only allow https iframe sources whose host is on the configured
+     * safe-embed allowlist, so the video block cannot embed an arbitrary
+     * (phishing / clickjacking / javascript:) origin.
+     */
+    private function isAllowedEmbedUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
+            return false;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($host === '') {
+            return false;
+        }
+
+        foreach ((array) config('cms.custom_code.safe_embed_domains', []) as $domain) {
+            $domain = strtolower(trim((string) $domain));
+            if ($domain !== '' && ($host === $domain || str_ends_with($host, '.'.$domain))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
