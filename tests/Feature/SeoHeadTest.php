@@ -58,5 +58,39 @@ class SeoHeadTest extends TestCase
         $this->assertStringContainsString('hreflang="en"', $html);
         $this->assertStringContainsString('hreflang="ru"', $html);
         $this->assertStringContainsString('hreflang="x-default"', $html);
+
+        // JSON-LD @graph wiring the previously-dead Organization/WebSite nodes
+        $this->assertStringContainsString('application/ld+json', $html);
+        $this->assertStringContainsString('"@graph"', $html);
+        $this->assertStringContainsString('"Organization"', $html);
+        $this->assertStringContainsString('"WebSite"', $html);
+    }
+
+    public function test_faq_block_emits_faqpage_structured_data(): void
+    {
+        $page = Page::query()->create([
+            'status' => 'published',
+            'page_type' => 'landing',
+            'published_at' => now(),
+        ]);
+
+        PageTranslation::query()->create([
+            'page_id' => $page->id,
+            'locale' => 'en',
+            'title' => 'FAQ Page',
+            'slug' => 'faq',
+            'content_blocks' => [[
+                'type' => 'faq',
+                'data' => ['items' => [
+                    ['question' => 'What is it?', 'answer' => 'A CMS.'],
+                ]],
+            ]],
+            'rendered_html' => '<p>faq</p>',
+        ]);
+
+        $html = $this->get('/en/faq')->assertOk()->getContent();
+
+        $this->assertStringContainsString('"FAQPage"', $html);
+        $this->assertStringContainsString('What is it?', $html);
     }
 }

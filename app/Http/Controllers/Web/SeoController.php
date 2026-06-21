@@ -73,11 +73,14 @@ class SeoController extends Controller
             // Stream Posts
             $postsCursor = PostTranslation::query()
                 ->where('locale', $locale)
-                ->whereHas('post', fn ($q) => $q->where('status', 'published')->whereNotNull('published_at'))
+                ->whereHas('post', fn ($q) => $q->published())
                 ->with('post')
                 ->cursor();
 
             foreach ($postsCursor as $translation) {
+                if (! $this->translationIsIndexable($translation)) {
+                    continue;
+                }
                 $this->echoSitemapUrl(
                     url('/'.$locale.'/'.$postPrefix.'/'.$translation->slug),
                     $translation->updated_at?->toAtomString()
@@ -87,10 +90,13 @@ class SeoController extends Controller
             // Stream Pages
             $pagesCursor = PageTranslation::query()
                 ->where('locale', $locale)
-                ->whereHas('page', fn ($q) => $q->where('status', 'published')->whereNotNull('published_at'))
+                ->whereHas('page', fn ($q) => $q->published())
                 ->cursor();
 
             foreach ($pagesCursor as $translation) {
+                if (! $this->translationIsIndexable($translation)) {
+                    continue;
+                }
                 $this->echoSitemapUrl(
                     url('/'.$locale.'/'.$translation->slug),
                     $translation->updated_at?->toAtomString()
@@ -133,13 +139,16 @@ class SeoController extends Controller
             // Stream the latest 100 posts for AI context
             $postsCursor = PostTranslation::query()
                 ->where('locale', $locale)
-                ->whereHas('post', fn ($q) => $q->where('status', 'published')->whereNotNull('published_at'))
+                ->whereHas('post', fn ($q) => $q->published())
                 ->with('post')
                 ->latest('id')
                 ->take(100)
                 ->cursor();
 
             foreach ($postsCursor as $translation) {
+                if (! $this->translationIsIndexable($translation)) {
+                    continue;
+                }
                 $url = url('/'.$locale.'/'.$postPrefix.'/'.$translation->slug);
                 $title = str_replace(["\r", "\n"], ' ', (string) $translation->title);
                 $desc = str_replace(["\r", "\n"], ' ', (string) $translation->meta_description);
@@ -154,11 +163,14 @@ class SeoController extends Controller
 
             $pagesCursor = PageTranslation::query()
                 ->where('locale', $locale)
-                ->whereHas('page', fn ($q) => $q->where('status', 'published')->whereNotNull('published_at'))
+                ->whereHas('page', fn ($q) => $q->published())
                 ->take(50)
                 ->cursor();
 
             foreach ($pagesCursor as $translation) {
+                if (! $this->translationIsIndexable($translation)) {
+                    continue;
+                }
                 $url = url('/'.$locale.'/'.$translation->slug);
                 $title = str_replace(["\r", "\n"], ' ', (string) $translation->title);
                 $desc = str_replace(["\r", "\n"], ' ', (string) $translation->meta_description);
@@ -169,6 +181,21 @@ class SeoController extends Controller
                 echo "\n";
             }
         }, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+    }
+
+    /**
+     * Whether a translation may appear in crawler-facing surfaces (sitemap,
+     * llms.txt). Honors the per-translation robots noindex directive so
+     * deliberately de-indexed content is not advertised to search/AI crawlers.
+     */
+    private function translationIsIndexable(object $translation): bool
+    {
+        $robots = $translation->robots_directives ?? null;
+        if (! is_array($robots)) {
+            return true;
+        }
+
+        return ($robots['index'] ?? true) !== false;
     }
 
     private function echoSitemapUrl(string $loc, ?string $lastmod): void

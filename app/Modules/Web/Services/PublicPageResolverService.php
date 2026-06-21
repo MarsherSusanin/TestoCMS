@@ -33,7 +33,27 @@ class PublicPageResolverService
             'structured_data' => $translation->structured_data,
         ]);
 
-        $structured = $seo['structured_data'] ?? $this->structuredDataFactory->webPage($translation, url($canonical));
+        // Respect an explicit per-translation structured_data override; otherwise
+        // assemble a JSON-LD @graph wiring Organization + WebSite(+SearchAction) +
+        // WebPage, plus FAQPage when the layout contains faq blocks.
+        if (is_array($seo['structured_data'] ?? null) && $seo['structured_data'] !== []) {
+            $structured = $seo['structured_data'];
+        } else {
+            $nodes = [
+                $this->structuredDataFactory->organization(),
+                $this->structuredDataFactory->website(),
+                $this->structuredDataFactory->webPage($translation, url($canonical)),
+            ];
+
+            $faq = $this->structuredDataFactory->faqFromBlocks(
+                is_array($translation->content_blocks) ? $translation->content_blocks : []
+            );
+            if ($faq !== null) {
+                $nodes[] = $faq;
+            }
+
+            $structured = $this->structuredDataFactory->graph($nodes);
+        }
 
         $response = response()->view('cms.page', [
             'page' => $page,
