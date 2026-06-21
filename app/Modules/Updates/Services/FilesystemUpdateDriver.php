@@ -3,6 +3,7 @@
 namespace App\Modules\Updates\Services;
 
 use App\Models\CoreBackup;
+use App\Modules\Extensibility\Services\ModulePublicAssetsPublisherService;
 use RuntimeException;
 
 class FilesystemUpdateDriver
@@ -13,6 +14,8 @@ class FilesystemUpdateDriver
         private readonly CoreBackupService $backupService,
         private readonly CorePackageApplier $packageApplier,
         private readonly CoreUpdateHealthCheckService $healthChecks,
+        private readonly ManagedPublicRootSyncService $publicRootSync,
+        private readonly ModulePublicAssetsPublisherService $publicAssetsPublisher,
     ) {}
 
     /**
@@ -26,6 +29,14 @@ class FilesystemUpdateDriver
             throw new RuntimeException('Cannot determine target version for update package.');
         }
 
+        // Copying vendor/ + running migrations in one request can exceed the
+        // default max_execution_time on shared hosting; give the apply room and
+        // do not let a dropped client connection abort a half-written update.
+        @set_time_limit(0);
+        if (function_exists('ignore_user_abort')) {
+            ignore_user_abort(true);
+        }
+
         $preflight = $this->preflight->run($targetVersion, $package);
         if (! ($preflight['ok'] ?? false)) {
             throw new RuntimeException('Preflight failed: '.implode(' | ', $preflight['issues'] ?? []));
@@ -37,8 +48,11 @@ class FilesystemUpdateDriver
         try {
             $maintenanceDown = $this->healthChecks->artisanCall('down', ['--retry' => 60], false);
             $this->packageApplier->applyArchiveToFilesystem((string) $package['zip_path']);
+            $this->publicRootSync->syncFromReleaseRoot();
             $this->healthChecks->artisanCall('migrate', ['--force' => true], true);
             $this->healthChecks->artisanCall('optimize:clear', [], false);
+            $this->healthChecks->artisanCall('storage:link', ['--force' => true], false);
+            $this->publicAssetsPublisher->republishInstalledModules();
             $this->healthChecks->artisanCall('cms:modules:cache', [], false);
             $this->healthChecks->runHealthCheck();
 
@@ -101,6 +115,10 @@ class FilesystemUpdateDriver
 
             $this->backupService->restoreSnapshot($backup);
             $this->healthChecks->artisanCall('optimize:clear', [], false);
+            $this->healthChecks->artisanCall('storage:link', ['--force' => true], false);
+            $this->publicAssetsPublisher->republishInstalledModules();
+            $this->healthChecks->artisanCall('cms:modules:cache', [], false);
+            $this->healthChecks->runHealthCheck();
 
             $backup->forceFill([
                 'status' => 'rolled_back',

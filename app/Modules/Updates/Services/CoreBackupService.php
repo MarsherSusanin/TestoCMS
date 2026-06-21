@@ -12,6 +12,7 @@ class CoreBackupService
     public function __construct(
         private readonly CoreUpdateSettingsService $settings,
         private readonly CoreUpdateEnvironment $environment,
+        private readonly ManagedPublicRootSyncService $publicRootSync,
     ) {}
 
     public function createBackup(string $fromVersion, string $toVersion, ?int $actorId = null): CoreBackup
@@ -27,6 +28,8 @@ class CoreBackupService
         $manifest = [
             'created_at' => now()->toIso8601String(),
             'paths' => [],
+            'public_root' => $this->publicRootSync->activePublicRootPath(),
+            'public_paths' => [],
         ];
 
         foreach ($this->environment->allowlistPaths() as $relative) {
@@ -62,6 +65,9 @@ class CoreBackupService
                 'type' => $type,
             ];
         }
+
+        $publicSnapshotPath = $backupPath.DIRECTORY_SEPARATOR.'public';
+        $manifest['public_paths'] = $this->publicRootSync->snapshotManagedPaths($publicSnapshotPath);
 
         $manifestPath = $backupPath.DIRECTORY_SEPARATOR.'manifest.json';
         File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -124,6 +130,13 @@ class CoreBackupService
             }
         }
 
+        if (is_array($rawManifest['public_paths'] ?? null)) {
+            $this->publicRootSync->restoreManagedPaths(
+                $backupPath.DIRECTORY_SEPARATOR.'public',
+                $rawManifest['public_paths']
+            );
+        }
+
         $this->restoreDatabaseDump(trim((string) ($backup->db_dump_path ?? '')));
     }
 
@@ -143,6 +156,18 @@ class CoreBackupService
             File::copy($dbFile, $dumpPath);
 
             return $dumpPath;
+        }
+
+        if (($connection === 'pgsql' || $connection === 'mysql') && ! $this->canRunProcess()) {
+            // Shared hosting commonly disables proc_open / omits dump binaries.
+            // Degrade to a file-only backup rather than failing the whole update,
+            // and surface a warning so the operator takes a manual DB backup.
+            report(new RuntimeException(sprintf(
+                'Skipping %s database dump for core backup: proc_open is unavailable. The update will proceed without an automatic DB backup — take a manual database backup first.',
+                $connection
+            )));
+
+            return null;
         }
 
         if ($connection === 'pgsql') {
@@ -241,8 +266,23 @@ class CoreBackupService
      * @param  array<int, string>  $command
      * @param  array<string, string>  $env
      */
+    private function canRunProcess(): bool
+    {
+        if (! function_exists('proc_open')) {
+            return false;
+        }
+
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+
+        return ! in_array('proc_open', $disabled, true);
+    }
+
     private function runProcess(array $command, array $env, string $errorPrefix): void
     {
+        if (! $this->canRunProcess()) {
+            throw new RuntimeException($errorPrefix.': proc_open is disabled in this PHP environment.');
+        }
+
         $descriptorSpec = [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
