@@ -8,7 +8,7 @@ use App\Models\PageTranslation;
 use App\Models\PostTranslation;
 use App\Models\SeoSetting;
 use Illuminate\Http\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\Cache;
 
 class SeoController extends Controller
 {
@@ -71,7 +71,7 @@ class SeoController extends Controller
         return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 
-    public function sitemapLocale(string $locale): StreamedResponse
+    public function sitemapLocale(string $locale): Response
     {
         $locale = strtolower($locale);
         if (! in_array($locale, config('cms.supported_locales', ['en']), true)) {
@@ -81,7 +81,8 @@ class SeoController extends Controller
         $postPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
         $categoryPrefix = trim((string) config('cms.category_url_prefix', 'category'), '/');
 
-        return response()->stream(function () use ($locale, $postPrefix, $categoryPrefix) {
+        $xml = Cache::remember('seo:sitemap:'.$locale, (int) config('seo.sitemap.cache_ttl', 3600), function () use ($locale, $postPrefix, $categoryPrefix): string {
+            ob_start();
             echo '<?xml version="1.0" encoding="UTF-8"?>'."\n";
             echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
 
@@ -132,15 +133,20 @@ class SeoController extends Controller
             }
 
             echo '</urlset>';
-        }, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+
+            return (string) ob_get_clean();
+        });
+
+        return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 
-    public function llmsTxt(): StreamedResponse
+    public function llmsTxt(): Response
     {
         $locale = config('cms.default_locale', 'en');
         $postPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
 
-        return response()->stream(function () use ($locale, $postPrefix) {
+        $body = Cache::remember('seo:llms:'.$locale, (int) config('seo.sitemap.cache_ttl', 3600), function () use ($locale, $postPrefix): string {
+            ob_start();
             $settings = SeoSetting::global();
 
             if (! empty($settings->llms_txt_intro)) {
@@ -195,7 +201,11 @@ class SeoController extends Controller
                 }
                 echo "\n";
             }
-        }, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+
+            return (string) ob_get_clean();
+        });
+
+        return response($body, 200, ['Content-Type' => 'text/markdown; charset=UTF-8']);
     }
 
     /**
