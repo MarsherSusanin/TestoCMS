@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\PageCrudController;
 use App\Http\Controllers\Admin\PageStagePreviewController;
 use App\Http\Controllers\Admin\PostCrudController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SeoSettingsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\UserController;
@@ -122,8 +123,8 @@ Route::prefix('admin')->group(function (): void {
         Route::get('/audit', AuditLogController::class)->name('admin.audit.index');
         Route::get('/settings', [SettingsController::class, 'edit'])->name('admin.settings.edit');
         Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
-        Route::get('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'edit'])->name('admin.settings.seo.edit');
-        Route::put('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'update'])->name('admin.settings.seo.update');
+        Route::get('/settings/seo', [SeoSettingsController::class, 'edit'])->name('admin.settings.seo.edit');
+        Route::put('/settings/seo', [SeoSettingsController::class, 'update'])->name('admin.settings.seo.update');
 
         Route::get('/updates', [CoreUpdateController::class, 'index'])->name('admin.updates.index');
         Route::get('/updates/logs', [CoreUpdateController::class, 'logs'])->name('admin.updates.logs');

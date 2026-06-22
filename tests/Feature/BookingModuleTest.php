@@ -6,6 +6,7 @@ use App\Models\CmsModule;
 use App\Models\User;
 use App\Modules\Extensibility\Registry\ModuleWidgetRegistry;
 use App\Modules\Extensibility\Services\EnabledModulePublicRoutesLoader;
+use App\Modules\Extensibility\Services\ModuleCacheService;
 use App\Modules\Extensibility\Services\ModuleInstallerService;
 use App\Modules\Extensibility\Services\ModuleRuntimeService;
 use Carbon\CarbonImmutable;
@@ -15,6 +16,7 @@ use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -26,8 +28,10 @@ use TestoCms\Booking\Models\BookingLocation;
 use TestoCms\Booking\Models\BookingResource;
 use TestoCms\Booking\Models\BookingService;
 use TestoCms\Booking\Models\BookingServiceTranslation;
+use TestoCms\Booking\Models\BookingSlotOccurrence;
 use TestoCms\Booking\Models\BookingWebhookDelivery;
 use TestoCms\Booking\Models\BookingWebhookEndpoint;
+use TestoCms\Booking\Services\BookingReservationService;
 use TestoCms\Booking\Services\BookingSlotProjectionService;
 use Tests\TestCase;
 use ZipArchive;
@@ -217,7 +221,7 @@ class BookingModuleTest extends TestCase
         $user = $this->makeUser('booking-empty-cache@testocms.local', 'superadmin');
         $this->installAndActivateBooking($user);
 
-        app(\App\Modules\Extensibility\Services\ModuleCacheService::class)->writeCacheFile([]);
+        app(ModuleCacheService::class)->writeCacheFile([]);
         $this->writeCachePayload(base_path('bootstrap/cache/cms_modules.php'), []);
         $this->assertSame([], $this->readTestingCacheModules());
         $this->assertSame([], $this->readCacheModules(base_path('bootstrap/cache/cms_modules.php')));
@@ -531,7 +535,7 @@ class BookingModuleTest extends TestCase
         $slot = $service->fresh(['translations'])?->rules()->first();
         $this->assertNotNull($slot);
 
-        $slotOccurrence = \TestoCms\Booking\Models\BookingSlotOccurrence::query()
+        $slotOccurrence = BookingSlotOccurrence::query()
             ->where('service_id', $service->id)
             ->orderBy('id')
             ->firstOrFail();
@@ -579,7 +583,7 @@ class BookingModuleTest extends TestCase
         $this->installAndActivateBooking($user);
 
         [, $service, $resources, $date] = $this->buildResourceBackedService('auto_assign');
-        $slot = \TestoCms\Booking\Models\BookingSlotOccurrence::query()
+        $slot = BookingSlotOccurrence::query()
             ->where('service_id', $service->id)
             ->orderBy('starts_at')
             ->firstOrFail();
@@ -636,7 +640,7 @@ class BookingModuleTest extends TestCase
             ->assertOk()
             ->json('data');
 
-        $booking = app(\TestoCms\Booking\Services\BookingReservationService::class)->reserveForPublicSelection(
+        $booking = app(BookingReservationService::class)->reserveForPublicSelection(
             $service,
             (int) $firstSlots[0]['id'],
             (int) $firstResource->id,
@@ -644,8 +648,8 @@ class BookingModuleTest extends TestCase
             'admin'
         );
 
-        $originalSlot = \TestoCms\Booking\Models\BookingSlotOccurrence::query()->findOrFail($booking->slot_occurrence_id);
-        $targetSlot = \TestoCms\Booking\Models\BookingSlotOccurrence::query()->findOrFail((int) $secondSlots[0]['id']);
+        $originalSlot = BookingSlotOccurrence::query()->findOrFail($booking->slot_occurrence_id);
+        $targetSlot = BookingSlotOccurrence::query()->findOrFail((int) $secondSlots[0]['id']);
 
         $this->assertSame(1, $originalSlot->reserved_count);
         $this->assertSame(0, $targetSlot->reserved_count);
@@ -998,7 +1002,7 @@ class BookingModuleTest extends TestCase
     }
 
     /**
-     * @return array{0: BookingLocation, 1: BookingService, 2: \Illuminate\Support\Collection<int, BookingResource>, 3: CarbonImmutable}
+     * @return array{0: BookingLocation, 1: BookingService, 2: Collection<int, BookingResource>, 3: CarbonImmutable}
      */
     private function buildResourceBackedService(string $resourceSelectionMode): array
     {

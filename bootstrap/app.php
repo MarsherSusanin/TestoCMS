@@ -1,8 +1,22 @@
 <?php
 
+use App\Http\Middleware\EnsureLocalBaselineMiddleware;
+use App\Http\Middleware\FullPageCacheMiddleware;
+use App\Http\Middleware\RedirectToSetupWizardMiddleware;
+use App\Http\Middleware\ResolveRedirectRuleMiddleware;
+use App\Http\Middleware\RunPublishSchedulerFallbackMiddleware;
+use App\Http\Middleware\SecurityHeadersMiddleware;
+use App\Http\Middleware\SetAdminInterfaceLocale;
+use App\Http\Middleware\SetLocaleFromRoute;
+use App\Http\Middleware\ValidateContentApiKey;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 $basePath = dirname(__DIR__);
 $argv = $_SERVER['argv'] ?? [];
@@ -25,30 +39,30 @@ $app = Application::configure(basePath: $basePath)
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(prepend: [
-            \App\Http\Middleware\RedirectToSetupWizardMiddleware::class,
+            RedirectToSetupWizardMiddleware::class,
         ]);
 
         $middleware->web(append: [
-            \App\Http\Middleware\EnsureLocalBaselineMiddleware::class,
-            \App\Http\Middleware\SetLocaleFromRoute::class,
-            \App\Http\Middleware\SetAdminInterfaceLocale::class,
-            \App\Http\Middleware\ResolveRedirectRuleMiddleware::class,
-            \App\Http\Middleware\RunPublishSchedulerFallbackMiddleware::class,
-            \App\Http\Middleware\FullPageCacheMiddleware::class,
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            EnsureLocalBaselineMiddleware::class,
+            SetLocaleFromRoute::class,
+            SetAdminInterfaceLocale::class,
+            ResolveRedirectRuleMiddleware::class,
+            RunPublishSchedulerFallbackMiddleware::class,
+            FullPageCacheMiddleware::class,
+            SecurityHeadersMiddleware::class,
         ]);
 
         $middleware->api(append: [
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            SecurityHeadersMiddleware::class,
         ]);
 
         $middleware->alias([
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
-            'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
-            'content_api_key' => \App\Http\Middleware\ValidateContentApiKey::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'abilities' => CheckAbilities::class,
+            'ability' => CheckForAnyAbility::class,
+            'content_api_key' => ValidateContentApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
