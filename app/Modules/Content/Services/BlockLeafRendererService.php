@@ -36,6 +36,10 @@ class BlockLeafRendererService
             'post_listing' => $this->renderPostListing($data, $context),
             'faq' => $this->renderFaq($data),
             'stats' => $this->renderStats($data),
+            'hero' => $this->renderHero($data),
+            'features' => $this->renderFeatures($data),
+            'testimonial' => $this->renderTestimonial($data),
+            'pricing' => $this->renderPricing($data),
             default => '',
         };
     }
@@ -619,6 +623,122 @@ class BlockLeafRendererService
         }
 
         return '<div class="cms-stats">'.implode('', $cards).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderHero(array $data): string
+    {
+        $heading = trim((string) ($data['heading'] ?? ''));
+        $subheading = trim((string) ($data['subheading'] ?? ''));
+        if ($heading === '' && $subheading === '') {
+            return '';
+        }
+
+        $align = (string) ($data['align'] ?? 'left');
+        $align = in_array($align, ['left', 'center'], true) ? $align : 'left';
+        $image = trim((string) ($data['image'] ?? ''));
+        $style = ($image !== '' && (str_starts_with($image, '/') || str_starts_with($image, 'https://')))
+            ? ' style="background-image:url(\''.e($image).'\')"'
+            : '';
+
+        $ctaLabel = trim((string) ($data['cta_label'] ?? ''));
+        $cta = $ctaLabel !== ''
+            ? '<a class="cms-cta" href="'.e($this->safeLinkUrl((string) ($data['cta_url'] ?? '#'))).'">'.e($ctaLabel).'</a>'
+            : '';
+
+        return '<section class="cms-hero cms-hero--align-'.e($align).'"'.$style.'><div class="cms-hero-copy">'
+            .($heading !== '' ? '<h1 class="cms-hero-title">'.e($heading).'</h1>' : '')
+            .($subheading !== '' ? '<p class="cms-hero-sub">'.e($subheading).'</p>' : '')
+            .$cta
+            .'</div></section>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderFeatures(array $data): string
+    {
+        $cards = [];
+        foreach ((is_array($data['items'] ?? null) ? $data['items'] : []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $title = trim((string) ($item['title'] ?? ''));
+            $text = trim((string) ($item['text'] ?? ''));
+            $icon = trim((string) ($item['icon'] ?? ''));
+            if ($title === '' && $text === '') {
+                continue;
+            }
+            $cards[] = '<div class="cms-feature">'
+                .($icon !== '' ? '<div class="cms-feature-icon">'.e($icon).'</div>' : '')
+                .'<h3 class="cms-feature-title">'.e($title).'</h3>'
+                .'<p class="cms-feature-text">'.e($text).'</p></div>';
+        }
+
+        return $cards === [] ? '' : '<div class="cms-features">'.implode('', $cards).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderTestimonial(array $data): string
+    {
+        $cards = [];
+        foreach ((is_array($data['items'] ?? null) ? $data['items'] : []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $quote = trim((string) ($item['quote'] ?? ''));
+            if ($quote === '') {
+                continue;
+            }
+            $author = trim((string) ($item['author'] ?? ''));
+            $role = trim((string) ($item['role'] ?? ''));
+            $cards[] = '<figure class="cms-testimonial"><blockquote>'.e($quote).'</blockquote><figcaption>'
+                .'<span class="cms-testimonial-author">'.e($author).'</span>'
+                .($role !== '' ? '<span class="cms-testimonial-role">'.e($role).'</span>' : '')
+                .'</figcaption></figure>';
+        }
+
+        return $cards === [] ? '' : '<div class="cms-testimonials">'.implode('', $cards).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderPricing(array $data): string
+    {
+        $cards = [];
+        foreach ((is_array($data['items'] ?? null) ? $data['items'] : []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $name = trim((string) ($item['name'] ?? ''));
+            $price = trim((string) ($item['price'] ?? ''));
+            if ($name === '' && $price === '') {
+                continue;
+            }
+            $period = trim((string) ($item['period'] ?? ''));
+            $features = '';
+            foreach ((is_array($item['features'] ?? null) ? $item['features'] : []) as $feature) {
+                $feature = trim((string) $feature);
+                if ($feature !== '') {
+                    $features .= '<li>'.e($feature).'</li>';
+                }
+            }
+            $ctaLabel = trim((string) ($item['cta_label'] ?? ''));
+            $cta = $ctaLabel !== ''
+                ? '<a class="cms-cta" href="'.e($this->safeLinkUrl((string) ($item['cta_url'] ?? '#'))).'">'.e($ctaLabel).'</a>'
+                : '';
+
+            $cards[] = '<div class="cms-price"><h3 class="cms-price-name">'.e($name).'</h3>'
+                .'<div class="cms-price-amount">'.e($price).($period !== '' ? '<span class="cms-price-period">/'.e($period).'</span>' : '').'</div>'
+                .'<ul class="cms-price-features">'.$features.'</ul>'.$cta.'</div>';
+        }
+
+        return $cards === [] ? '' : '<div class="cms-pricing">'.implode('', $cards).'</div>';
     }
 
     private function safeLinkUrl(string $url): string

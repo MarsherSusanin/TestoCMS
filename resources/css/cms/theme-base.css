@@ -1380,3 +1380,68 @@
             color: var(--muted);
             font-size: .9rem;
         }
+        .cms-hero {
+            position: relative;
+            padding: 56px 32px;
+            margin: 24px 0;
+            border-radius: 20px;
+            background-size: cover;
+            background-position: center;
+            background-color: var(--surface-strong);
+            border: 1px solid var(--line);
+        }
+        .cms-hero--align-center { text-align: center; }
+        .cms-hero-copy { position: relative; max-width: 640px; }
+        .cms-hero--align-center .cms-hero-copy { margin: 0 auto; }
+        .cms-hero-title { font-family: var(--font-heading), sans-serif; font-size: 2.4rem; line-height: 1.1; margin: 0 0 12px; }
+        .cms-hero-sub { color: var(--muted); font-size: 1.1rem; margin: 0 0 20px; }
+        .cms-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .cms-feature {
+            padding: 22px;
+            border-radius: 16px;
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+        }
+        .cms-feature-icon { font-size: 1.8rem; margin-bottom: 10px; }
+        .cms-feature-title { margin: 0 0 6px; font-size: 1.1rem; }
+        .cms-feature-text { margin: 0; color: var(--muted); }
+        .cms-testimonials {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .cms-testimonial {
+            margin: 0;
+            padding: 24px;
+            border-radius: 16px;
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+        }
+        .cms-testimonial blockquote { margin: 0 0 14px; font-size: 1.05rem; }
+        .cms-testimonial-author { display: block; font-weight: 700; }
+        .cms-testimonial-role { display: block; color: var(--muted); font-size: .9rem; }
+        .cms-pricing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .cms-price {
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            border-radius: 16px;
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+        }
+        .cms-price-name { margin: 0 0 8px; }
+        .cms-price-amount { font-family: var(--font-heading), sans-serif; font-weight: 700; font-size: 2rem; color: var(--brand); }
+        .cms-price-period { font-size: 1rem; color: var(--muted); }
+        .cms-price-features { list-style: none; padding: 0; margin: 16px 0; flex: 1; }
+        .cms-price-features li { padding: 6px 0; border-bottom: 1px solid var(--line); color: var(--muted); }

@@ -36,6 +36,10 @@
                 post_listing: 'Список постов',
                 faq: 'FAQ',
                 stats: 'Показатели',
+                hero: 'Hero',
+                features: 'Преимущества',
+                testimonial: 'Отзывы',
+                pricing: 'Тарифы',
             };
 
             const moduleWidgetFieldOptions = (options) => (Array.isArray(options) ? options : []).map((option) => ({
@@ -317,6 +321,46 @@
                     const [value, ...rest] = line.split('|');
                     return { value: (value || '').trim(), label: rest.join('|').trim() };
                 });
+            const toFeatureLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.icon || ''} | ${item?.title || ''} | ${item?.text || ''}`)
+                .join('\\n');
+            const fromFeatureLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const [icon, title, ...rest] = line.split('|');
+                    return { icon: (icon || '').trim(), title: (title || '').trim(), text: rest.join('|').trim() };
+                });
+            const toTestimonialLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.quote || ''} | ${item?.author || ''} | ${item?.role || ''}`)
+                .join('\\n');
+            const fromTestimonialLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const [quote, author, ...rest] = line.split('|');
+                    return { quote: (quote || '').trim(), author: (author || '').trim(), role: rest.join('|').trim() };
+                });
+            const toPricingLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.name || ''} | ${item?.price || ''} | ${item?.period || ''} | ${(Array.isArray(item?.features) ? item.features : []).join('; ')} | ${item?.cta_label || ''} | ${item?.cta_url || ''}`)
+                .join('\\n');
+            const fromPricingLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const parts = line.split('|').map((part) => part.trim());
+                    return {
+                        name: parts[0] || '',
+                        price: parts[1] || '',
+                        period: parts[2] || '',
+                        features: (parts[3] || '').split(';').map((f) => f.trim()).filter(Boolean),
+                        cta_label: parts[4] || '',
+                        cta_url: parts[5] || '',
+                    };
+                });
 
             const carouselHeightOptions = ['md', 'lg', 'xl'];
             const carouselAlignOptions = ['left', 'center', 'right'];
@@ -506,6 +550,14 @@
                         return { type, data: { items: [{ question: 'Вопрос?', answer: '<p>Ответ с форматированием.</p>' }] } };
                     case 'stats':
                         return { type, data: { items: [{ value: '500+', label: 'Клиентов' }, { value: '99%', label: 'Аптайм' }, { value: '24/7', label: 'Поддержка' }] } };
+                    case 'hero':
+                        return { type, data: { heading: 'Заголовок лендинга', subheading: 'Короткий оффер в одну-две строки.', cta_label: 'Начать', cta_url: '/ru/blog', image: '', align: 'left' } };
+                    case 'features':
+                        return { type, data: { items: [{ icon: '⚡', title: 'Быстро', text: 'Описание преимущества.' }, { icon: '🔒', title: 'Надёжно', text: 'Описание преимущества.' }, { icon: '🎯', title: 'Точно', text: 'Описание преимущества.' }] } };
+                    case 'testimonial':
+                        return { type, data: { items: [{ quote: 'Отличный продукт, рекомендуем.', author: 'Имя Фамилия', role: 'CEO, Компания' }] } };
+                    case 'pricing':
+                        return { type, data: { items: [{ name: 'Старт', price: '0₽', period: 'мес', features: ['Базовые функции', 'Email-поддержка'], cta_label: 'Выбрать', cta_url: '/ru/blog' }, { name: 'Pro', price: '990₽', period: 'мес', features: ['Все функции', 'Приоритетная поддержка'], cta_label: 'Выбрать', cta_url: '/ru/blog' }] } };
                     default:
                         return { type, data: {} };
                 }
@@ -616,6 +668,10 @@
                 if (type === 'faq') return `FAQ (${Array.isArray(data.items) ? data.items.length : 0})`;
                 if (type === 'gallery') return `Галерея (${Array.isArray(data.items) ? data.items.length : 0})`;
                 if (type === 'stats') return `Показатели (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'features') return `Преимущества (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'testimonial') return `Отзывы (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'pricing') return `Тарифы (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'hero') return `Hero: ${String(data.heading || '').slice(0, 40)}`;
                 if (type === 'carousel') return `Карусель (${Array.isArray(data.slides) ? data.slides.length : 0})`;
                 return typeLabels[type] || type;
             };
@@ -775,6 +831,35 @@
                     if (items.length === 0) return '';
                     const cards = items.map((item) => `<div class="cms-stat"><span class="cms-stat-value">${escapeHtml(item?.value || '')}</span><span class="cms-stat-label">${escapeHtml(item?.label || '')}</span></div>`).join('');
                     return `<div class="cms-stats">${cards}</div>`;
+                }
+                if (type === 'hero') {
+                    const cta = String(data.cta_label || '').trim() !== ''
+                        ? `<a class="cms-cta" href="${escapeHtml(data.cta_url || '#')}">${escapeHtml(data.cta_label)}</a>`
+                        : '';
+                    const bg = String(data.image || '').trim() !== '' ? ` style="background-image:url('${escapeHtml(data.image)}')"` : '';
+                    return `<section class="cms-hero cms-hero--align-${escapeHtml(String(data.align || 'left'))}"${bg}><div class="cms-hero-copy"><h1 class="cms-hero-title">${escapeHtml(data.heading || '')}</h1><p class="cms-hero-sub">${escapeHtml(data.subheading || '')}</p>${cta}</div></section>`;
+                }
+                if (type === 'features') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.title || '').trim() !== '' || String(item?.text || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => `<div class="cms-feature">${String(item?.icon || '').trim() !== '' ? `<div class="cms-feature-icon">${escapeHtml(item.icon)}</div>` : ''}<h3 class="cms-feature-title">${escapeHtml(item?.title || '')}</h3><p class="cms-feature-text">${escapeHtml(item?.text || '')}</p></div>`).join('');
+                    return `<div class="cms-features">${cards}</div>`;
+                }
+                if (type === 'testimonial') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.quote || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => `<figure class="cms-testimonial"><blockquote>${escapeHtml(item?.quote || '')}</blockquote><figcaption><span class="cms-testimonial-author">${escapeHtml(item?.author || '')}</span>${String(item?.role || '').trim() !== '' ? `<span class="cms-testimonial-role">${escapeHtml(item.role)}</span>` : ''}</figcaption></figure>`).join('');
+                    return `<div class="cms-testimonials">${cards}</div>`;
+                }
+                if (type === 'pricing') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.name || '').trim() !== '' || String(item?.price || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => {
+                        const feats = (Array.isArray(item?.features) ? item.features : []).map((f) => `<li>${escapeHtml(f)}</li>`).join('');
+                        const cta = String(item?.cta_label || '').trim() !== '' ? `<a class="cms-cta" href="${escapeHtml(item?.cta_url || '#')}">${escapeHtml(item.cta_label)}</a>` : '';
+                        return `<div class="cms-price"><h3 class="cms-price-name">${escapeHtml(item?.name || '')}</h3><div class="cms-price-amount">${escapeHtml(item?.price || '')}${String(item?.period || '').trim() !== '' ? `<span class="cms-price-period">/${escapeHtml(item.period)}</span>` : ''}</div><ul class="cms-price-features">${feats}</ul>${cta}</div>`;
+                    }).join('');
+                    return `<div class="cms-pricing">${cards}</div>`;
                 }
                 if (type === 'carousel') {
                     return previewRenderCarousel(data);
@@ -1052,6 +1137,47 @@
                         type: 'textarea',
                         rows: 5,
                         hint: 'Каждая строка: значение | подпись (например: 500+ | Клиентов)',
+                    });
+                }
+
+                if (type === 'hero') {
+                    return `
+                        <div class="block-fields-grid">
+                            ${buildField('Заголовок', 'data.heading', data.heading || '')}
+                            ${buildField('Подзаголовок', 'data.subheading', data.subheading || '', { type: 'textarea', rows: 2 })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Текст кнопки', 'data.cta_label', data.cta_label || '')}
+                            ${buildField('URL кнопки', 'data.cta_url', data.cta_url || '', { placeholder: '/ru/blog или https://...' })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Фоновое изображение (URL)', 'data.image', data.image || '', { placeholder: 'https://...' })}
+                            ${buildField('Выравнивание', 'data.align', data.align || 'left', { type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }] })}
+                        </div>
+                    `;
+                }
+
+                if (type === 'features') {
+                    return buildField('Преимущества', 'data._features_lines', toFeatureLines(data.items), {
+                        type: 'textarea',
+                        rows: 6,
+                        hint: 'Каждая строка: иконка | заголовок | текст (например: ⚡ | Быстро | Описание)',
+                    });
+                }
+
+                if (type === 'testimonial') {
+                    return buildField('Отзывы', 'data._testimonial_lines', toTestimonialLines(data.items), {
+                        type: 'textarea',
+                        rows: 6,
+                        hint: 'Каждая строка: цитата | автор | роль',
+                    });
+                }
+
+                if (type === 'pricing') {
+                    return buildField('Тарифы', 'data._pricing_lines', toPricingLines(data.items), {
+                        type: 'textarea',
+                        rows: 6,
+                        hint: 'Строка тарифа: название | цена | период | фича; фича | текст кнопки | URL',
                     });
                 }
 
@@ -1448,6 +1574,18 @@
                     }
                     if (key === '_stats_lines') {
                         data.items = fromStatsLines(rawValue);
+                        return;
+                    }
+                    if (key === '_features_lines') {
+                        data.items = fromFeatureLines(rawValue);
+                        return;
+                    }
+                    if (key === '_testimonial_lines') {
+                        data.items = fromTestimonialLines(rawValue);
+                        return;
+                    }
+                    if (key === '_pricing_lines') {
+                        data.items = fromPricingLines(rawValue);
                         return;
                     }
                     if (key === 'interval_ms') {
@@ -2128,6 +2266,12 @@
                 toGalleryLines,
                 fromStatsLines,
                 toStatsLines,
+                fromFeatureLines,
+                toFeatureLines,
+                fromTestimonialLines,
+                toTestimonialLines,
+                fromPricingLines,
+                toPricingLines,
                 fromListLines,
                 toListLines,
                 fromTableLines,

@@ -269,8 +269,11 @@ class PageTranslationNormalizer
         if ($type === 'faq') {
             return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
         }
-        if ($type === 'stats') {
+        if ($type === 'stats' || $type === 'features' || $type === 'testimonial' || $type === 'pricing') {
             return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
+        }
+        if ($type === 'hero') {
+            return trim((string) ($data['heading'] ?? '')) !== '' || trim((string) ($data['subheading'] ?? '')) !== '';
         }
         if ($type === 'video_embed') {
             return trim((string) ($data['url'] ?? '')) !== '';

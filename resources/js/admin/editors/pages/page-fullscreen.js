@@ -1853,6 +1853,25 @@
         if (type === 'stats') {
             return buildInspectorField('Показатели', 'data._stats_lines', bridge.toStatsLines ? bridge.toStatsLines(data.items) : '', { type: 'textarea', rows: 5, hint: 'Строка: значение | подпись' });
         }
+        if (type === 'hero') {
+            return `
+                ${buildInspectorField('Заголовок', 'data.heading', data.heading || '', {})}
+                ${buildInspectorField('Подзаголовок', 'data.subheading', data.subheading || '', { type: 'textarea', rows: 2 })}
+                ${buildInspectorField('Текст кнопки', 'data.cta_label', data.cta_label || '', {})}
+                ${buildInspectorField('URL кнопки', 'data.cta_url', data.cta_url || '', {})}
+                ${buildInspectorField('Фон (URL)', 'data.image', data.image || '', {})}
+                ${buildInspectorField('Выравнивание', 'data.align', data.align || 'left', { type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }] })}
+            `;
+        }
+        if (type === 'features') {
+            return buildInspectorField('Преимущества', 'data._features_lines', bridge.toFeatureLines ? bridge.toFeatureLines(data.items) : '', { type: 'textarea', rows: 6, hint: 'Строка: иконка | заголовок | текст' });
+        }
+        if (type === 'testimonial') {
+            return buildInspectorField('Отзывы', 'data._testimonial_lines', bridge.toTestimonialLines ? bridge.toTestimonialLines(data.items) : '', { type: 'textarea', rows: 6, hint: 'Строка: цитата | автор | роль' });
+        }
+        if (type === 'pricing') {
+            return buildInspectorField('Тарифы', 'data._pricing_lines', bridge.toPricingLines ? bridge.toPricingLines(data.items) : '', { type: 'textarea', rows: 6, hint: 'Строка: название | цена | период | фича; фича | кнопка | URL' });
+        }
         if (type === 'carousel') {
             const carousel = normalizeCarouselData(data);
             return `
@@ -2435,6 +2454,12 @@
             node.data.items = bridge.fromGalleryLines ? bridge.fromGalleryLines(value) : [];
         } else if (key === '_stats_lines') {
             node.data.items = bridge.fromStatsLines ? bridge.fromStatsLines(value) : [];
+        } else if (key === '_features_lines') {
+            node.data.items = bridge.fromFeatureLines ? bridge.fromFeatureLines(value) : [];
+        } else if (key === '_testimonial_lines') {
+            node.data.items = bridge.fromTestimonialLines ? bridge.fromTestimonialLines(value) : [];
+        } else if (key === '_pricing_lines') {
+            node.data.items = bridge.fromPricingLines ? bridge.fromPricingLines(value) : [];
         } else if (key === '_list_lines') {
             node.data.items = bridge.fromListLines ? bridge.fromListLines(value) : [];
         } else if (key === '_table_lines') {
