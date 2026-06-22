@@ -35,6 +35,7 @@
                 html_embed_restricted: 'Ограниченный embed',
                 post_listing: 'Список постов',
                 faq: 'FAQ',
+                stats: 'Показатели',
             };
 
             const moduleWidgetFieldOptions = (options) => (Array.isArray(options) ? options : []).map((option) => ({
@@ -305,6 +306,17 @@
                     const [src, ...rest] = line.split('|');
                     return { src: (src || '').trim(), alt: rest.join('|').trim() };
                 });
+            const toStatsLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.value || ''} | ${item?.label || ''}`)
+                .join('\\n');
+            const fromStatsLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const [value, ...rest] = line.split('|');
+                    return { value: (value || '').trim(), label: rest.join('|').trim() };
+                });
 
             const carouselHeightOptions = ['md', 'lg', 'xl'];
             const carouselAlignOptions = ['left', 'center', 'right'];
@@ -492,6 +504,8 @@
                         return { type, data: { category_slug: '', limit: 6 } };
                     case 'faq':
                         return { type, data: { items: [{ question: 'Вопрос?', answer: '<p>Ответ с форматированием.</p>' }] } };
+                    case 'stats':
+                        return { type, data: { items: [{ value: '500+', label: 'Клиентов' }, { value: '99%', label: 'Аптайм' }, { value: '24/7', label: 'Поддержка' }] } };
                     default:
                         return { type, data: {} };
                 }
@@ -601,6 +615,7 @@
                 if (type === 'image') return data.alt || data.src || 'Изображение';
                 if (type === 'faq') return `FAQ (${Array.isArray(data.items) ? data.items.length : 0})`;
                 if (type === 'gallery') return `Галерея (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'stats') return `Показатели (${Array.isArray(data.items) ? data.items.length : 0})`;
                 if (type === 'carousel') return `Карусель (${Array.isArray(data.slides) ? data.slides.length : 0})`;
                 return typeLabels[type] || type;
             };
@@ -754,6 +769,12 @@
                     const items = Array.isArray(data.items) ? data.items : [];
                     const images = items.map((item) => `<img src="${escapeHtml(item?.src || '')}" alt="${escapeHtml(item?.alt || '')}" loading="lazy">`).join('');
                     return `<div class="cms-gallery">${images}</div>`;
+                }
+                if (type === 'stats') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.value || '').trim() !== '' || String(item?.label || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => `<div class="cms-stat"><span class="cms-stat-value">${escapeHtml(item?.value || '')}</span><span class="cms-stat-label">${escapeHtml(item?.label || '')}</span></div>`).join('');
+                    return `<div class="cms-stats">${cards}</div>`;
                 }
                 if (type === 'carousel') {
                     return previewRenderCarousel(data);
@@ -1024,6 +1045,14 @@
                             hint: 'Каждая строка: URL | Alt',
                         })}
                     `;
+                }
+
+                if (type === 'stats') {
+                    return buildField('Показатели', 'data._stats_lines', toStatsLines(data.items), {
+                        type: 'textarea',
+                        rows: 5,
+                        hint: 'Каждая строка: значение | подпись (например: 500+ | Клиентов)',
+                    });
                 }
 
                 if (type === 'carousel') {
@@ -1415,6 +1444,10 @@
                     }
                     if (key === '_gallery_lines') {
                         data.items = fromGalleryLines(rawValue);
+                        return;
+                    }
+                    if (key === '_stats_lines') {
+                        data.items = fromStatsLines(rawValue);
                         return;
                     }
                     if (key === 'interval_ms') {
@@ -2093,6 +2126,8 @@
                 createStructuredSection,
                 fromGalleryLines,
                 toGalleryLines,
+                fromStatsLines,
+                toStatsLines,
                 fromListLines,
                 toListLines,
                 fromTableLines,

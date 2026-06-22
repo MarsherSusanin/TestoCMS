@@ -1850,6 +1850,9 @@
                 ${buildInspectorField('Галерея', 'data._gallery_lines', bridge.toGalleryLines ? bridge.toGalleryLines(data.items) : '', { type: 'textarea', rows: 6, hint: 'Строка: URL | Alt' })}
             `;
         }
+        if (type === 'stats') {
+            return buildInspectorField('Показатели', 'data._stats_lines', bridge.toStatsLines ? bridge.toStatsLines(data.items) : '', { type: 'textarea', rows: 5, hint: 'Строка: значение | подпись' });
+        }
         if (type === 'carousel') {
             const carousel = normalizeCarouselData(data);
             return `
@@ -2430,6 +2433,8 @@
             node.data.config[configKey] = inputEl?.type === 'checkbox' ? !!inputEl.checked : value;
         } else if (key === '_gallery_lines') {
             node.data.items = bridge.fromGalleryLines ? bridge.fromGalleryLines(value) : [];
+        } else if (key === '_stats_lines') {
+            node.data.items = bridge.fromStatsLines ? bridge.fromStatsLines(value) : [];
         } else if (key === '_list_lines') {
             node.data.items = bridge.fromListLines ? bridge.fromListLines(value) : [];
         } else if (key === '_table_lines') {

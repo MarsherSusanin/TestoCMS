@@ -269,6 +269,9 @@ class PageTranslationNormalizer
         if ($type === 'faq') {
             return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
         }
+        if ($type === 'stats') {
+            return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
+        }
         if ($type === 'video_embed') {
             return trim((string) ($data['url'] ?? '')) !== '';
         }

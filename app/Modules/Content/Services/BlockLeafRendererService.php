@@ -35,6 +35,7 @@ class BlockLeafRendererService
             'html_embed_restricted' => $this->renderRestrictedHtml($data),
             'post_listing' => $this->renderPostListing($data, $context),
             'faq' => $this->renderFaq($data),
+            'stats' => $this->renderStats($data),
             default => '',
         };
     }
@@ -583,6 +584,41 @@ class BlockLeafRendererService
         }
 
         return '<section class="cms-faq">'.implode('', $output).'</section>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderStats(array $data): string
+    {
+        $items = $data['items'] ?? [];
+        if (! is_array($items)) {
+            return '';
+        }
+
+        $cards = [];
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $value = trim((string) ($item['value'] ?? ''));
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($value === '' && $label === '') {
+                continue;
+            }
+
+            $cards[] = '<div class="cms-stat">'
+                .'<span class="cms-stat-value">'.e($value).'</span>'
+                .'<span class="cms-stat-label">'.e($label).'</span>'
+                .'</div>';
+        }
+
+        if ($cards === []) {
+            return '';
+        }
+
+        return '<div class="cms-stats">'.implode('', $cards).'</div>';
     }
 
     private function safeLinkUrl(string $url): string

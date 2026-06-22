@@ -38,6 +38,7 @@ return [
             'html_embed_restricted',
             'post_listing',
             'faq',
+            'stats',
         ],
         'required_keys' => ['type'],
     ],

@@ -1352,3 +1352,31 @@
         .skip-link:focus {
             left: 0;
         }
+        .cms-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .cms-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 20px 16px;
+            border-radius: 16px;
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+        }
+        .cms-stat-value {
+            font-family: var(--font-heading), sans-serif;
+            font-weight: 700;
+            font-size: 2rem;
+            line-height: 1.1;
+            color: var(--brand);
+        }
+        .cms-stat-label {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: .9rem;
+        }
