@@ -32,6 +32,10 @@ class PublicAccessibilityTest extends TestCase
 
         $this->assertStringContainsString('class="skip-link" href="#main"', $html);
         $this->assertStringContainsString('id="main"', $html);
-        $this->assertStringContainsString(':focus-visible', $html);
+
+        // Focus-visible / skip-link styles live in the (external) base stylesheet.
+        $css = $this->get('/cms/theme-base.css')->assertOk()->getContent();
+        $this->assertStringContainsString(':focus-visible', $css);
+        $this->assertStringContainsString('.skip-link', $css);
     }
 }
