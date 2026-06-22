@@ -146,11 +146,10 @@ class PublicSearchService
      */
     private function searchPostItems(string $locale, string $query): Collection
     {
-        $like = '%'.$query.'%';
         $blogPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
-        $operator = $this->textSearchOperator(PostTranslation::query()->getConnection()->getDriverName());
+        $driver = PostTranslation::query()->getConnection()->getDriverName();
 
-        return PostTranslation::query()
+        $builder = PostTranslation::query()
             ->select([
                 'post_translations.post_id',
                 'post_translations.title',
@@ -165,13 +164,17 @@ class PublicSearchService
             ->where('post_translations.locale', $locale)
             ->where('posts.status', 'published')
             ->whereNotNull('posts.published_at')
-            ->where('posts.published_at', '<=', now())
-            ->where(function ($q) use ($like, $operator): void {
-                $q->where('post_translations.title', $operator, $like)
-                    ->orWhere('post_translations.excerpt', $operator, $like)
-                    ->orWhere('post_translations.content_plain', $operator, $like)
-                    ->orWhere('post_translations.meta_description', $operator, $like);
-            })
+            ->where('posts.published_at', '<=', now());
+
+        $this->applyTextSearch(
+            $builder,
+            $driver,
+            $query,
+            ['post_translations.title', 'post_translations.excerpt', 'post_translations.meta_description'],
+            ['title', 'content_plain'],
+        );
+
+        return $builder
             ->orderByDesc('posts.published_at')
             ->limit(500)
             ->get()
@@ -193,10 +196,9 @@ class PublicSearchService
      */
     private function searchPageItems(string $locale, string $query): Collection
     {
-        $like = '%'.$query.'%';
-        $operator = $this->textSearchOperator(PageTranslation::query()->getConnection()->getDriverName());
+        $driver = PageTranslation::query()->getConnection()->getDriverName();
 
-        return PageTranslation::query()
+        $builder = PageTranslation::query()
             ->select([
                 'page_translations.page_id',
                 'page_translations.title',
@@ -210,12 +212,17 @@ class PublicSearchService
             ->where('page_translations.locale', $locale)
             ->where('pages.status', 'published')
             ->whereNotNull('pages.published_at')
-            ->where('pages.published_at', '<=', now())
-            ->where(function ($q) use ($like, $operator): void {
-                $q->where('page_translations.title', $operator, $like)
-                    ->orWhere('page_translations.rendered_html', $operator, $like)
-                    ->orWhere('page_translations.meta_description', $operator, $like);
-            })
+            ->where('pages.published_at', '<=', now());
+
+        $this->applyTextSearch(
+            $builder,
+            $driver,
+            $query,
+            ['page_translations.title', 'page_translations.meta_description'],
+            ['title', 'rendered_html'],
+        );
+
+        return $builder
             ->orderByDesc('pages.updated_at')
             ->limit(500)
             ->get()
@@ -237,8 +244,38 @@ class PublicSearchService
             });
     }
 
-    private function textSearchOperator(string $driver): string
+    /**
+     * Apply a text-search predicate that uses the FULLTEXT (MySQL/MariaDB) or
+     * GIN to_tsvector (PostgreSQL) indexes for the large body columns instead
+     * of a non-sargable leading-wildcard LIKE on LONGTEXT, while keeping a
+     * substring LIKE on the short columns (title/excerpt/meta) for partial
+     * matches. Other drivers (sqlite/dev) search only the short columns.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<*>  $builder
+     * @param  list<string>  $shortColumns  qualified short columns for substring LIKE
+     * @param  list<string>  $fulltextColumns  unqualified columns covered by the FULLTEXT/GIN index
+     */
+    private function applyTextSearch(object $builder, string $driver, string $term, array $shortColumns, array $fulltextColumns): void
     {
-        return $driver === 'pgsql' ? 'ilike' : 'like';
+        $like = '%'.$term.'%';
+        $likeOperator = $driver === 'pgsql' ? 'ilike' : 'like';
+
+        $builder->where(function ($q) use ($driver, $term, $like, $likeOperator, $shortColumns, $fulltextColumns): void {
+            foreach ($shortColumns as $column) {
+                $q->orWhere($column, $likeOperator, $like);
+            }
+
+            if ($driver === 'mysql' || $driver === 'mariadb') {
+                $q->orWhereFullText($fulltextColumns, $term);
+            } elseif ($driver === 'pgsql') {
+                $vector = implode(" || ' ' || ", array_map(
+                    static fn (string $column): string => "coalesce(\"{$column}\", '')",
+                    $fulltextColumns
+                ));
+                $q->orWhereRaw("to_tsvector('simple', {$vector}) @@ plainto_tsquery('simple', ?)", [$term]);
+            }
+            // sqlite / other drivers: the short columns above cover search; the
+            // LONGTEXT body is intentionally not scanned with a leading wildcard.
+        });
     }
 }
