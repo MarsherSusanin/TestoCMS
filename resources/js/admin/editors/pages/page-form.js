@@ -2769,7 +2769,16 @@
             cleanupCreateAutosaveAfterRedirect();
             serverInitialPayload = serializeForm();
             updateAutosaveSummary(serverInitialPayload);
-            recoverAutosaveIfNeeded();
+            if (boot.justSaved && autosaveStorage) {
+                // The page was just successfully saved (edit mode posts back to
+                // the same URL), so any local draft snapshot is now stale — drop
+                // it instead of offering to restore it over the saved content.
+                try { autosaveStorage.removeItem(autosaveKey); } catch (_) {}
+                lastSavedFingerprint = JSON.stringify(serverInitialPayload);
+                setAutosaveStatus('Сохранено');
+            } else {
+                recoverAutosaveIfNeeded();
+            }
 
             form.addEventListener('submit', () => {
                 builders.forEach((builder) => builder.sync());

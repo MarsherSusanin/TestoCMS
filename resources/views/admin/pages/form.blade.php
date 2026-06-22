@@ -1482,6 +1482,7 @@
         'templateSourceName' => $templateSourceName,
         'allowedBlockTypes' => array_values($allowedBlockTypes),
         'isEditMode' => (bool) $page,
+        'justSaved' => (bool) session('content_saved'),
         'moduleWidgetCatalog' => array_values($moduleWidgetCatalog ?? []),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
     <script src="{{ route('admin.runtime.show', ['runtime' => 'editor-shared.js']) }}"></script>
