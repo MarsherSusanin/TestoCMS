@@ -320,8 +320,13 @@
                 nofollow: false,
                 ...((overrides && typeof overrides === 'object') ? overrides : {}),
             });
+            // Keep every slide while editing — filtering empty-src slides here
+            // dropped/re-indexed them on each keystroke (so "add slide" no-op'd
+            // and editing one slide overwrote another). Empty slides are skipped
+            // only for the visual preview and dropped server-side on save.
             const normalizeCarouselSlides = (slides) => (Array.isArray(slides) ? slides : [])
-                .map((slide) => defaultCarouselSlide((slide && typeof slide === 'object') ? slide : {}))
+                .map((slide) => defaultCarouselSlide((slide && typeof slide === 'object') ? slide : {}));
+            const renderableCarouselSlides = (slides) => (Array.isArray(slides) ? slides : [])
                 .filter((slide) => String(slide.src || '').trim() !== '');
             const normalizeCarouselData = (data) => {
                 const safe = (data && typeof data === 'object') ? data : {};
@@ -339,11 +344,12 @@
             };
             const previewRenderCarousel = (rawData) => {
                 const data = normalizeCarouselData(rawData);
-                if (data.slides.length === 0) {
+                const slides = renderableCarouselSlides(data.slides);
+                if (slides.length === 0) {
                     return '';
                 }
 
-                const slidesHtml = data.slides.map((slide, index) => {
+                const slidesHtml = slides.map((slide, index) => {
                     const relParts = [];
                     if (slide.target_blank) relParts.push('noopener', 'noreferrer');
                     if (slide.nofollow) relParts.push('nofollow');
@@ -366,10 +372,10 @@
                     `;
                 }).join('');
 
-                const dotsHtml = data.show_dots && data.slides.length > 1
-                    ? `<div class="cms-carousel-dots" data-cms-carousel-dots="">${data.slides.map((slide, index) => `<button type="button" class="cms-carousel-dot ${index === 0 ? 'is-active' : ''}" data-cms-carousel-dot="${index}" aria-label="${escapeHtml(slide.title || `Слайд ${index + 1}`)}"></button>`).join('')}</div>`
+                const dotsHtml = data.show_dots && slides.length > 1
+                    ? `<div class="cms-carousel-dots" data-cms-carousel-dots="">${slides.map((slide, index) => `<button type="button" class="cms-carousel-dot ${index === 0 ? 'is-active' : ''}" data-cms-carousel-dot="${index}" aria-label="${escapeHtml(slide.title || `Слайд ${index + 1}`)}"></button>`).join('')}</div>`
                     : '';
-                const arrowsHtml = data.show_arrows && data.slides.length > 1
+                const arrowsHtml = data.show_arrows && slides.length > 1
                     ? `
                         <div class="cms-carousel-arrows">
                             <button type="button" class="cms-carousel-arrow prev" data-cms-carousel-prev aria-label="Предыдущий слайд">‹</button>

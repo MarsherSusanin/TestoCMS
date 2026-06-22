@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ThemeSetting;
 use App\Models\User;
+use App\Modules\Core\Services\SiteChromeNormalizerService;
 use App\Modules\Core\Services\ThemeSettingsService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -142,6 +143,20 @@ class ThemeAdminTest extends TestCase
         $this->assertSame([], $navItems[1]['children'] ?? null);
         $this->assertSame('page', $navItems[1]['link_target']['type'] ?? null);
         $this->assertSame(15, $navItems[1]['link_target']['id'] ?? null);
+    }
+
+    public function test_chrome_logo_src_drops_dangerous_schemes(): void
+    {
+        $service = app(SiteChromeNormalizerService::class);
+
+        $bad = $service->normalizeForSave(['header' => ['logo' => ['src' => 'javascript:alert(1)', 'alt' => 'x']]]);
+        $this->assertSame('', data_get($bad, 'header.logo.src'));
+
+        $https = $service->normalizeForSave(['header' => ['logo' => ['src' => 'https://cdn.test/logo.svg']]]);
+        $this->assertSame('https://cdn.test/logo.svg', data_get($https, 'header.logo.src'));
+
+        $relative = $service->normalizeForSave(['header' => ['logo' => ['src' => '/storage/logo.png']]]);
+        $this->assertSame('/storage/logo.png', data_get($relative, 'header.logo.src'));
     }
 
     private function makeUser(string $email, string $role): User

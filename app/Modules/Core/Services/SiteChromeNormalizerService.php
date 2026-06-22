@@ -197,9 +197,29 @@ class SiteChromeNormalizerService
         $logo = is_array($value) ? $value : [];
 
         return [
-            'src' => mb_substr(trim((string) ($logo['src'] ?? '')), 0, 2048),
+            'src' => $this->normalizeLogoSrc((string) ($logo['src'] ?? '')),
             'alt' => mb_substr(trim((string) ($logo['alt'] ?? '')), 0, 255),
         ];
+    }
+
+    /**
+     * Restrict the logo src to same-origin paths, http(s) and data:image URLs.
+     * Anything else (javascript:, vbscript:, other schemes) is dropped.
+     */
+    private function normalizeLogoSrc(string $src): string
+    {
+        $src = mb_substr(trim($src), 0, 2048);
+        if ($src === '') {
+            return '';
+        }
+
+        if (str_starts_with($src, '/')
+            || preg_match('#^https?://#i', $src) === 1
+            || preg_match('#^data:image/#i', $src) === 1) {
+            return $src;
+        }
+
+        return '';
     }
 
     /**
