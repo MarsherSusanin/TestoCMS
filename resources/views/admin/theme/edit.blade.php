@@ -16,10 +16,11 @@
     @include('admin.theme.partials.presets')
 
     <div class="theme-form-grid" style="margin-top:14px;">
-        @include('admin.theme.partials.theme-builder')
-        @include('admin.theme.partials.theme-preview')
-    </div>
+    @include('admin.theme.partials.theme-builder')
+    @include('admin.theme.partials.theme-preview')
+</div>
 
+    @include('admin.partials.media-picker')
     @include('admin.theme.partials.chrome-builder')
 
     <script type="application/json" id="testocms-theme-editor-boot">{!! json_encode($adminThemeBootPayload ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>

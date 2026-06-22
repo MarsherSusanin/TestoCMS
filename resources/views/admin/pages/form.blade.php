@@ -574,6 +574,82 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap:10px;
         }
+        .builder-structured-carousel-section {
+            display:grid;
+            gap:12px;
+            margin-top:14px;
+        }
+        .builder-structured-carousel-section-head {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+        }
+        .builder-structured-carousel-grid {
+            display:grid;
+            gap:12px;
+        }
+        .builder-structured-carousel-shell {
+            border:1px solid #dbe3ef;
+            border-radius:12px;
+            background:#fff;
+            padding:12px;
+            display:grid;
+            gap:10px;
+        }
+        .builder-structured-carousel-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+        }
+        .builder-structured-carousel-head p {
+            margin:4px 0 0;
+            color:#667085;
+            font-size:13px;
+            line-height:1.45;
+        }
+        .block-carousel-list {
+            display:grid;
+            gap:12px;
+        }
+        .block-carousel-card {
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            background:linear-gradient(180deg, #fff, #f8fafc);
+            padding:12px;
+            display:grid;
+            gap:10px;
+        }
+        .block-carousel-card-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:10px;
+        }
+        .block-carousel-preview {
+            border:1px dashed #dbe3ef;
+            border-radius:12px;
+            overflow:hidden;
+            min-height:160px;
+            background:#f8fafc;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#667085;
+        }
+        .block-carousel-preview img {
+            display:block;
+            width:100%;
+            max-height:220px;
+            object-fit:cover;
+        }
+        .block-carousel-preview.is-empty {
+            padding:18px;
+            text-align:center;
+            font-size:13px;
+            line-height:1.45;
+        }
         .block-subtle {
             color:#667085;
             font-size:12px;
@@ -1020,6 +1096,7 @@
                                                     'rich_text' => 'Текст (HTML)',
                                                     'image' => 'Изображение',
                                                     'gallery' => 'Галерея',
+                                                    'carousel' => 'Карусель',
                                                     'cta' => 'CTA',
                                                     'divider' => 'Разделитель',
                                                     'faq' => 'FAQ',

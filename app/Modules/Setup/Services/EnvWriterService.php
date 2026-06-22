@@ -92,12 +92,12 @@ class EnvWriterService
             'MAIL_PORT' => '2525',
             'MAIL_USERNAME' => 'null',
             'MAIL_PASSWORD' => 'null',
-            'MAIL_FROM_ADDRESS' => '"'.($data['admin_email'] ?? 'hello@example.com').'"',
-            'MAIL_FROM_NAME' => '"${APP_NAME}"',
+            'MAIL_FROM_ADDRESS' => $data['admin_email'] ?? 'hello@example.com',
+            'MAIL_FROM_NAME' => '${APP_NAME}',
             '',
-            'SEO_SITE_NAME' => '"${APP_NAME}"',
-            'SEO_SITE_DESCRIPTION' => '"SEO-first CMS"',
-            'SEO_ORGANIZATION_NAME' => '"${APP_NAME}"',
+            'SEO_SITE_NAME' => '${APP_NAME}',
+            'SEO_SITE_DESCRIPTION' => 'SEO-first CMS',
+            'SEO_ORGANIZATION_NAME' => '${APP_NAME}',
             'SEO_ORGANIZATION_LOGO' => '',
             'SEO_SITEMAP_MAX_URLS' => '50000',
             'SEO_SITEMAP_CACHE_TTL' => '3600',
@@ -119,12 +119,12 @@ class EnvWriterService
             'ANTHROPIC_TIMEOUT' => '30',
             'ANTHROPIC_VERSION' => '2023-06-01',
             '',
-            'CMS_ADMIN_NAME' => '"'.($data['admin_name'] ?? 'Super Admin').'"',
+            'CMS_ADMIN_NAME' => $data['admin_name'] ?? 'Super Admin',
             'CMS_ADMIN_LOGIN' => $data['admin_login'] ?? 'admin',
             'CMS_ADMIN_EMAIL' => $data['admin_email'] ?? 'admin@example.com',
-            'CMS_ADMIN_PASSWORD' => '"'.addcslashes($data['admin_password'] ?? '', '"\\').'"',
+            'CMS_ADMIN_PASSWORD' => $data['admin_password'] ?? '',
             '',
-            'VITE_APP_NAME' => '"${APP_NAME}"',
+            'VITE_APP_NAME' => '${APP_NAME}',
         ];
 
         return $this->renderLines($lines);
@@ -220,10 +220,19 @@ class EnvWriterService
             if (is_int($key) && $value === '') {
                 $output .= "\n";
             } else {
-                $output .= $key.'='.$value."\n";
+                $output .= $key.'='.$this->quoteEnvValue($value)."\n";
             }
         }
 
         return $output;
+    }
+
+    private function quoteEnvValue(string $value): string
+    {
+        return '"'.str_replace(
+            ['\\', '"', "\n", "\r"],
+            ['\\\\', '\\"', '\\n', '\\r'],
+            $value,
+        ).'"';
     }
 }

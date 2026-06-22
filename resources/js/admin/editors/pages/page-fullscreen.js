@@ -94,6 +94,34 @@
     const clone = bridge.cloneJson || ((v) => JSON.parse(JSON.stringify(v)));
     const containsStructuredLayout = bridge.containsStructuredLayout || ((nodes) => Array.isArray(nodes) && nodes.some((n) => ['section', 'columns'].includes(String(n?.type || ''))));
     const normalizeLayoutNodes = bridge.normalizeLayoutNodes || ((nodes) => Array.isArray(nodes) ? nodes : []);
+    const defaultCarouselSlide = bridge.defaultCarouselSlide || ((overrides = {}) => ({
+        src: '',
+        alt: '',
+        title: '',
+        text: '',
+        cta_label: '',
+        cta_url: '',
+        target_blank: false,
+        nofollow: false,
+        ...((overrides && typeof overrides === 'object') ? overrides : {}),
+    }));
+    const normalizeCarouselData = bridge.normalizeCarouselData || ((data) => {
+        const safe = (data && typeof data === 'object') ? data : {};
+        const interval = Number(safe.interval_ms || 5000);
+        const slides = Array.isArray(safe.slides)
+            ? safe.slides.map((slide) => defaultCarouselSlide((slide && typeof slide === 'object') ? slide : {}))
+            : [];
+        return {
+            height: ['md', 'lg', 'xl'].includes(String(safe.height || '')) ? String(safe.height) : 'lg',
+            overlay_align: ['left', 'center', 'right'].includes(String(safe.overlay_align || '')) ? String(safe.overlay_align) : 'left',
+            overlay_theme: ['gradient', 'dark', 'light'].includes(String(safe.overlay_theme || '')) ? String(safe.overlay_theme) : 'gradient',
+            autoplay: !!safe.autoplay,
+            interval_ms: Number.isFinite(interval) ? Math.max(1500, Math.min(30000, Math.round(interval))) : 5000,
+            show_arrows: safe.show_arrows !== false,
+            show_dots: safe.show_dots !== false,
+            slides,
+        };
+    });
 
     const makeId = (prefix = 'n') => `${prefix}_${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
 
@@ -831,7 +859,7 @@
         }
     };
 
-    const syncNodesToBuilder = () => {
+    const syncNodesToBuilder = (options = {}) => {
         const builder = bridge.getBuilder?.(getCurrentLocale());
         if (!builder) return;
         state.nodes = ensureStructuredNodes(state.nodes);
@@ -842,7 +870,9 @@
         state.localDirty = true;
         renderStructure();
         renderCanvas();
-        renderInspector();
+        if (options.rerenderInspector !== false) {
+            renderInspector();
+        }
         scheduleStageRender(260, 'nodes-sync');
     };
 
@@ -1557,6 +1587,14 @@
         refs.canvas.innerHTML = renderNodeList(state.nodes, 'root');
     };
 
+    const syncSeoPreviewPanel = () => {
+        const locale = getCurrentLocale();
+        const slot = refs.seoPanel?.querySelector('[data-fs-seo-preview-slot]');
+        if (!slot) return;
+        const sourcePreview = document.querySelector(`[data-page-seo-preview="${locale}"]`);
+        slot.innerHTML = sourcePreview ? sourcePreview.outerHTML : '<div class="fs-node-hint">SEO preview недоступен.</div>';
+    };
+
     const buildInspectorField = (label, name, value, opts = {}) => {
         const type = opts.type || 'text';
         if (type === 'checkbox') {
@@ -1714,6 +1752,43 @@
         `;
     };
 
+    const carouselSlideInspectorMarkup = (slideInput, index, total) => {
+        const slide = defaultCarouselSlide((slideInput && typeof slideInput === 'object') ? slideInput : {});
+        return `
+            <article class="fs-carousel-card">
+                <div class="fs-node-head" style="margin-bottom:0;">
+                    <div class="fs-node-title" style="cursor:default;">
+                        <span class="tag-mini">slide</span>
+                        <span>Слайд ${index + 1}</span>
+                        <small>${esc(String(slide.title || slide.alt || slide.src || 'Без изображения'))}</small>
+                    </div>
+                    <div class="fs-node-actions">
+                        <button type="button" class="fs-node-btn" data-fs-carousel-slide-action="up" data-fs-carousel-slide-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button type="button" class="fs-node-btn" data-fs-carousel-slide-action="down" data-fs-carousel-slide-index="${index}" ${index >= total - 1 ? 'disabled' : ''}>↓</button>
+                        <button type="button" class="fs-node-btn danger" data-fs-carousel-slide-action="remove" data-fs-carousel-slide-index="${index}">✕</button>
+                    </div>
+                </div>
+                <div class="fs-inline">
+                    <button type="button" class="btn btn-small" data-fs-carousel-media-pick="${index}">Выбрать изображение из Assets</button>
+                </div>
+                ${buildInspectorField('Изображение', `data.slides.${index}.src`, slide.src || '', { placeholder: 'https://...' })}
+                <div class="fs-grid-2">
+                    ${buildInspectorField('Alt', `data.slides.${index}.alt`, slide.alt || '')}
+                    ${buildInspectorField('Заголовок', `data.slides.${index}.title`, slide.title || '')}
+                </div>
+                ${buildInspectorField('Текст поверх изображения', `data.slides.${index}.text`, slide.text || '', { type: 'textarea', rows: 3 })}
+                <div class="fs-grid-2">
+                    ${buildInspectorField('CTA label', `data.slides.${index}.cta_label`, slide.cta_label || '')}
+                    ${buildInspectorField('CTA URL', `data.slides.${index}.cta_url`, slide.cta_url || '', { placeholder: '/ru/blog или https://...' })}
+                </div>
+                <div class="fs-grid-2">
+                    ${buildInspectorField('Новый таб', `data.slides.${index}.target_blank`, !!slide.target_blank, { type: 'checkbox' })}
+                    ${buildInspectorField('Nofollow', `data.slides.${index}.nofollow`, !!slide.nofollow, { type: 'checkbox' })}
+                </div>
+            </article>
+        `;
+    };
+
     const leafInspectorMarkup = (node) => {
         const type = String(node?.type || '');
         const data = (node?.data && typeof node.data === 'object') ? node.data : {};
@@ -1773,6 +1848,35 @@
             return `
                 <div class="fs-inline"><button type="button" class="btn btn-small" data-fs-media-pick="gallery">Добавить из Assets</button></div>
                 ${buildInspectorField('Галерея', 'data._gallery_lines', bridge.toGalleryLines ? bridge.toGalleryLines(data.items) : '', { type: 'textarea', rows: 6, hint: 'Строка: URL | Alt' })}
+            `;
+        }
+        if (type === 'carousel') {
+            const carousel = normalizeCarouselData(data);
+            return `
+                <div class="fs-grid-2">
+                    ${buildInspectorField('Высота', 'data.height', carousel.height, { type: 'select', options: [{ value: 'md', label: 'MD' }, { value: 'lg', label: 'LG' }, { value: 'xl', label: 'XL' }] })}
+                    ${buildInspectorField('Выравнивание overlay', 'data.overlay_align', carousel.overlay_align, { type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }] })}
+                </div>
+                <div class="fs-grid-2">
+                    ${buildInspectorField('Тема overlay', 'data.overlay_theme', carousel.overlay_theme, { type: 'select', options: [{ value: 'gradient', label: 'Gradient' }, { value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }] })}
+                    ${buildInspectorField('Интервал autoplay (ms)', 'data.interval_ms', carousel.interval_ms, { type: 'number', min: 1500, max: 30000, step: 100 })}
+                </div>
+                <div class="fs-grid-2">
+                    ${buildInspectorField('Autoplay', 'data.autoplay', !!carousel.autoplay, { type: 'checkbox' })}
+                    ${buildInspectorField('Стрелки', 'data.show_arrows', !!carousel.show_arrows, { type: 'checkbox' })}
+                </div>
+                <div class="fs-grid-2">
+                    ${buildInspectorField('Dots', 'data.show_dots', !!carousel.show_dots, { type: 'checkbox' })}
+                    <div class="fs-node-hint">Первый валидный слайд виден без JS, runtime только улучшает переключение.</div>
+                </div>
+                <div class="fs-inline">
+                    <button type="button" class="btn btn-small" data-fs-carousel-add-slide>Добавить слайд</button>
+                </div>
+                <div class="fs-carousel-list">
+                    ${carousel.slides.length > 0
+                        ? carousel.slides.map((slide, index) => carouselSlideInspectorMarkup(slide, index, carousel.slides.length)).join('')
+                        : '<div class="fs-node-hint">Карусель пуста. Добавьте минимум один слайд с изображением.</div>'}
+                </div>
             `;
         }
         if (type === 'video_embed') {
@@ -1925,11 +2029,7 @@
             <div class="fs-inline"><button type="button" class="btn btn-small" data-fs-refresh-seo-preview>Обновить SEO preview</button></div>
             <div data-fs-seo-preview-slot></div>
         `;
-        const sourcePreview = document.querySelector(`[data-page-seo-preview="${locale}"]`);
-        const slot = refs.seoPanel.querySelector('[data-fs-seo-preview-slot]');
-        if (slot && sourcePreview) {
-            slot.innerHTML = sourcePreview.outerHTML;
-        }
+        syncSeoPreviewPanel();
     };
 
     const renderPublishPanel = () => {
@@ -2272,7 +2372,7 @@
         }
     };
 
-    const applyInspectorField = (name, value, inputEl) => {
+    const applyInspectorField = (name, value, inputEl, options = {}) => {
         const ref = getSelectedRef();
         if (!ref) return;
         const node = ref.node;
@@ -2336,10 +2436,29 @@
             node.data.rows = bridge.fromTableLines ? bridge.fromTableLines(value) : [];
         } else if (key === '_faq_text') {
             node.data.items = bridge.fromFaqText ? bridge.fromFaqText(value) : [];
+        } else if (key.startsWith('slides.')) {
+            const match = key.match(/^slides\.(\d+)\.([a-z_]+)$/);
+            if (!match) return;
+            node.data = normalizeCarouselData(node.data);
+            const slideIndex = Number(match[1]);
+            const slideField = match[2];
+            if (!Array.isArray(node.data.slides)) {
+                node.data.slides = [];
+            }
+            while (node.data.slides.length <= slideIndex) {
+                node.data.slides.push(defaultCarouselSlide());
+            }
+            const slide = defaultCarouselSlide(node.data.slides[slideIndex]);
+            if (slideField === 'target_blank' || slideField === 'nofollow') {
+                slide[slideField] = !!(inputEl && inputEl.checked);
+            } else {
+                slide[slideField] = String(value || '');
+            }
+            node.data.slides[slideIndex] = slide;
         } else {
             node.data[key] = value;
         }
-        syncNodesToBuilder();
+        syncNodesToBuilder({ rerenderInspector: options.rerenderInspector !== false });
     };
 
     const applySeoField = (field, value) => {
@@ -2356,7 +2475,7 @@
             if (field === 'custom_head_html' && f.customHead) f.customHead.dispatchEvent(new Event('input', { bubbles: true }));
         } catch (_) {}
         bridge.updateSeoPreview?.(locale);
-        renderSeoPanel();
+        syncSeoPreviewPanel();
         setSyncState('SEO синхронизировано с формой');
         scheduleStageRender(650, 'seo');
     };
@@ -3134,10 +3253,9 @@
             }
             if (String(field).startsWith('publish.')) {
                 applyPublishField(String(field).slice(8), value);
-                renderPublishPanel();
                 return;
             }
-            applyInspectorField(field, value, input);
+            applyInspectorField(field, value, input, { rerenderInspector: false });
         });
         container?.addEventListener('change', (e) => {
             const input = e.target.closest('[data-fs-field]');
@@ -3152,10 +3270,9 @@
             }
             if (String(field).startsWith('publish.')) {
                 applyPublishField(String(field).slice(8), value);
-                renderPublishPanel();
                 return;
             }
-            applyInspectorField(field, value, input);
+            applyInspectorField(field, value, input, { rerenderInspector: true });
         });
     };
     inspectorDelegator(refs.inspector);
@@ -3441,6 +3558,36 @@
     });
 
     refs.inspector?.addEventListener('click', (e) => {
+        const carouselAddBtn = e.target.closest('[data-fs-carousel-add-slide]');
+        if (carouselAddBtn) {
+            const ref = getSelectedRef();
+            if (!ref || ref.node?.type !== 'carousel') return;
+            ref.node.data = normalizeCarouselData(ref.node.data);
+            ref.node.data.slides.push(defaultCarouselSlide());
+            syncNodesToBuilder();
+            return;
+        }
+
+        const carouselActionBtn = e.target.closest('[data-fs-carousel-slide-action]');
+        if (carouselActionBtn) {
+            const ref = getSelectedRef();
+            if (!ref || ref.node?.type !== 'carousel') return;
+            ref.node.data = normalizeCarouselData(ref.node.data);
+            const slides = Array.isArray(ref.node.data.slides) ? ref.node.data.slides : [];
+            const index = Number(carouselActionBtn.getAttribute('data-fs-carousel-slide-index'));
+            if (!Number.isInteger(index) || !slides[index]) return;
+            const action = String(carouselActionBtn.getAttribute('data-fs-carousel-slide-action') || '');
+            if (action === 'remove') {
+                slides.splice(index, 1);
+            } else if (action === 'up' && index > 0) {
+                [slides[index - 1], slides[index]] = [slides[index], slides[index - 1]];
+            } else if (action === 'down' && index < slides.length - 1) {
+                [slides[index + 1], slides[index]] = [slides[index], slides[index + 1]];
+            }
+            syncNodesToBuilder();
+            return;
+        }
+
         const mediaBtn = e.target.closest('[data-fs-media-pick]');
         if (!mediaBtn) return;
         const ref = getSelectedRef();
@@ -3474,6 +3621,29 @@
                 .catch(() => {});
             return;
         }
+    });
+
+    refs.inspector?.addEventListener('click', (e) => {
+        const carouselMediaBtn = e.target.closest('[data-fs-carousel-media-pick]');
+        if (!carouselMediaBtn) return;
+        const ref = getSelectedRef();
+        if (!ref || ref.node?.type !== 'carousel' || !bridge.openMediaPicker) return;
+        const index = Number(carouselMediaBtn.getAttribute('data-fs-carousel-media-pick'));
+        ref.node.data = normalizeCarouselData(ref.node.data);
+        const slides = Array.isArray(ref.node.data.slides) ? ref.node.data.slides : [];
+        if (!Number.isInteger(index) || !slides[index]) return;
+        bridge.openMediaPicker({ accept: 'image', multiple: false, title: 'Выбор изображения', subtitle: 'Выберите изображение для слайда карусели' })
+            .then((asset) => {
+                if (!asset?.public_url) return;
+                const slide = defaultCarouselSlide(slides[index]);
+                slide.src = asset.public_url;
+                if (!String(slide.alt || '').trim()) {
+                    slide.alt = asset.alt || asset.title || '';
+                }
+                slides[index] = slide;
+                syncNodesToBuilder();
+            })
+            .catch(() => {});
     });
 
     refs.seoPanel?.addEventListener('click', (e) => {

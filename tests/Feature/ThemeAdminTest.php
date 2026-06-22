@@ -65,19 +65,42 @@ class ThemeAdminTest extends TestCase
             'header' => [
                 'enabled' => true,
                 'variant' => 'split_nav',
+                'logo' => [
+                    'src' => 'https://cdn.test/logo.svg',
+                    'alt' => 'TestoCMS logo',
+                ],
+                'menu_position' => 'center',
                 'show_brand_subtitle' => true,
                 'show_locale_switcher' => true,
                 'show_search' => true,
                 'search_placement' => 'header',
-                'nav_items' => [[
-                    'id' => 'home',
-                    'enabled' => true,
-                    'url' => '/{locale}',
-                    'link_target' => ['type' => 'page', 'id' => 15],
-                    'new_tab' => false,
-                    'nofollow' => false,
-                    'label_translations' => ['ru' => 'Главная', 'en' => 'Home'],
-                ]],
+                'nav_items' => [
+                    [
+                        'id' => 'services',
+                        'enabled' => true,
+                        'url' => '',
+                        'new_tab' => false,
+                        'nofollow' => false,
+                        'label_translations' => ['ru' => 'Услуги', 'en' => 'Services'],
+                        'children' => [[
+                            'id' => 'consulting',
+                            'enabled' => true,
+                            'url' => '/{locale}/consulting',
+                            'new_tab' => false,
+                            'nofollow' => false,
+                            'label_translations' => ['ru' => 'Консалтинг', 'en' => 'Consulting'],
+                        ]],
+                    ],
+                    [
+                        'id' => 'home',
+                        'enabled' => true,
+                        'url' => '/{locale}',
+                        'link_target' => ['type' => 'page', 'id' => 15],
+                        'new_tab' => false,
+                        'nofollow' => false,
+                        'label_translations' => ['ru' => 'Главная', 'en' => 'Home'],
+                    ],
+                ],
                 'cta_buttons' => [],
             ],
             'footer' => [
@@ -110,9 +133,15 @@ class ThemeAdminTest extends TestCase
         $record = ThemeSetting::query()->where('key', 'site_chrome')->first();
         $this->assertNotNull($record);
         $navItems = $record->settings['header']['nav_items'] ?? [];
-        $this->assertCount(1, $navItems);
-        $this->assertSame('page', $navItems[0]['link_target']['type'] ?? null);
-        $this->assertSame(15, $navItems[0]['link_target']['id'] ?? null);
+        $this->assertSame('https://cdn.test/logo.svg', $record->settings['header']['logo']['src'] ?? null);
+        $this->assertSame('TestoCMS logo', $record->settings['header']['logo']['alt'] ?? null);
+        $this->assertSame('center', $record->settings['header']['menu_position'] ?? null);
+        $this->assertCount(2, $navItems);
+        $this->assertCount(1, $navItems[0]['children'] ?? []);
+        $this->assertSame('/{locale}/consulting', $navItems[0]['children'][0]['url'] ?? null);
+        $this->assertSame([], $navItems[1]['children'] ?? null);
+        $this->assertSame('page', $navItems[1]['link_target']['type'] ?? null);
+        $this->assertSame(15, $navItems[1]['link_target']['id'] ?? null);
     }
 
     private function makeUser(string $email, string $role): User

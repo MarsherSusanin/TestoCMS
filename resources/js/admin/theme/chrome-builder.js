@@ -41,7 +41,7 @@
                 cursor[part] = value;
                 return;
             }
-            if (!cursor[part] || typeof cursor[part] !== 'object' || Array.isArray(cursor[part])) {
+            if (!cursor[part] || typeof cursor[part] !== 'object') {
                 cursor[part] = {};
             }
             cursor = cursor[part];
@@ -60,6 +60,7 @@
         'footer.social_links': 6,
         'footer.legal_links': 6,
     };
+    const listCap = (path) => /^header\.nav_items\.\d+\.children$/.test(String(path || '')) ? 6 : (listCaps[path] || 99);
     const listHasStyle = (path) => path === 'header.cta_buttons';
     const listSupportsTargetPicker = (path) => path !== 'footer.social_links';
     const chromeLinkTargetMap = new Map(
@@ -96,22 +97,22 @@
             post: 'Посты',
             category: 'Категории',
         };
-        const groupOptions = Object.entries(groups)
-            .filter(([, list]) => list.length > 0)
-            .map(([type, list]) => {
-                const options = list.map((target) => {
-                    const key = String(target.key || '');
-                    const selected = key === selectedKey ? ' selected' : '';
-                    const statusText = targetStatusLabel(target);
-                    const suffix = statusText ? ` · ${statusText}` : '';
-                    return `<option value="${escapeHtml(key)}"${selected}>${escapeHtml(String(target.label || key) + suffix)}</option>`;
-                }).join('');
-                return `<optgroup label="${escapeHtml(typeLabels[type] || type)}">${options}</optgroup>`;
-            }).join('');
 
         return `
             <option value="">Ручной URL</option>
-            ${groupOptions}
+            ${Object.entries(groups)
+                .filter(([, list]) => list.length > 0)
+                .map(([type, list]) => `
+                    <optgroup label="${escapeHtml(typeLabels[type] || type)}">
+                        ${list.map((target) => {
+                            const key = String(target.key || '');
+                            const selected = key === selectedKey ? ' selected' : '';
+                            const statusText = targetStatusLabel(target);
+                            const suffix = statusText ? ` · ${statusText}` : '';
+                            return `<option value="${escapeHtml(key)}"${selected}>${escapeHtml(String(target.label || key) + suffix)}</option>`;
+                        }).join('')}
+                    </optgroup>
+                `).join('')}
         `;
     };
     const ensureLabelTranslations = (item) => {
@@ -124,16 +125,23 @@
         });
         return item.label_translations;
     };
+    const makeBaseLinkItem = () => ({
+        id: `item_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        enabled: true,
+        url: '',
+        new_tab: false,
+        nofollow: false,
+        link_target: null,
+        label_translations: Object.fromEntries(supportedLocales.map((locale) => [locale, ''])),
+    });
     const newListItem = (path) => {
-        const item = {
-            id: `item_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-            enabled: true,
-            url: '',
-            new_tab: false,
-            nofollow: false,
-            link_target: null,
-            label_translations: Object.fromEntries(supportedLocales.map((locale) => [locale, ''])),
-        };
+        if (path === 'header.nav_items') {
+            return { ...makeBaseLinkItem(), children: [] };
+        }
+        if (/^header\.nav_items\.\d+\.children$/.test(String(path || ''))) {
+            return makeBaseLinkItem();
+        }
+        const item = makeBaseLinkItem();
         if (listHasStyle(path)) item.style = 'primary';
         return item;
     };
@@ -144,6 +152,24 @@
             if (typeof dict[code] === 'string' && dict[code].trim() !== '') return dict[code].trim();
         }
         return '';
+    };
+    const ensureHeaderState = () => {
+        const logo = getPath(state, 'header.logo');
+        if (!logo || typeof logo !== 'object' || Array.isArray(logo)) {
+            setPath(state, 'header.logo', { src: '', alt: '' });
+        }
+        if (typeof getPath(state, 'header.logo.src') !== 'string') setPath(state, 'header.logo.src', '');
+        if (typeof getPath(state, 'header.logo.alt') !== 'string') setPath(state, 'header.logo.alt', '');
+        const menuPosition = String(getPath(state, 'header.menu_position') || 'right');
+        if (!['left', 'center', 'right'].includes(menuPosition)) {
+            setPath(state, 'header.menu_position', 'right');
+        }
+        const navItems = ensureArrayPath(state, 'header.nav_items');
+        navItems.forEach((item) => {
+            ensureLabelTranslations(item);
+            if (!Array.isArray(item.children)) item.children = [];
+            item.children.forEach((child) => ensureLabelTranslations(child));
+        });
     };
 
     let state = clone(initialChrome);
@@ -166,82 +192,125 @@
         });
     };
 
-    const renderList = (path) => {
+    const renderItemForm = (path, index, item, options = {}) => {
+        const selectedTargetKey = targetKeyForItem(item);
+        const selectedTarget = selectedTargetKey ? (chromeLinkTargetMap.get(selectedTargetKey) || null) : null;
+        const labels = ensureLabelTranslations(item);
+        const title = labelForLocale(labels, 'ru') || labelForLocale(labels, supportedLocales[0] || 'ru') || item?.id || 'Элемент';
+        const localeInputs = supportedLocales.map((locale) => `
+            <div class="chrome-kv">
+                <label>Подпись (${escapeHtml(locale.toUpperCase())})</label>
+                <input type="text" value="${escapeHtml(labels[locale] || '')}" data-list-field="label_translations.${escapeHtml(locale)}" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
+            </div>
+        `).join('');
+        const targetPickerField = listSupportsTargetPicker(path)
+            ? `<div class="chrome-item-row">
+                    <div class="chrome-kv" style="grid-column: span 2;">
+                        <label>Связать с существующей страницей / постом / категорией</label>
+                        <select data-list-target-select data-list-path="${escapeHtml(path)}" data-list-index="${index}">
+                            ${renderTargetOptions(selectedTargetKey)}
+                        </select>
+                        <div class="muted" style="font-size:12px; margin-top:4px;">
+                            ${selectedTarget
+                                ? `Источник: ${escapeHtml(String(selectedTarget.label || selectedTargetKey))}${targetStatusLabel(selectedTarget) ? ` · ${escapeHtml(targetStatusLabel(selectedTarget))}` : ''}${selectedTarget.preview_path ? ` · ${escapeHtml(String(selectedTarget.preview_path))}` : ''}`
+                                : 'Можно выбрать существующую сущность для автозаполнения URL и локализованных подписей.'}
+                        </div>
+                   </div>
+               </div>`
+            : '';
+        const styleField = listHasStyle(path)
+            ? `<div class="chrome-kv">
+                    <label>Стиль</label>
+                    <select data-list-field="style" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
+                        ${['primary', 'secondary', 'ghost'].map((opt) => `<option value="${opt}"${String(item?.style || 'primary') === opt ? ' selected' : ''}>${opt}</option>`).join('')}
+                    </select>
+               </div>`
+            : '';
+        const actionPrefix = options.child ? 'Подпункт' : 'Элемент';
+        const urlHint = options.hasChildren
+            ? 'URL родителя игнорируется, если есть вложенные пункты.'
+            : (selectedTarget ? 'Используется как fallback, если связанная сущность недоступна.' : '');
+
+        return `
+            <div class="chrome-item-card ${options.child ? 'chrome-item-card-child' : ''}">
+                <div class="chrome-item-actions">
+                    <strong>${escapeHtml(title)}</strong>
+                    <div class="chrome-item-tools">
+                        <button type="button" class="btn btn-small" data-list-action="up" data-list-path="${escapeHtml(path)}" data-list-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button type="button" class="btn btn-small" data-list-action="down" data-list-path="${escapeHtml(path)}" data-list-index="${index}" ${index >= (ensureArrayPath(state, path).length - 1) ? 'disabled' : ''}>↓</button>
+                        <button type="button" class="btn btn-small btn-danger" data-list-action="remove" data-list-path="${escapeHtml(path)}" data-list-index="${index}">Удалить</button>
+                    </div>
+                </div>
+                <div class="chrome-item-row cols-3">
+                    <div class="chrome-kv">
+                        <label>ID</label>
+                        <input type="text" value="${escapeHtml(item?.id || '')}" data-list-field="id" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
+                    </div>
+                    ${localeInputs}
+                </div>
+                ${targetPickerField}
+                <div class="chrome-item-row ${listHasStyle(path) ? 'cols-3' : ''}">
+                    <div class="chrome-kv" style="grid-column: span 2;">
+                        <label>${actionPrefix} URL</label>
+                        <input type="text" value="${escapeHtml(item?.url || '')}" placeholder="/{locale}/blog или https://..." data-list-field="url" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
+                        ${urlHint ? `<div class="muted" style="font-size:12px; margin-top:4px;">${escapeHtml(urlHint)}</div>` : ''}
+                    </div>
+                    ${styleField}
+                </div>
+                <div class="chrome-check-grid">
+                    <label class="checkbox"><input type="checkbox" ${item?.enabled ? 'checked' : ''} data-list-field="enabled" data-list-path="${escapeHtml(path)}" data-list-index="${index}"> Включено</label>
+                    <label class="checkbox"><input type="checkbox" ${item?.new_tab ? 'checked' : ''} data-list-field="new_tab" data-list-path="${escapeHtml(path)}" data-list-index="${index}"> Новая вкладка</label>
+                    <label class="checkbox"><input type="checkbox" ${item?.nofollow ? 'checked' : ''} data-list-field="nofollow" data-list-path="${escapeHtml(path)}" data-list-index="${index}"> Nofollow</label>
+                    <div class="muted" style="font-size:12px;">${ensureArrayPath(state, path).length}/${listCap(path)}</div>
+                </div>
+            </div>
+        `;
+    };
+
+    const renderGenericList = (path) => {
         const container = form.querySelector(`[data-chrome-list="${path}"]`);
         if (!container) return;
         const items = ensureArrayPath(state, path);
-        const cap = listCaps[path] || 99;
-
         if (!Array.isArray(items) || items.length === 0) {
             container.innerHTML = '<div class="muted" style="font-size:13px;">Список пуст. Нажмите «Добавить».</div>';
             return;
         }
 
-        container.innerHTML = items.map((item, index) => {
-            const labels = (item && typeof item.label_translations === 'object') ? item.label_translations : {};
-            const selectedTargetKey = targetKeyForItem(item);
-            const selectedTarget = selectedTargetKey ? (chromeLinkTargetMap.get(selectedTargetKey) || null) : null;
-            const title = labelForLocale(labels, 'ru') || labelForLocale(labels, supportedLocales[0] || 'ru') || item?.id || 'Элемент';
-            const targetPickerField = listSupportsTargetPicker(path)
-                ? `<div class="chrome-item-row">
-                        <div class="chrome-kv" style="grid-column: span 2;">
-                            <label>Связать с существующей страницей / постом / категорией</label>
-                            <select data-list-target-select data-list-path="${escapeHtml(path)}" data-list-index="${index}">
-                                ${renderTargetOptions(selectedTargetKey)}
-                            </select>
-                            <div class="muted" style="font-size:12px; margin-top:4px;">
-                                ${selectedTarget
-                                    ? `Источник: ${escapeHtml(String(selectedTarget.label || selectedTargetKey))}${targetStatusLabel(selectedTarget) ? ` · ${escapeHtml(targetStatusLabel(selectedTarget))}` : ''}${selectedTarget.preview_path ? ` · ${escapeHtml(String(selectedTarget.preview_path))}` : ''}`
-                                    : 'Можно выбрать существующую сущность для автозаполнения URL и локализованных подписей.'}
-                            </div>
-                       </div>
-                   </div>`
-                : '';
-            const styleField = listHasStyle(path)
-                ? `<div class="chrome-kv">
-                        <label>Стиль</label>
-                        <select data-list-field="style" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
-                            ${['primary', 'secondary', 'ghost'].map((opt) => `<option value="${opt}"${String(item?.style || 'primary') === opt ? ' selected' : ''}>${opt}</option>`).join('')}
-                        </select>
-                   </div>`
-                : '';
-            const localeInputs = supportedLocales.map((locale) => `
-                <div class="chrome-kv">
-                    <label>Подпись (${escapeHtml(locale.toUpperCase())})</label>
-                    <input type="text" value="${escapeHtml(labels?.[locale] || '')}" data-list-field="label_translations.${escapeHtml(locale)}" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
-                </div>
-            `).join('');
+        container.innerHTML = items.map((item, index) => renderItemForm(path, index, item)).join('');
+    };
 
+    const renderHeaderNavList = () => {
+        const path = 'header.nav_items';
+        const container = form.querySelector('[data-chrome-list="header.nav_items"]');
+        if (!container) return;
+        const items = ensureArrayPath(state, path);
+        if (!Array.isArray(items) || items.length === 0) {
+            container.innerHTML = '<div class="muted" style="font-size:13px;">Список пуст. Нажмите «Добавить пункт».</div>';
+            return;
+        }
+
+        container.innerHTML = items.map((item, index) => {
+            ensureLabelTranslations(item);
+            if (!Array.isArray(item.children)) item.children = [];
+            item.children.forEach((child) => ensureLabelTranslations(child));
+            const childPath = `${path}.${index}.children`;
+            const children = ensureArrayPath(state, childPath);
             return `
-                <div class="chrome-item-card">
-                    <div class="chrome-item-actions">
-                        <strong>${escapeHtml(title)}</strong>
-                        <div class="chrome-item-tools">
-                            <button type="button" class="btn btn-small" data-list-action="up" data-list-path="${escapeHtml(path)}" data-list-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
-                            <button type="button" class="btn btn-small" data-list-action="down" data-list-path="${escapeHtml(path)}" data-list-index="${index}" ${index >= items.length - 1 ? 'disabled' : ''}>↓</button>
-                            <button type="button" class="btn btn-small btn-danger" data-list-action="remove" data-list-path="${escapeHtml(path)}" data-list-index="${index}">Удалить</button>
-                        </div>
+                <div class="chrome-list-shell">
+                    <div class="chrome-list-header">
+                        <h3>Пункт #${index + 1}</h3>
+                        <button type="button" class="btn btn-small" data-nav-child-add="${index}" ${children.length >= listCap(childPath) ? 'disabled' : ''}>Добавить подпункт</button>
                     </div>
-                    <div class="chrome-item-row cols-3">
-                        <div class="chrome-kv">
-                            <label>ID</label>
-                            <input type="text" value="${escapeHtml(item?.id || '')}" data-list-field="id" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
+                    <div class="chrome-list-items">
+                        ${renderItemForm(path, index, item, { hasChildren: children.length > 0 })}
+                        <div class="chrome-child-shell">
+                            <div class="muted" style="font-size:12px;">Вложенность: 1 уровень. Если у пункта есть children, он становится dropdown/disclosure и сам не ведёт по URL.</div>
+                            <div class="chrome-child-list">
+                                ${children.length > 0
+                                    ? children.map((child, childIndex) => renderItemForm(childPath, childIndex, child, { child: true })).join('')
+                                    : '<div class="muted" style="font-size:13px;">Подпунктов пока нет.</div>'}
+                            </div>
                         </div>
-                        ${localeInputs}
-                    </div>
-                    ${targetPickerField}
-                    <div class="chrome-item-row ${listHasStyle(path) ? 'cols-3' : ''}">
-                        <div class="chrome-kv" style="grid-column: ${listHasStyle(path) ? 'span 2' : 'span 2'};">
-                            <label>${selectedTarget ? 'URL (fallback)' : 'URL'}</label>
-                            <input type="text" value="${escapeHtml(item?.url || '')}" placeholder="/{locale}/blog или https://..." data-list-field="url" data-list-path="${escapeHtml(path)}" data-list-index="${index}">
-                        </div>
-                        ${styleField}
-                    </div>
-                    <div class="chrome-check-grid">
-                        <label class="checkbox"><input type="checkbox" ${item?.enabled ? 'checked' : ''} data-list-field="enabled" data-list-path="${escapeHtml(path)}" data-list-index="${index}"> Включено</label>
-                        <label class="checkbox"><input type="checkbox" ${item?.new_tab ? 'checked' : ''} data-list-field="new_tab" data-list-path="${escapeHtml(path)}" data-list-index="${index}"> Новая вкладка</label>
-                        <label class="checkbox"><input type="checkbox" ${item?.nofollow ? 'checked' : ''} data-list-field="nofollow" data-list-path="${escapeHtml(path)}" data-list-index="${index}"> Nofollow</label>
-                        <div class="muted" style="font-size:12px;">${items.length}/${cap}</div>
                     </div>
                 </div>
             `;
@@ -249,32 +318,62 @@
     };
 
     const renderAllLists = () => {
-        Object.keys(listCaps).forEach(renderList);
+        renderHeaderNavList();
+        ['header.cta_buttons', 'footer.links', 'footer.social_links', 'footer.legal_links'].forEach(renderGenericList);
     };
 
     const renderPreview = () => {
         const preview = document.getElementById('chrome-builder-preview');
         if (!preview) return;
+
         const header = state?.header || {};
         const footer = state?.footer || {};
         const search = state?.search || {};
         const previewLocale = supportedLocales[0] || 'ru';
+        const menuPosition = ['left', 'center', 'right'].includes(String(header.menu_position || ''))
+            ? String(header.menu_position)
+            : 'right';
 
+        const topbar = preview.querySelector('[data-chrome-preview-topbar]');
         const headerNav = preview.querySelector('[data-chrome-preview-header-nav]');
         const footerLinks = preview.querySelector('[data-chrome-preview-footer-links]');
         const searchBox = preview.querySelector('[data-chrome-preview-search]');
         const footerTagline = preview.querySelector('[data-chrome-preview-footer-tagline]');
         const headerTagline = preview.querySelector('[data-chrome-preview-tagline]');
         const footerBrand = preview.querySelector('[data-chrome-preview-footer-brand]');
+        const brandMark = preview.querySelector('[data-chrome-preview-brand-mark]');
 
-        const navItems = Array.isArray(header.nav_items) ? header.nav_items.filter((i) => i && i.enabled) : [];
-        const ctaItems = Array.isArray(header.cta_buttons) ? header.cta_buttons.filter((i) => i && i.enabled) : [];
+        const navItems = Array.isArray(header.nav_items) ? header.nav_items.filter((item) => item && item.enabled) : [];
+        const ctaItems = Array.isArray(header.cta_buttons) ? header.cta_buttons.filter((item) => item && item.enabled) : [];
         if (headerNav) {
+            headerNav.className = `chrome-preview-nav pos-${menuPosition}`;
             headerNav.innerHTML = [
-                ...navItems.slice(0, 5).map((item) => `<span class="chrome-preview-pill">${escapeHtml(labelForLocale(item.label_translations, previewLocale) || 'Ссылка')}</span>`),
+                ...navItems.slice(0, 5).map((item) => {
+                    const label = labelForLocale(item.label_translations, previewLocale) || 'Ссылка';
+                    const childCount = Array.isArray(item.children) ? item.children.filter((child) => child && child.enabled).length : 0;
+                    const childPreview = childCount > 0
+                        ? (Array.isArray(item.children) ? item.children.filter((child) => child && child.enabled).slice(0, 2).map((child) => `<span class="chrome-preview-pill">${escapeHtml(labelForLocale(child.label_translations, previewLocale) || 'Подпункт')}</span>`).join('') : '')
+                        : '';
+                    return `<span class="chrome-preview-pill ${childCount > 0 ? 'has-children' : ''}">${escapeHtml(label)}</span>${childPreview}`;
+                }),
                 ...ctaItems.slice(0, 2).map((item) => `<span class="chrome-preview-pill ${escapeHtml(item.style || 'primary')}">${escapeHtml(labelForLocale(item.label_translations, previewLocale) || 'Кнопка')}</span>`),
             ].join('');
             headerNav.style.display = header.enabled === false ? 'none' : 'flex';
+        }
+
+        if (topbar) {
+            topbar.style.display = header.enabled === false ? 'none' : 'flex';
+        }
+
+        if (brandMark) {
+            const logoSrc = String(header.logo?.src || '').trim();
+            if (logoSrc !== '') {
+                brandMark.classList.add('has-image');
+                brandMark.innerHTML = `<img src="${escapeHtml(logoSrc)}" alt="${escapeHtml(String(header.logo?.alt || 'Logo'))}">`;
+            } else {
+                brandMark.classList.remove('has-image');
+                brandMark.innerHTML = '';
+            }
         }
 
         const canShowSearch = search.enabled !== false
@@ -299,13 +398,14 @@
             footerBrand.style.display = footer.show_brand === false ? 'none' : 'inline';
         }
         if (footerLinks) {
-            const list = Array.isArray(footer.links) ? footer.links.filter((i) => i && i.enabled) : [];
+            const list = Array.isArray(footer.links) ? footer.links.filter((item) => item && item.enabled) : [];
             footerLinks.innerHTML = list.slice(0, 8).map((item) => `<span class="chrome-preview-pill">${escapeHtml(labelForLocale(item.label_translations, previewLocale) || 'Ссылка')}</span>`).join('');
             footerLinks.style.display = footer.enabled === false ? 'none' : 'flex';
         }
     };
 
     const rerender = () => {
+        ensureHeaderState();
         syncPayload();
         applyScalarInputsFromState();
         renderAllLists();
@@ -326,6 +426,46 @@
         renderPreview();
     };
 
+    const applySelectedTarget = (path, index, selectedKey) => {
+        const items = ensureArrayPath(state, path);
+        const item = items[index];
+        if (!item || typeof item !== 'object') return;
+
+        if (selectedKey === '') {
+            delete item.link_target;
+            rerender();
+            return;
+        }
+
+        const target = chromeLinkTargetMap.get(selectedKey);
+        if (!target) {
+            dialogs.alert('Выбранная сущность не найдена в каталоге.');
+            return;
+        }
+
+        item.link_target = {
+            type: String(target.type || ''),
+            id: Number(target.entity_id || 0),
+        };
+
+        const urlTemplate = String(target.url_template || '').trim();
+        if (urlTemplate !== '') {
+            item.url = urlTemplate;
+        }
+
+        const labels = ensureLabelTranslations(item);
+        const targetTitles = (target && typeof target.titles === 'object') ? target.titles : {};
+        supportedLocales.forEach((locale) => {
+            const current = String(labels[locale] || '').trim();
+            const suggested = String(targetTitles[locale] || '').trim();
+            if (current === '' && suggested !== '') {
+                labels[locale] = suggested;
+            }
+        });
+
+        rerender();
+    };
+
     form.addEventListener('click', (e) => {
         const tabBtn = e.target.closest('[data-chrome-tab]');
         if (tabBtn) {
@@ -341,12 +481,56 @@
         if (addBtn) {
             const path = addBtn.getAttribute('data-chrome-add');
             const items = ensureArrayPath(state, path);
-            const cap = listCaps[path] || 99;
+            const cap = listCap(path);
             if (items.length >= cap) {
                 dialogs.alert(`Лимит элементов для ${path}: ${cap}`);
                 return;
             }
             items.push(newListItem(path));
+            rerender();
+            return;
+        }
+
+        const childAddBtn = e.target.closest('[data-nav-child-add]');
+        if (childAddBtn) {
+            const parentIndex = Number(childAddBtn.getAttribute('data-nav-child-add'));
+            if (!Number.isInteger(parentIndex)) return;
+            const path = `header.nav_items.${parentIndex}.children`;
+            const items = ensureArrayPath(state, path);
+            if (items.length >= listCap(path)) {
+                dialogs.alert(`Лимит подпунктов: ${listCap(path)}`);
+                return;
+            }
+            items.push(newListItem(path));
+            rerender();
+            return;
+        }
+
+        const logoPickBtn = e.target.closest('[data-chrome-logo-pick]');
+        if (logoPickBtn) {
+            if (!window.TestoCmsMediaPicker?.open) {
+                dialogs.alert('Media picker недоступен.');
+                return;
+            }
+            window.TestoCmsMediaPicker.open({
+                accept: 'image',
+                multiple: false,
+                title: 'Выбор логотипа',
+                subtitle: 'Выберите изображение из Assets для шапки сайта',
+            }).then((asset) => {
+                if (!asset?.public_url) return;
+                setPath(state, 'header.logo.src', asset.public_url);
+                if (String(getPath(state, 'header.logo.alt') || '').trim() === '') {
+                    setPath(state, 'header.logo.alt', asset.alt || asset.title || 'Logo');
+                }
+                rerender();
+            }).catch(() => {});
+            return;
+        }
+
+        const logoClearBtn = e.target.closest('[data-chrome-logo-clear]');
+        if (logoClearBtn) {
+            setPath(state, 'header.logo.src', '');
             rerender();
             return;
         }
@@ -404,45 +588,7 @@
         if (!targetSelect) return;
         const path = targetSelect.getAttribute('data-list-path');
         const index = Number(targetSelect.getAttribute('data-list-index'));
-        const items = ensureArrayPath(state, path);
-        if (!Array.isArray(items) || !Number.isInteger(index) || index < 0 || index >= items.length) return;
-        const item = items[index];
-        if (!item || typeof item !== 'object') return;
-
-        const selectedKey = String(targetSelect.value || '').trim();
-        if (selectedKey === '') {
-            delete item.link_target;
-            rerender();
-            return;
-        }
-
-        const target = chromeLinkTargetMap.get(selectedKey);
-        if (!target) {
-            dialogs.alert('Выбранная сущность не найдена в каталоге.');
-            return;
-        }
-
-        item.link_target = {
-            type: String(target.type || ''),
-            id: Number(target.entity_id || 0),
-        };
-
-        const urlTemplate = String(target.url_template || '').trim();
-        if (urlTemplate !== '') {
-            item.url = urlTemplate;
-        }
-
-        const labels = ensureLabelTranslations(item);
-        const targetTitles = (target && typeof target.titles === 'object') ? target.titles : {};
-        supportedLocales.forEach((locale) => {
-            const current = String(labels[locale] || '').trim();
-            const suggested = String(targetTitles[locale] || '').trim();
-            if (current === '' && suggested !== '') {
-                labels[locale] = suggested;
-            }
-        });
-
-        rerender();
+        applySelectedTarget(path, index, String(targetSelect.value || '').trim());
     });
 
     const resetBtn = document.getElementById('chrome-builder-reset');
@@ -476,5 +622,6 @@
         });
     });
 
+    ensureHeaderState();
     rerender();
 })();

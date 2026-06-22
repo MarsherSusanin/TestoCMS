@@ -177,6 +177,59 @@ class BlockSchemaValidator
                 continue;
             }
 
+            if ($type === 'carousel') {
+                $height = (string) ($data['height'] ?? 'lg');
+                if (! in_array($height, ['md', 'lg', 'xl'], true)) {
+                    $errors[] = "Block schema path {$nodePath}.data.height must be one of md|lg|xl.";
+                }
+                $align = (string) ($data['overlay_align'] ?? 'left');
+                if (! in_array($align, ['left', 'center', 'right'], true)) {
+                    $errors[] = "Block schema path {$nodePath}.data.overlay_align must be one of left|center|right.";
+                }
+                $theme = (string) ($data['overlay_theme'] ?? 'gradient');
+                if (! in_array($theme, ['gradient', 'dark', 'light'], true)) {
+                    $errors[] = "Block schema path {$nodePath}.data.overlay_theme must be one of gradient|dark|light.";
+                }
+                $interval = (int) ($data['interval_ms'] ?? 5000);
+                if ($interval < 1500 || $interval > 30000) {
+                    $errors[] = "Block schema path {$nodePath}.data.interval_ms must be between 1500 and 30000.";
+                }
+                foreach (['autoplay', 'show_arrows', 'show_dots'] as $boolKey) {
+                    if (array_key_exists($boolKey, $data) && ! is_bool($data[$boolKey])) {
+                        $errors[] = "Block schema path {$nodePath}.data.{$boolKey} must be a boolean.";
+                    }
+                }
+
+                $slides = $data['slides'] ?? null;
+                if (! is_array($slides)) {
+                    $errors[] = "Block schema path {$nodePath}.data.slides must be an array.";
+                } else {
+                    foreach ($slides as $slideIndex => $slide) {
+                        $slidePath = "{$nodePath}.data.slides[{$slideIndex}]";
+                        if (! is_array($slide)) {
+                            $errors[] = "Block schema path {$slidePath} must be an object.";
+
+                            continue;
+                        }
+                        foreach (['src', 'alt', 'title', 'text', 'cta_label', 'cta_url'] as $stringKey) {
+                            if (array_key_exists($stringKey, $slide) && ! is_string($slide[$stringKey])) {
+                                $errors[] = "Block schema path {$slidePath}.{$stringKey} must be a string.";
+                            }
+                        }
+                        foreach (['target_blank', 'nofollow'] as $boolKey) {
+                            if (array_key_exists($boolKey, $slide) && ! is_bool($slide[$boolKey])) {
+                                $errors[] = "Block schema path {$slidePath}.{$boolKey} must be a boolean.";
+                            }
+                        }
+                    }
+                }
+                if (array_key_exists('children', $node)) {
+                    $errors[] = "Block schema path {$nodePath} type '{$type}' does not support children.";
+                }
+
+                continue;
+            }
+
             if (array_key_exists('children', $node)) {
                 $errors[] = "Block schema path {$nodePath} type '{$type}' does not support children.";
             }

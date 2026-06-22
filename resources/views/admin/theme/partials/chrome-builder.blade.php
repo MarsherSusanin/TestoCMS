@@ -45,6 +45,34 @@
                         </div>
                     </div>
 
+                    <div class="grid cols-2">
+                        <div class="field">
+                            <label for="chrome-header-menu-position">Позиция меню</label>
+                            <select id="chrome-header-menu-position" data-chrome-input="header.menu_position">
+                                <option value="left">Слева</option>
+                                <option value="center">По центру</option>
+                                <option value="right">Справа</option>
+                            </select>
+                            <small>Для макета с логотипом по центру это поле игнорируется.</small>
+                        </div>
+                        <div class="field">
+                            <label for="chrome-header-logo-alt">Alt логотипа</label>
+                            <input type="text" id="chrome-header-logo-alt" data-chrome-input="header.logo.alt" placeholder="TestoCMS">
+                        </div>
+                    </div>
+
+                    <div class="grid cols-2">
+                        <div class="field">
+                            <label for="chrome-header-logo-src">Логотип (image URL)</label>
+                            <div class="inline" style="gap:8px;">
+                                <input type="text" id="chrome-header-logo-src" data-chrome-input="header.logo.src" placeholder="https://...">
+                                <button type="button" class="btn btn-small" data-chrome-logo-pick>Выбрать из Assets</button>
+                                <button type="button" class="btn btn-small" data-chrome-logo-clear>Сбросить</button>
+                            </div>
+                            <small>Если URL пустой, используется встроенный бренд-марк.</small>
+                        </div>
+                    </div>
+
                     <div class="chrome-check-grid" style="margin-bottom:12px;">
                         <label class="checkbox"><input type="checkbox" data-chrome-input="header.enabled"> Включить шапку</label>
                         <label class="checkbox"><input type="checkbox" data-chrome-input="header.show_brand_subtitle"> Подзаголовок бренда</label>
@@ -169,13 +197,16 @@
             </div>
 
             <aside>
-                <div class="chrome-preview-shell" id="chrome-builder-preview">
-                    <div class="chrome-preview-head">Живое превью (RU)</div>
-                    <div class="chrome-preview-body">
-                        <div class="chrome-preview-topbar">
+                    <div class="chrome-preview-shell" id="chrome-builder-preview">
+                        <div class="chrome-preview-head">Живое превью (RU)</div>
+                        <div class="chrome-preview-body">
+                        <div class="chrome-preview-topbar" data-chrome-preview-topbar>
                             <div class="chrome-preview-brand">
-                                <strong>{{ config('app.name') }}</strong>
-                                <span data-chrome-preview-tagline>SEO-first CMS на Laravel</span>
+                                <span class="chrome-preview-brand-mark" data-chrome-preview-brand-mark></span>
+                                <span class="chrome-preview-brand-copy">
+                                    <strong>{{ config('app.name') }}</strong>
+                                    <span data-chrome-preview-tagline>SEO-first CMS на Laravel</span>
+                                </span>
                             </div>
                             <div class="chrome-preview-nav" data-chrome-preview-header-nav></div>
                         </div>

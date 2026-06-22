@@ -62,6 +62,19 @@ class AdminEditorRuntimeTest extends TestCase
             ->assertSee('walkNodes(state.rawNodes, (node) => {', false);
     }
 
+    public function test_page_form_runtime_includes_inline_carousel_editor_hooks(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $superadmin = $this->makeUser('runtime-pages-carousel@testocms.local', 'superadmin');
+
+        $this->actingAs($superadmin)
+            ->get('/admin/runtime/page-form.js')
+            ->assertOk()
+            ->assertSee('data-structured-carousel-add-slide', false)
+            ->assertSee('data-structured-carousel-media-pick', false)
+            ->assertSee('slides.', false);
+    }
+
     public function test_page_fullscreen_runtime_keeps_manual_open_available_on_narrow_viewports(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

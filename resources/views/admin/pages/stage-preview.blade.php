@@ -20,17 +20,9 @@
 @section('content')
     <article class="surface">
         <div class="surface-body">
-            <div class="meta-row">
-                <span class="tag brand">{{ strtoupper(app()->getLocale()) }}</span>
-                <span class="tag">{{ $page->page_type }}</span>
-                <span class="tag">{{ $page->status }}</span>
-                <span class="tag">Stage Preview</span>
-            </div>
-
             <div class="content-prose" data-builder-preview-root>
                 {!! (string) ($stageRenderedHtml ?? ($translation->rendered_html ?? '')) !!}
             </div>
         </div>
     </article>
 @endsection
-

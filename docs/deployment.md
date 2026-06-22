@@ -54,4 +54,6 @@ The repository also includes a separate local Docker stack for development only.
 - Create your own admin credentials during setup and rotate any bootstrap passwords after first login
 - Back up both uploaded files and the database before updates
 - Shared hosting profile expects `LARAVEL_PUBLIC_PATH=../public_html`
+- GitHub Releases now publish two ZIP artifacts: `testocms-vX.Y.Z-shared-hosting.zip` for manual deploy and `testocms-vX.Y.Z-updater.zip` for admin/core updater
+- Core updater treats `html_public/` as the canonical public source and selectively syncs only core-managed files into the active public root, preserving host-managed extras like `.well-known`
 - Treat `docker-compose.yml` as local-only and `docker-compose.vps.yml` as the Docker/VPS production recipe
