@@ -4,6 +4,7 @@ namespace App\Modules\Updates\Services;
 
 use App\Models\ThemeSetting;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
 
 class CoreUpdateSettingsService
@@ -46,6 +47,9 @@ class CoreUpdateSettingsService
         }
 
         $stored = $this->storedPayload(self::SETTINGS_KEY);
+        if (is_array($stored) && trim((string) ($stored['deploy_hook_token'] ?? '')) !== '') {
+            $stored['deploy_hook_token'] = $this->decryptSecret((string) $stored['deploy_hook_token']);
+        }
 
         return $this->resolvedCache = $this->normalizeForSave($stored);
     }
@@ -102,10 +106,17 @@ class CoreUpdateSettingsService
             return null;
         }
 
+        $normalized = $this->normalizeForSave($payload);
+        // Encrypt the deploy-hook bearer token at rest; it is a secret, unlike
+        // the (public) signing key. Decrypted again in resolved().
+        if ($normalized['deploy_hook_token'] !== '') {
+            $normalized['deploy_hook_token'] = $this->encryptSecret($normalized['deploy_hook_token']);
+        }
+
         $record = ThemeSetting::query()->updateOrCreate(
             ['key' => self::SETTINGS_KEY],
             [
-                'settings' => $this->normalizeForSave($payload),
+                'settings' => $normalized,
                 'updated_by' => $actorId,
             ]
         );
@@ -113,6 +124,21 @@ class CoreUpdateSettingsService
         $this->resolvedCache = null;
 
         return $record;
+    }
+
+    private function encryptSecret(string $value): string
+    {
+        return Crypt::encryptString($value);
+    }
+
+    private function decryptSecret(string $value): string
+    {
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Throwable) {
+            // Legacy plaintext token saved before encryption was added.
+            return $value;
+        }
     }
 
     /**

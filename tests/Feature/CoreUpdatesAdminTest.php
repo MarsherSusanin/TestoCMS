@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CoreBackup;
 use App\Models\ThemeSetting;
 use App\Models\User;
+use App\Modules\Updates\Services\CoreUpdateSettingsService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -254,6 +255,21 @@ class CoreUpdatesAdminTest extends TestCase
 
         $backup->refresh();
         $this->assertSame('rolled_back', $backup->status);
+    }
+
+    public function test_deploy_hook_token_is_encrypted_at_rest(): void
+    {
+        $service = app(CoreUpdateSettingsService::class);
+        $service->save(['mode' => 'deploy-hook', 'deploy_hook_token' => 'super-secret-token']);
+
+        $record = ThemeSetting::query()->where('key', 'core_updates')->first();
+        $this->assertNotNull($record);
+        $storedToken = (string) ($record->settings['deploy_hook_token'] ?? '');
+        $this->assertNotSame('super-secret-token', $storedToken, 'token must not be stored in plaintext');
+        $this->assertNotSame('', $storedToken);
+
+        // resolved() transparently decrypts it back.
+        $this->assertSame('super-secret-token', $service->resolved()['deploy_hook_token'] ?? null);
     }
 
     private function makeUpdaterZip(string $version, bool $includeArtifact = true): string
