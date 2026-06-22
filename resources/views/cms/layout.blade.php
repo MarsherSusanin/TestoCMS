@@ -49,5 +49,6 @@
     @include('cms.partials.chrome-footer')
 </div>
 @include('cms.partials.public-runtime')
+@include('cms.partials.cookie-consent')
 </body>
 </html>

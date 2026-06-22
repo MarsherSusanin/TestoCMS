@@ -1445,3 +1445,31 @@
         .cms-price-period { font-size: 1rem; color: var(--muted); }
         .cms-price-features { list-style: none; padding: 0; margin: 16px 0; flex: 1; }
         .cms-price-features li { padding: 6px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+        .cms-consent {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            z-index: 1000;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            background: var(--surface-strong);
+            border: 1px solid var(--line-strong);
+            box-shadow: var(--shadow);
+        }
+        .cms-consent[hidden] { display: none; }
+        .cms-consent-text { margin: 0; font-size: .9rem; }
+        .cms-consent-actions { display: flex; gap: 8px; }
+        .cms-consent-actions button {
+            cursor: pointer;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: transparent;
+            font: inherit;
+        }
