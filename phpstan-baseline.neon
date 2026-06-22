@@ -1,0 +1,913 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Offset ''optional'' on array\{passed\: false, label\: string, detail\: string\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Console/Commands/CmsSetupCommand.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: app/Console/Commands/CmsSetupCommand.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-empty\-string and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Console/Commands/MakeModuleSkeletonCommand.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminRuntimeController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Admin/ApiKeyController.php
+
+		-
+			message: '#^Offset 0 on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Admin/AssetCrudController.php
+
+		-
+			message: '#^Offset 1 on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Admin/AssetCrudController.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Admin/AssetCrudController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Admin/CategoryCrudController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 5
+			path: app/Http/Controllers/Admin/ContentTemplateController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Admin/PageCrudController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Http/Controllers/Admin/PageCrudController.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Admin/PostCrudController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Http/Controllers/Admin/PostCrudController.php
+
+		-
+			message: '#^Offset 0 on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Api/Admin/AssetController.php
+
+		-
+			message: '#^Offset 1 on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Api/Admin/AssetController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Api/Admin/PageController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Api/Admin/PostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/CategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/CategoryController.php
+
+		-
+			message: '#^Parameter \#1 \$category of static method App\\Modules\\Core\\DTO\\CategoryDto\:\:fromModels\(\) expects App\\Models\\Category, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Content/CategoryController.php
+
+		-
+			message: '#^Parameter \#2 \$translation of static method App\\Modules\\Core\\DTO\\CategoryDto\:\:fromModels\(\) expects App\\Models\\CategoryTranslation\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Content/CategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PageController.php
+
+		-
+			message: '#^Parameter \#1 \$page of static method App\\Modules\\Core\\DTO\\PageDto\:\:fromModels\(\) expects App\\Models\\Page, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Content/PageController.php
+
+		-
+			message: '#^Parameter \#2 \$translation of static method App\\Modules\\Core\\DTO\\PageDto\:\:fromModels\(\) expects App\\Models\\PageTranslation\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Content/PageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$categories\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Parameter \#1 \$post of static method App\\Modules\\Core\\DTO\\PostDto\:\:fromModels\(\) expects App\\Models\\Post, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Parameter \#2 \$translation of static method App\\Modules\\Core\\DTO\\PostDto\:\:fromModels\(\) expects App\\Models\\PostTranslation\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/Content/PostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/FeedController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/FeedController.php
+
+		-
+			message: '#^Cannot call method toRssString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/FeedController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:published\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: app/Http/Controllers/Web/SeoController.php
+
+		-
+			message: '#^The @use tag of class App\\Models\\User describes Illuminate\\Database\\Eloquent\\Factories\\HasFactory but the class uses Laravel\\Sanctum\\HasApiTokens\.$#'
+			identifier: generics.wrongParent
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 4
+			path: app/Modules/Auth/Services/AdminProvisionerService.php
+
+		-
+			message: '#^Instanceof between Laravel\\Sanctum\\NewAccessToken and Laravel\\Sanctum\\NewAccessToken will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Modules/Auth/Services/ApiIntegrationKeyService.php
+
+		-
+			message: '#^Method App\\Modules\\Auth\\Services\\ApiIntegrationKeyService\:\:listManagedTokenRows\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{id\: int, name\: string, raw_name\: string, owner_id\: int\|null, owner_label\: string, abilities\: array\<int, string\>, is_full_access\: bool, surfaces\: array\<int, string\>, \.\.\.\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Auth/Services/ApiIntegrationKeyService.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 2
+			path: app/Modules/Auth/Services/DefaultAdminBootstrapService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:published\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Modules/Content/Services/BlockLeafRendererService.php
+
+		-
+			message: '#^Offset 1 on array\{string, string, string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Content/Services/BlockLeafRendererService.php
+
+		-
+			message: '#^Offset 2 on array\{list\<string\>, list\<non\-empty\-string\>, list\<non\-empty\-string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Content/Services/BlockLeafRendererService.php
+
+		-
+			message: '#^Offset 2 on array\{non\-falsy\-string, non\-empty\-string, non\-empty\-string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Content/Services/BlockLeafRendererService.php
+
+		-
+			message: '#^Offset 2 on array\{string, string, string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Content/Services/BlockLeafRendererService.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-list\<non\-falsy\-string\> and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Modules/Content/Services/BlockLeafRendererService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/ContentMutationFinalizerService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content_blocks\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$custom_head_html\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$meta_description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$robots_directives\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$structured_data\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Call to an undefined method App\\Modules\\Content\\Services\\PageContentService\:\:shouldRequireDefaultLocale\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Method App\\Modules\\Content\\Services\\PageContentService\:\:createFromValidated\(\) should return App\\Models\\Page but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Method App\\Modules\\Content\\Services\\PageContentService\:\:updateFromValidated\(\) should return App\\Models\\Page but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Content/Services/PageContentService.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Modules/Content/Services/PageTemplatePayloadBuilder.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Modules/Content/Services/PageTranslationNormalizer.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\PageTranslation\)\: \(bool\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Content/Services/PageTranslationPersisterService.php
+
+		-
+			message: '#^Offset 1 on array\{string, string, string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Content/Services/PostContentRendererService.php
+
+		-
+			message: '#^Offset 2 on array\{list\<string\>, list\<non\-empty\-string\>, list\<non\-empty\-string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Content/Services/PostContentRendererService.php
+
+		-
+			message: '#^Offset 2 on array\{non\-falsy\-string, non\-empty\-string, non\-empty\-string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Content/Services/PostContentRendererService.php
+
+		-
+			message: '#^Offset 2 on array\{string, string, string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Content/Services/PostContentRendererService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$custom_head_html\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$excerpt\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$meta_description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$robots_directives\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$structured_data\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Call to an undefined method App\\Modules\\Content\\Services\\PostContentService\:\:shouldRequireDefaultLocale\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Method App\\Modules\\Content\\Services\\PostContentService\:\:createFromValidated\(\) should return App\\Models\\Post but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Method App\\Modules\\Content\\Services\\PostContentService\:\:updateFromValidated\(\) should return App\\Models\\Post but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Offset ''content_html'' on array\{content_markdown\: string, content_html\: string, content_plain\: string, front_matter\: array\<string, string\|null\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Offset ''content_plain'' on array\{content_markdown\: string, content_html\: string, content_plain\: string, front_matter\: array\<string, string\|null\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Content/Services/PostContentService.php
+
+		-
+			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Modules/Content/Services/PostTemplatePayloadBuilder.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: app/Modules/Content/Services/PostTranslationNormalizer.php
+
+		-
+			message: '#^Offset ''content_html'' on array\{content_html\: string, content_plain\: string\}\|array\{content_markdown\: string, content_html\: string, content_plain\: string, front_matter\: array\<string, string\|null\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Content/Services/PostTranslationNormalizer.php
+
+		-
+			message: '#^Offset ''content_plain'' on array\{content_html\: string, content_plain\: string\}\|array\{content_markdown\: string, content_html\: string, content_plain\: string, front_matter\: array\<string, string\|null\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Content/Services/PostTranslationNormalizer.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\PostTranslation\)\: \(bool\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Content/Services/PostTranslationPersisterService.php
+
+		-
+			message: '#^Parameter \$robotsDirectives of class App\\Modules\\Core\\DTO\\CategoryDto constructor expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Core/DTO/CategoryDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/CategoryDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>slug" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/CategoryDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>title" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/CategoryDto.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Parameter \$robotsDirectives of class App\\Modules\\Core\\DTO\\PageDto constructor expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Parameter \$structuredData of class App\\Modules\\Core\\DTO\\PageDto constructor expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>content_blocks" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>slug" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>title" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PageDto.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Modules/Core/DTO/PostDto.php
+
+		-
+			message: '#^Parameter \$robotsDirectives of class App\\Modules\\Core\\DTO\\PostDto constructor expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Core/DTO/PostDto.php
+
+		-
+			message: '#^Parameter \$structuredData of class App\\Modules\\Core\\DTO\\PostDto constructor expects array\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Core/DTO/PostDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PostDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>slug" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PostDto.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>title" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Core/DTO/PostDto.php
+
+		-
+			message: '#^Call to function method_exists\(\) with App\\Models\\User and ''hasRole'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Modules/Core/Services/AdminShellViewModelFactory.php
+
+		-
+			message: '#^Offset ''route'' on array\{route\: ''admin\.api\-keys\.index'', label\: ''API'', short_ru\: ''API'', short_en\: ''API'', icon\: ''braces''\}\|array\{route\: ''admin\.assets\.index'', label\: ''Файлы'', short_ru\: ''Ф'', short_en\: ''A'', icon\: ''image''\}\|array\{route\: ''admin\.audit\.index'', label\: ''Аудит'', short_ru\: ''А'', short_en\: ''Au'', icon\: ''shield''\}\|array\{route\: ''admin\.categories…'', label\: ''Категории'', short_ru\: ''К'', short_en\: ''C'', icon\: ''tags''\}\|array\{route\: ''admin\.dashboard'', label\: ''Панель'', short_ru\: ''П'', short_en\: ''D'', icon\: ''layout\-dashboard''\}\|array\{route\: ''admin\.modules\.index'', label\: ''Модули'', short_ru\: ''Мд'', short_en\: ''Md'', icon\: ''puzzle''\}\|array\{route\: ''admin\.pages\.index'', label\: ''Страницы'', short_ru\: ''С'', short_en\: ''Pg'', icon\: ''files''\}\|array\{route\: ''admin\.posts\.index'', label\: ''Посты'', short_ru\: ''Пс'', short_en\: ''Pt'', icon\: ''newspaper''\}\|array\{route\: ''admin\.settings\.edit'', label\: ''Настройки'', short_ru\: ''Н'', short_en\: ''S'', icon\: ''settings''\}\|array\{route\: ''admin\.templates…'', label\: ''Шаблоны'', short_ru\: ''Шб'', short_en\: ''Tp'', icon\: ''layout\-template''\}\|array\{route\: ''admin\.theme\.edit'', label\: ''Тема'', short_ru\: ''Т'', short_en\: ''Th'', icon\: ''palette''\}\|array\{route\: ''admin\.updates\.index'', label\: ''Обновления'', short_ru\: ''Об'', short_en\: ''Up'', icon\: ''refresh\-cw'', badge\: string\}\|array\{route\: ''admin\.users\.index'', label\: ''Пользователи'', short_ru\: ''Пл'', short_en\: ''Us'', icon\: ''users''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Core/Services/AdminShellViewModelFactory.php
+
+		-
+			message: '#^Offset ''route'' on array\{route\: ''admin\.assets\.index'', label\: ''Файлы'', short_ru\: ''Ф'', short_en\: ''A'', icon\: ''image''\}\|array\{route\: ''admin\.audit\.index'', label\: ''Аудит'', short_ru\: ''А'', short_en\: ''Au'', icon\: ''shield''\}\|array\{route\: ''admin\.categories…'', label\: ''Категории'', short_ru\: ''К'', short_en\: ''C'', icon\: ''tags''\}\|array\{route\: ''admin\.dashboard'', label\: ''Панель'', short_ru\: ''П'', short_en\: ''D'', icon\: ''layout\-dashboard''\}\|array\{route\: ''admin\.pages\.index'', label\: ''Страницы'', short_ru\: ''С'', short_en\: ''Pg'', icon\: ''files''\}\|array\{route\: ''admin\.posts\.index'', label\: ''Посты'', short_ru\: ''Пс'', short_en\: ''Pt'', icon\: ''newspaper''\}\|array\{route\: ''admin\.settings\.edit'', label\: ''Настройки'', short_ru\: ''Н'', short_en\: ''S'', icon\: ''settings''\}\|array\{route\: ''admin\.templates…'', label\: ''Шаблоны'', short_ru\: ''Шб'', short_en\: ''Tp'', icon\: ''layout\-template''\}\|array\{route\: ''admin\.theme\.edit'', label\: ''Тема'', short_ru\: ''Т'', short_en\: ''Th'', icon\: ''palette''\}\|array\{route\: ''admin\.users\.index'', label\: ''Пользователи'', short_ru\: ''Пл'', short_en\: ''Us'', icon\: ''users''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Core/Services/AdminShellViewModelFactory.php
+
+		-
+			message: '#^Offset ''label'' on array\{key\: non\-falsy\-string, type\: ''category''\|''page''\|''post'', entity_id\: int, status\: string, label\: non\-falsy\-string, titles\: non\-empty\-array\<non\-falsy\-string, string\>, slugs\: non\-empty\-array\<non\-falsy\-string, string\>, url_template\: non\-falsy\-string, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Core/Services/ChromeLinkTargetCatalogService.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Modules/Core/Services/SiteChromeSettingStore.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Modules/Core/Services/ThemeSettingStore.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Modules/Extensibility/Registry/AdminNavigationRegistry.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Modules/Extensibility/Registry/ModuleWidgetRegistry.php
+
+		-
+			message: '#^Offset ''name'' on array\{module_key\: string, route_key\: string, name\: string, version\: string, description\: string\|null, author\: string\|null, provider\: string, source_path\: mixed, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Extensibility/Services/BundledModuleCatalogService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>enabled" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/Extensibility/Services/BundledModuleCatalogService.php
+
+		-
+			message: '#^Parameter \#1 \$routeCollection of method App\\Modules\\Extensibility\\Services\\EnabledModulePublicRoutesLoader\:\:moveCoreLocaleRoutesToEnd\(\) expects Illuminate\\Routing\\RouteCollection, Illuminate\\Routing\\RouteCollectionInterface given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Extensibility/Services/EnabledModulePublicRoutesLoader.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Modules/Extensibility/Services/EnabledModulePublicRoutesLoader.php
+
+		-
+			message: '#^Offset ''modules'' on array\{status\: ''ok'', modules\: array\<int, array\<string, mixed\>\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Modules/Extensibility/Services/ModuleCacheService.php
+
+		-
+			message: '#^Offset ''status'' on array\{status\: ''missing_table''\|''ok'', modules\: array\<int, array\<string, mixed\>\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 3
+			path: app/Modules/Extensibility/Services/ModuleCacheService.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between ''ok'' and ''ok'' will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 1
+			path: app/Modules/Extensibility/Services/ModuleCacheService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-empty\-string and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Modules/Extensibility/Services/ModuleInstallerService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Modules/Extensibility/Services/ModuleManagerService.php
+
+		-
+			message: '#^Offset 0 on array\{list\<string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Extensibility/Services/ModuleManifestParserService.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Modules/Ops/Services/AuditLogger.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/SEO/Services/StructuredDataFactory.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$public_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/SEO/Services/StructuredDataFactory.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Modules/SEO/Services/StructuredDataFactory.php
+
+		-
+			message: '#^Cannot call method toAtomString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Modules/SEO/Services/StructuredDataFactory.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/SEO/Services/StructuredDataFactory.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>public_url" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Modules/SEO/Services/StructuredDataFactory.php
+
+		-
+			message: '#^Left side of \|\| is always false\.$#'
+			identifier: booleanOr.leftAlwaysFalse
+			count: 1
+			path: app/Modules/Setup/Services/SetupFinalizationService.php
+
+		-
+			message: '#^Offset 1 on array\{non\-falsy\-string, non\-empty\-string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Setup/Services/SetupFinalizationService.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: app/Modules/Setup/Services/SystemCheckService.php
+
+		-
+			message: '#^Offset ''optional'' on array\{passed\: bool, label\: string, detail\: string\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Setup/Services/SystemCheckService.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$command$#'
+			identifier: parameter.notFound
+			count: 1
+			path: app/Modules/Updates/Services/CoreBackupService.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$env$#'
+			identifier: parameter.notFound
+			count: 1
+			path: app/Modules/Updates/Services/CoreBackupService.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Modules/Updates/Services/CoreUpdateSettingsService.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Modules/Updates/Services/CoreUpdateSettingsService.php
+
+		-
+			message: '#^Offset 1 on array\{non\-falsy\-string, decimal\-int\-string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Modules/Web/Services/LocalizedSiteRouterService.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Modules/Web/Services/PublicPageResolverService.php
+
+		-
+			message: '#^Parameter \#3 \$translation of method App\\Modules\\Web\\Services\\PublicPageResolverService\:\:render\(\) expects App\\Models\\PageTranslation, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Web/Services/PublicPreviewService.php
+
+		-
+			message: '#^Parameter \#3 \$translation of method App\\Modules\\Web\\Services\\PublicPostResolverService\:\:render\(\) expects App\\Models\\PostTranslation, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Modules/Web/Services/PublicPreviewService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\ConnectionInterface\:\:getDriverName\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Modules/Web/Services/PublicSearchService.php
+
+		-
+			message: '#^Method App\\Modules\\Web\\Services\\PublicSearchService\:\:searchPageItems\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{type\: ''page'', title\: string, url\: string, excerpt\: string, sort_at\: string\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Web/Services/PublicSearchService.php
+
+		-
+			message: '#^Method App\\Modules\\Web\\Services\\PublicSearchService\:\:searchPostItems\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{type\: ''post'', title\: string, url\: string, excerpt\: string, sort_at\: string\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Web/Services/PublicSearchService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$translations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Observers/ContentEntityCleanupObserver.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$category_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Observers/TranslationSlugObserver.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Observers/TranslationSlugObserver.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Observers/TranslationSlugObserver.php
+
+		-
+			message: '#^Instanceof between App\\Models\\Asset and App\\Models\\Asset will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Support/AdminAssetPickerPayload.php

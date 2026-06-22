@@ -17,6 +17,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.0",
         "laravel/pail": "^1.1",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.26",
@@ -54,6 +55,9 @@
         ],
         "lint": [
             "@php ./vendor/bin/pint --test"
+        ],
+        "analyse": [
+            "@php -d memory_limit=1G ./vendor/bin/phpstan analyse --no-progress"
         ],
         "test": [
             "@php artisan test"
