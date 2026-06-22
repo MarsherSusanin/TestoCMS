@@ -27,6 +27,10 @@ class ResolvedThemeViewModelFactory
             'theme_google_fonts_url' => $themeGoogleFontsUrl,
             'theme_color' => (string) ($themeColors['accent'] ?? '#0f172a'),
             'theme_css' => $this->themeCssRenderer->render($themeColors, $themeFonts),
+            // Public pages inline only the small per-theme tokens and load the
+            // large structural sheet as an external, immutable, cacheable file.
+            'theme_css_dynamic' => $this->themeCssRenderer->dynamicCss($themeColors, $themeFonts),
+            'theme_base_css_url' => url('/cms/theme-base.css').'?v='.$this->themeCssRenderer->baseCssHash(),
         ];
     }
 }

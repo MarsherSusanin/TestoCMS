@@ -25,6 +25,7 @@ use App\Http\Controllers\Web\SeoController;
 use App\Http\Controllers\Web\SiteContentController;
 use App\Http\Controllers\Web\SitePreviewController;
 use App\Http\Controllers\Web\SiteSearchController;
+use App\Http\Controllers\Web\ThemeAssetController;
 use App\Modules\Extensibility\Services\EnabledModulePublicRoutesLoader;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +52,7 @@ Route::get('/login', fn () => redirect()->route('admin.login'))->name('login');
 Route::get('/robots.txt', [SeoController::class, 'robotsTxt'])->name('seo.robots');
 Route::get('/openapi.yaml', fn () => response()->file(base_path('openapi/openapi.yaml')));
 Route::get('/llms.txt', [SeoController::class, 'llmsTxt'])->name('seo.llms');
+Route::get('/cms/theme-base.css', [ThemeAssetController::class, 'baseCss'])->name('cms.theme.base-css');
 Route::get('/sitemap.xml', fn () => redirect('/sitemap-index.xml', 301));
 Route::get('/sitemap-index.xml', [SeoController::class, 'sitemapIndex'])->name('seo.sitemap.index');
 Route::get('/sitemaps/{locale}.xml', [SeoController::class, 'sitemapLocale'])->name('seo.sitemap.locale');
