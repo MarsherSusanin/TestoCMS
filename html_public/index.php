@@ -59,6 +59,17 @@ if (! function_exists('testoCmsConfiguredBasePath')) {
     }
 }
 
+if (! function_exists('testoCmsNormalizePath')) {
+    function testoCmsNormalizePath(string $path): string
+    {
+        if (str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1) {
+            return rtrim($path, DIRECTORY_SEPARATOR);
+        }
+
+        return rtrim(__DIR__.DIRECTORY_SEPARATOR.ltrim($path, DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR);
+    }
+}
+
 $basePath = testoCmsResolveBasePath();
 
 // Determine if the application is in maintenance mode...
@@ -72,14 +83,3 @@ require $basePath.'/vendor/autoload.php';
 // Bootstrap Laravel and handle the request...
 (require_once $basePath.'/bootstrap/app.php')
     ->handleRequest(Request::capture());
-
-if (! function_exists('testoCmsNormalizePath')) {
-    function testoCmsNormalizePath(string $path): string
-    {
-        if (str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1) {
-            return rtrim($path, DIRECTORY_SEPARATOR);
-        }
-
-        return rtrim(__DIR__.DIRECTORY_SEPARATOR.ltrim($path, DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR);
-    }
-}

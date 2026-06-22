@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\PageCrudController;
 use App\Http\Controllers\Admin\PageStagePreviewController;
 use App\Http\Controllers\Admin\PostCrudController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SeoSettingsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\UserController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Web\SeoController;
 use App\Http\Controllers\Web\SiteContentController;
 use App\Http\Controllers\Web\SitePreviewController;
 use App\Http\Controllers\Web\SiteSearchController;
+use App\Http\Controllers\Web\ThemeAssetController;
 use App\Modules\Extensibility\Services\EnabledModulePublicRoutesLoader;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +52,7 @@ Route::get('/login', fn () => redirect()->route('admin.login'))->name('login');
 Route::get('/robots.txt', [SeoController::class, 'robotsTxt'])->name('seo.robots');
 Route::get('/openapi.yaml', fn () => response()->file(base_path('openapi/openapi.yaml')));
 Route::get('/llms.txt', [SeoController::class, 'llmsTxt'])->name('seo.llms');
+Route::get('/cms/theme-base.css', [ThemeAssetController::class, 'baseCss'])->name('cms.theme.base-css');
 Route::get('/sitemap.xml', fn () => redirect('/sitemap-index.xml', 301));
 Route::get('/sitemap-index.xml', [SeoController::class, 'sitemapIndex'])->name('seo.sitemap.index');
 Route::get('/sitemaps/{locale}.xml', [SeoController::class, 'sitemapLocale'])->name('seo.sitemap.locale');
@@ -122,8 +125,8 @@ Route::prefix('admin')->group(function (): void {
         Route::get('/audit', AuditLogController::class)->name('admin.audit.index');
         Route::get('/settings', [SettingsController::class, 'edit'])->name('admin.settings.edit');
         Route::put('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
-        Route::get('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'edit'])->name('admin.settings.seo.edit');
-        Route::put('/settings/seo', [\App\Http\Controllers\Admin\SeoSettingsController::class, 'update'])->name('admin.settings.seo.update');
+        Route::get('/settings/seo', [SeoSettingsController::class, 'edit'])->name('admin.settings.seo.edit');
+        Route::put('/settings/seo', [SeoSettingsController::class, 'update'])->name('admin.settings.seo.update');
 
         Route::get('/updates', [CoreUpdateController::class, 'index'])->name('admin.updates.index');
         Route::get('/updates/logs', [CoreUpdateController::class, 'logs'])->name('admin.updates.logs');

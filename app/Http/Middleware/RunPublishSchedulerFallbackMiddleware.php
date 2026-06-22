@@ -15,11 +15,18 @@ class RunPublishSchedulerFallbackMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $lastRun = (int) Cache::get('cms:scheduler:last-run', 0);
-        $now = now()->timestamp;
 
-        if (($now - $lastRun) > 30) {
-            $this->publishSchedulerService->runDue();
-            Cache::put('cms:scheduler:last-run', $now, 120);
+        if ((now()->timestamp - $lastRun) > 30) {
+            // Acquire an atomic lock so concurrent requests don't all pass the
+            // check-then-act window and run the scheduler (and flush caches)
+            // more than once. Non-blocking: if another request holds it, skip.
+            Cache::lock('cms:scheduler:fallback-lock', 30)->get(function (): void {
+                $lastRun = (int) Cache::get('cms:scheduler:last-run', 0);
+                if ((now()->timestamp - $lastRun) > 30) {
+                    $this->publishSchedulerService->runDue();
+                    Cache::put('cms:scheduler:last-run', now()->timestamp, 120);
+                }
+            });
         }
 
         return $next($request);

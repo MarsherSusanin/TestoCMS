@@ -1,6 +1,9 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\CmsServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\CmsServiceProvider::class,
+    AppServiceProvider::class,
+    CmsServiceProvider::class,
 ];

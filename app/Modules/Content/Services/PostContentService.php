@@ -28,6 +28,7 @@ class PostContentService implements PostContentServiceContract
             'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
             'owner_id' => null,
             'assert_unique' => true,
+            'allow_custom_code' => $context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor),
         ]);
 
         $post = DB::transaction(function () use ($validated, $translations, $actor): Post {
@@ -56,6 +57,7 @@ class PostContentService implements PostContentServiceContract
             'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
             'owner_id' => (int) $post->id,
             'assert_unique' => true,
+            'allow_custom_code' => $context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor),
         ]);
 
         DB::transaction(function () use ($post, $validated, $translations): void {
@@ -119,6 +121,8 @@ class PostContentService implements PostContentServiceContract
         return $this->createFromValidated($validated, $actor, $context + [
             'require_default_locale' => false,
             'audit_action' => $context['audit_action'] ?? null,
+            // Duplicating copies already-persisted, previously-authorized content.
+            'allow_custom_code' => true,
         ]);
     }
 

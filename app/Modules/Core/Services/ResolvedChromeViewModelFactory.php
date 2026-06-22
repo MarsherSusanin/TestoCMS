@@ -52,9 +52,17 @@ class ResolvedChromeViewModelFactory
         $chromeHeader = is_array($siteChrome['header'] ?? null) ? $siteChrome['header'] : [];
         $chromeFooter = is_array($siteChrome['footer'] ?? null) ? $siteChrome['footer'] : [];
         $chromeSearch = is_array($siteChrome['search'] ?? null) ? $siteChrome['search'] : [];
+        $headerLogo = is_array($chromeHeader['logo'] ?? null) ? $chromeHeader['logo'] : ['src' => '', 'alt' => ''];
+        $headerMenuPosition = in_array((string) ($chromeHeader['menu_position'] ?? 'right'), ['left', 'center', 'right'], true)
+            ? (string) $chromeHeader['menu_position']
+            : 'right';
         $searchEnabled = (bool) ($chromeSearch['enabled'] ?? false);
         $searchPathSlug = trim((string) ($chromeSearch['path_slug'] ?? 'search'), '/') ?: 'search';
         $searchPlacement = (string) ($chromeHeader['search_placement'] ?? 'header');
+        $currentRequestPath = '/'.trim($this->request->path(), '/');
+        if ($currentRequestPath === '//') {
+            $currentRequestPath = '/';
+        }
 
         $footerTagline = $this->chromeText(
             is_array($chromeFooter['tagline_translations'] ?? null) ? $chromeFooter['tagline_translations'] : null,
@@ -102,7 +110,7 @@ class ResolvedChromeViewModelFactory
         $footerLegalLinks = $this->mapChromeLinks($chromeFooter['legal_links'] ?? [], $currentLocale, $supportedLocales, $blogPrefix, $categoryPrefix);
 
         $headerNavLinks = array_map(
-            fn (array $link): array => $this->decorateNavLink($link, $currentLocale, $blogPrefix, $searchPathSlug, $isHome, $isBlog, $isSearch),
+            fn (array $link): array => $this->decorateNavLink($link, $currentLocale, $blogPrefix, $searchPathSlug, $isHome, $isBlog, $isSearch, $currentRequestPath),
             $headerNavLinks
         );
         $headerCtaLinks = array_map(fn (array $link): array => $this->decorateLink($link), $headerCtaLinks);
@@ -118,7 +126,7 @@ class ResolvedChromeViewModelFactory
 
         $headerEnabled = ($chromeHeader['enabled'] ?? true) === true;
         $headerVariant = (string) ($chromeHeader['variant'] ?? 'split_nav');
-        $headerClass = 'topbar topbar-'.preg_replace('/[^a-z0-9_-]+/i', '', $headerVariant);
+        $headerClass = 'topbar topbar-'.preg_replace('/[^a-z0-9_-]+/i', '', $headerVariant).' topbar-menu-'.preg_replace('/[^a-z0-9_-]+/i', '', $headerMenuPosition);
         $headerLeftNav = $headerNavLinks;
         $headerRightNav = [];
         if ($headerVariant === 'center_logo') {
@@ -141,6 +149,8 @@ class ResolvedChromeViewModelFactory
             'chrome_header' => $chromeHeader,
             'chrome_footer' => $chromeFooter,
             'chrome_search' => $chromeSearch,
+            'header_logo' => $headerLogo,
+            'header_menu_position' => $headerMenuPosition,
             'search_path_slug' => $searchPathSlug,
             'search_placeholder' => $searchPlaceholder,
             'show_header_search' => $showHeaderSearch,
@@ -223,6 +233,7 @@ class ResolvedChromeViewModelFactory
             if (! is_array($item) || (($item['enabled'] ?? false) !== true)) {
                 continue;
             }
+            $children = $this->mapChromeLinks(is_array($item['children'] ?? null) ? $item['children'] : [], $locale, $supportedLocales, $blogPrefix, $categoryPrefix);
             $resolvedTarget = $this->resolveEntityLink($item['link_target'] ?? null, $locale, $supportedLocales, $blogPrefix, $categoryPrefix);
             $itemLabels = is_array($item['label_translations'] ?? null) ? $item['label_translations'] : [];
             $targetLabels = is_array($resolvedTarget['label_translations'] ?? null) ? $resolvedTarget['label_translations'] : [];
@@ -238,11 +249,15 @@ class ResolvedChromeViewModelFactory
             }
             $fallbackHref = $this->chromeResolveHref((string) ($item['url'] ?? ''), $locale);
             $out[] = [
+                'id' => (string) ($item['id'] ?? ''),
                 'label' => $label,
-                'href' => (string) ($resolvedTarget['href'] ?? $fallbackHref),
+                'href' => $children !== []
+                    ? null
+                    : (string) ($resolvedTarget['href'] ?? $fallbackHref),
                 'new_tab' => (bool) ($item['new_tab'] ?? false),
                 'nofollow' => (bool) ($item['nofollow'] ?? false),
                 'style' => (string) ($item['style'] ?? ''),
+                'children' => $children,
             ];
         }
 
@@ -350,16 +365,17 @@ class ResolvedChromeViewModelFactory
     private function decorateLink(array $link): array
     {
         $rel = [];
-        if (! empty($link['nofollow'])) {
+        $hasHref = trim((string) ($link['href'] ?? '')) !== '';
+        if (! empty($link['nofollow']) && $hasHref) {
             $rel[] = 'nofollow';
         }
-        if (! empty($link['new_tab'])) {
+        if (! empty($link['new_tab']) && $hasHref) {
             $rel[] = 'noopener';
             $rel[] = 'noreferrer';
         }
 
         $link['rel'] = $rel !== [] ? implode(' ', array_values(array_unique($rel))) : null;
-        $link['target_blank'] = ! empty($link['new_tab']);
+        $link['target_blank'] = ! empty($link['new_tab']) && $hasHref;
 
         return $link;
     }
@@ -375,13 +391,23 @@ class ResolvedChromeViewModelFactory
         string $searchPathSlug,
         bool $isHome,
         bool $isBlog,
-        bool $isSearch
+        bool $isSearch,
+        string $currentRequestPath
     ): array {
+        $children = array_map(
+            fn (array $child): array => $this->decorateNavLink($child, $currentLocale, $blogPrefix, $searchPathSlug, $isHome, $isBlog, $isSearch, $currentRequestPath),
+            is_array($link['children'] ?? null) ? $link['children'] : []
+        );
+        $link['children'] = $children;
         $link = $this->decorateLink($link);
         $hrefPath = (string) (parse_url($link['href'] ?? '', PHP_URL_PATH) ?? '');
-        $link['is_active'] = ($isHome && $hrefPath === '/'.$currentLocale)
+        $normalizedCurrentPath = rtrim($currentRequestPath, '/') ?: '/';
+        $normalizedHrefPath = rtrim($hrefPath, '/') ?: '/';
+        $link['is_active'] = ($normalizedHrefPath !== '/' && $normalizedCurrentPath === $normalizedHrefPath)
+            || ($isHome && $hrefPath === '/'.$currentLocale)
             || ($isBlog && $hrefPath === '/'.$currentLocale.'/'.$blogPrefix)
-            || ($isSearch && $hrefPath === '/'.$currentLocale.'/'.$searchPathSlug);
+            || ($isSearch && $hrefPath === '/'.$currentLocale.'/'.$searchPathSlug)
+            || collect($children)->contains(static fn (array $child): bool => ! empty($child['is_active']));
 
         return $link;
     }

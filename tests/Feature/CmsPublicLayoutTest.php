@@ -9,6 +9,7 @@ use App\Models\PageTranslation;
 use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Models\ThemeSetting;
+use App\Modules\Core\Services\SiteChromeSettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -114,6 +115,67 @@ class CmsPublicLayoutTest extends TestCase
             ->assertOk()
             ->assertSee('Searchable Home')
             ->assertSee('site-search-form', false);
+    }
+
+    public function test_public_header_renders_uploaded_logo_and_nested_menu_markup(): void
+    {
+        /** @var SiteChromeSettingsService $chrome */
+        $chrome = app(SiteChromeSettingsService::class);
+        $payload = $chrome->defaults();
+        $payload['header']['logo'] = [
+            'src' => 'https://cdn.test/logo.svg',
+            'alt' => 'Uploaded logo',
+        ];
+        $payload['header']['menu_position'] = 'left';
+        $payload['header']['show_search'] = false;
+        $payload['header']['search_placement'] = 'none';
+        $payload['search']['enabled'] = false;
+        $payload['header']['nav_items'] = [[
+            'id' => 'services',
+            'enabled' => true,
+            'url' => '',
+            'new_tab' => false,
+            'nofollow' => false,
+            'label_translations' => ['ru' => 'Услуги', 'en' => 'Services'],
+            'children' => [[
+                'id' => 'consulting',
+                'enabled' => true,
+                'url' => '/{locale}/consulting',
+                'new_tab' => false,
+                'nofollow' => false,
+                'label_translations' => ['ru' => 'Консалтинг', 'en' => 'Consulting'],
+            ]],
+        ]];
+        $payload['header']['cta_buttons'] = [];
+
+        ThemeSetting::query()->updateOrCreate(
+            ['key' => 'site_chrome'],
+            ['settings' => $payload]
+        );
+
+        $page = Page::query()->create([
+            'status' => 'published',
+            'page_type' => 'landing',
+            'published_at' => now(),
+        ]);
+
+        PageTranslation::query()->create([
+            'page_id' => $page->id,
+            'locale' => 'en',
+            'title' => 'Consulting',
+            'slug' => 'consulting',
+            'content_blocks' => [],
+            'rendered_html' => '<p>Consulting page</p>',
+        ]);
+
+        $this->get('/en/consulting')
+            ->assertOk()
+            ->assertSee('https://cdn.test/logo.svg', false)
+            ->assertSee('topbar-nav-shell--left', false)
+            ->assertSee('data-cms-nav-disclosure', false)
+            ->assertSee('nav-disclosure is-active', false)
+            ->assertSee('nav-submenu-link is-active', false)
+            ->assertSee('Consulting', false);
     }
 
     public function test_category_route_renders_published_posts(): void

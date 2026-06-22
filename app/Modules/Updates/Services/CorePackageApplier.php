@@ -32,15 +32,8 @@ class CorePackageApplier
 
             $releaseRoot = $this->discoverReleaseRoot($extractDir);
             $release = $this->readReleaseJson($releaseRoot);
+            $this->assertExpectedArtifact($release);
             $this->assertReleasePaths($releaseRoot);
-
-            $declaredChecksum = trim((string) ($release['checksum'] ?? ''));
-            if ($declaredChecksum !== '') {
-                $actual = strtolower((string) hash_file('sha256', $archivePath));
-                if (! hash_equals(strtolower($declaredChecksum), $actual)) {
-                    throw new RuntimeException('Release checksum in release.json does not match archive checksum.');
-                }
-            }
 
             return [
                 'release' => $release,
@@ -67,6 +60,8 @@ class CorePackageApplier
             File::ensureDirectoryExists($extractDir);
             $this->extractZipSecure($archivePath, $extractDir);
             $releaseRoot = $this->discoverReleaseRoot($extractDir);
+            $release = $this->readReleaseJson($releaseRoot);
+            $this->assertExpectedArtifact($release);
             $this->assertReleasePaths($releaseRoot);
 
             $basePath = $this->environment->rootPath();
@@ -116,19 +111,41 @@ class CorePackageApplier
             throw new RuntimeException('release.json must be a JSON object.');
         }
 
+        $artifact = trim((string) ($decoded['artifact'] ?? ''));
+        if ($artifact === '') {
+            throw new RuntimeException('release.json artifact is required.');
+        }
+
         $version = trim((string) ($decoded['version'] ?? ''));
         if ($version === '') {
             throw new RuntimeException('release.json version is required.');
         }
 
         return [
+            'artifact' => $artifact,
             'version' => $version,
             'build' => trim((string) ($decoded['build'] ?? '')),
-            'checksum' => trim((string) ($decoded['checksum'] ?? '')),
             'signed_at' => trim((string) ($decoded['signed_at'] ?? '')),
             'compat' => is_array($decoded['compat'] ?? null) ? $decoded['compat'] : [],
             'raw' => $decoded,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $release
+     */
+    private function assertExpectedArtifact(array $release): void
+    {
+        $expectedArtifact = trim((string) config('updates.package_artifact', 'core-updater'));
+        $artifact = trim((string) ($release['artifact'] ?? ''));
+
+        if ($artifact !== $expectedArtifact) {
+            throw new RuntimeException(sprintf(
+                'Unsupported package artifact "%s". Expected "%s".',
+                $artifact !== '' ? $artifact : 'unknown',
+                $expectedArtifact
+            ));
+        }
     }
 
     private function assertReleasePaths(string $releaseRoot): void
@@ -148,6 +165,10 @@ class CorePackageApplier
                 throw new RuntimeException('Package contains non-allowlisted top-level path: '.$name);
             }
         }
+
+        if (! is_dir($releaseRoot.DIRECTORY_SEPARATOR.'html_public')) {
+            throw new RuntimeException('Package must contain html_public as the canonical public root source.');
+        }
     }
 
     private function extractZipSecure(string $archivePath, string $extractDir): void
@@ -159,11 +180,24 @@ class CorePackageApplier
         }
 
         try {
+            $maxEntries = (int) config('updates.max_archive_entries', 20000);
+            $maxUncompressedBytes = (int) config('updates.max_uncompressed_mb', 1024) * 1024 * 1024;
+
+            if ($zip->numFiles > $maxEntries) {
+                throw new RuntimeException('Update archive exceeds the maximum allowed entry count.');
+            }
+
+            $totalUncompressed = 0;
             for ($i = 0; $i < $zip->numFiles; $i++) {
-                $entryName = (string) $zip->getNameIndex($i);
-                $entryName = str_replace('\\', '/', $entryName);
+                $stat = $zip->statIndex($i);
+                $entryName = str_replace('\\', '/', (string) ($stat['name'] ?? $zip->getNameIndex($i)));
                 if ($entryName === '' || str_contains($entryName, '../') || str_starts_with($entryName, '/') || str_contains($entryName, "\0")) {
                     throw new RuntimeException('Unsafe ZIP entry detected.');
+                }
+
+                $totalUncompressed += (int) ($stat['size'] ?? 0);
+                if ($totalUncompressed > $maxUncompressedBytes) {
+                    throw new RuntimeException('Update archive uncompressed size exceeds the allowed limit (possible zip bomb).');
                 }
             }
 

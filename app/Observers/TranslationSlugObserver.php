@@ -35,14 +35,29 @@ class TranslationSlugObserver
             'new_slug' => $newSlug,
         ]);
 
+        $oldPath = $this->buildPath($entityType, $locale, $oldSlug);
+        $newPath = $this->buildPath($entityType, $locale, $newSlug);
+
+        // Forward redirect: old URL -> new URL.
         RedirectRule::query()->updateOrCreate(
-            ['from_path' => $this->buildPath($entityType, $locale, $oldSlug)],
+            ['from_path' => $oldPath],
             [
-                'to_path' => $this->buildPath($entityType, $locale, $newSlug),
+                'to_path' => $newPath,
                 'http_code' => 301,
                 'is_active' => true,
             ]
         );
+
+        // Drop the inverse rule (new -> old) so renaming a slug back does not
+        // create an infinite redirect loop and leave the page unreachable.
+        RedirectRule::query()->where('from_path', $newPath)->delete();
+
+        // Resolve chains: any rule that pointed at the old URL now points
+        // straight at the new one (avoids multi-hop 301 chains).
+        RedirectRule::query()
+            ->where('to_path', $oldPath)
+            ->where('from_path', '!=', $newPath)
+            ->update(['to_path' => $newPath]);
 
         app(PageCacheService::class)->flushAll();
     }

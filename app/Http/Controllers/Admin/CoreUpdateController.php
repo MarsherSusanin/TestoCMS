@@ -103,10 +103,17 @@ class CoreUpdateController extends Controller
         $maxMb = (int) config('updates.max_zip_size_mb', 120);
         $request->validate([
             'release_zip' => ['required', 'file', 'mimes:zip', 'max:'.($maxMb * 1024)],
+            'release_signature' => ['nullable', 'string', 'max:4096'],
+            'release_sig' => ['nullable', 'file', 'max:64'],
         ]);
 
+        $signature = trim((string) $request->input('release_signature', ''));
+        if ($signature === '' && $request->hasFile('release_sig')) {
+            $signature = trim((string) file_get_contents($request->file('release_sig')->getRealPath()));
+        }
+
         try {
-            $result = $this->updates->uploadManualPackage($request->file('release_zip'), $request->user()?->id);
+            $result = $this->updates->uploadManualPackage($request->file('release_zip'), $signature, $request->user()?->id);
 
             $this->auditLogger->log('core_updates.upload.web', null, [
                 'target_version' => (string) ($result['version'] ?? ''),

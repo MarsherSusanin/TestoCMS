@@ -26,6 +26,7 @@ class PostTranslationNormalizer
         $requireDefaultLocale = (bool) ($options['require_default_locale'] ?? $this->shouldRequireDefaultLocale($translationsInput));
         $ownerId = isset($options['owner_id']) ? (int) $options['owner_id'] : null;
         $assertUnique = (bool) ($options['assert_unique'] ?? true);
+        $allowCustomCode = (bool) ($options['allow_custom_code'] ?? false);
         $normalized = [];
 
         foreach ($locales as $locale) {
@@ -56,6 +57,9 @@ class PostTranslationNormalizer
                 $canonicalUrl = $this->defaultCanonicalUrlForPost($locale, $slug);
             }
             $customHeadHtml = $this->normalizeTextarea($item['custom_head_html'] ?? null);
+            if ($customHeadHtml !== null && ! $allowCustomCode) {
+                abort(403, 'Custom head HTML is limited to advanced roles.');
+            }
             $robotsDirectives = isset($item['robots_directives']) && is_array($item['robots_directives'])
                 ? $item['robots_directives']
                 : null;

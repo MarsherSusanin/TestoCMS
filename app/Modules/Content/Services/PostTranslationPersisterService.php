@@ -35,5 +35,12 @@ class PostTranslationPersisterService
                 ]
             );
         }
+
+        // Prune locales no longer in the submitted set (see PageTranslationPersisterService).
+        $keep = array_keys($translations);
+        if ($keep !== []) {
+            $post->translations()->whereNotIn('locale', $keep)->get()
+                ->each(static fn (PostTranslation $translation) => $translation->delete());
+        }
     }
 }

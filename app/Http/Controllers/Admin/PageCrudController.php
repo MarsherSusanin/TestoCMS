@@ -152,7 +152,8 @@ class PageCrudController extends Controller
 
         return redirect()
             ->route('admin.pages.edit', $page)
-            ->with('status', 'Page updated.');
+            ->with('status', 'Page updated.')
+            ->with('content_saved', true);
     }
 
     public function destroy(Request $request, Page $page): RedirectResponse

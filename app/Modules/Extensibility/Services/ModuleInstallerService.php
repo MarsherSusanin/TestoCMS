@@ -18,6 +18,7 @@ class ModuleInstallerService
         private readonly ModuleManifestParserService $manifestParser,
         private readonly ModuleCacheService $moduleCache,
         private readonly PageCacheService $pageCacheService,
+        private readonly ModulePublicAssetsPublisherService $publicAssetsPublisher,
     ) {}
 
     public function installFromZip(UploadedFile $zipFile, ?int $userId = null): CmsModule
@@ -60,7 +61,7 @@ class ModuleInstallerService
             }
 
             $this->copyDirectorySafe($moduleRoot, $installPath);
-            $this->publishModulePublicAssets($installPath, $manifest->id);
+            $this->publicAssetsPublisher->publishFromInstallPath($installPath, $manifest->id);
 
             $module = $this->createInstalledModuleRecord(
                 manifest: $manifest,
@@ -123,7 +124,7 @@ class ModuleInstallerService
             $this->copyDirectorySafe($sourcePath, $installPath);
         }
 
-        $this->publishModulePublicAssets($installPath, $manifest->id);
+        $this->publicAssetsPublisher->publishFromInstallPath($installPath, $manifest->id);
 
         $module = $this->createInstalledModuleRecord(
             manifest: $manifest,
@@ -178,7 +179,7 @@ class ModuleInstallerService
         }
 
         $this->copyDirectorySafe($sourcePath, $installPath);
-        $this->publishModulePublicAssets($installPath, $manifest->id);
+        $this->publicAssetsPublisher->publishFromInstallPath($installPath, $manifest->id);
 
         $module = $this->createInstalledModuleRecord(
             manifest: $manifest,
@@ -246,7 +247,7 @@ class ModuleInstallerService
             }
 
             File::deleteDirectory($backupPath);
-            $this->publishModulePublicAssets($targetPath, $manifest->id);
+            $this->publicAssetsPublisher->publishFromInstallPath($targetPath, $manifest->id);
 
             $module->fill([
                 'name' => $manifest->name,
@@ -303,10 +304,7 @@ class ModuleInstallerService
             }
         }
 
-        $publicAssetsPath = public_path('modules'.DIRECTORY_SEPARATOR.$this->moduleDirName($moduleKey));
-        if (is_dir($publicAssetsPath)) {
-            File::deleteDirectory($publicAssetsPath);
-        }
+        $this->publicAssetsPublisher->removePublishedAssets($moduleKey);
 
         $module->delete();
 
@@ -389,7 +387,20 @@ class ModuleInstallerService
             ));
         }
 
-        $this->publishModulePublicAssets($installPath, $existingManifest->id);
+        // Recovery only re-registers a directory whose manifest matches the
+        // requested module exactly. Also require the version to match so a
+        // stale/planted directory of a different version is not silently
+        // adopted in place of the uploaded/selected source.
+        if (trim((string) $existingManifest->version) !== trim((string) $requestedManifest->version)) {
+            throw new RuntimeException(sprintf(
+                'Existing module directory at %s is version %s but %s was requested. Remove the stale directory before installing.',
+                $installPath,
+                $existingManifest->version !== '' ? $existingManifest->version : 'unknown',
+                $requestedManifest->version !== '' ? $requestedManifest->version : 'unknown',
+            ));
+        }
+
+        $this->publicAssetsPublisher->publishFromInstallPath($installPath, $existingManifest->id);
 
         $installSource = [
             'type' => 'recovered_existing_directory',
@@ -531,21 +542,6 @@ class ModuleInstallerService
         }
 
         throw new RuntimeException('Local module path is outside allowed roots.');
-    }
-
-    private function publishModulePublicAssets(string $installPath, string $moduleKey): void
-    {
-        $source = rtrim($installPath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'public';
-        if (! is_dir($source)) {
-            return;
-        }
-
-        $target = public_path('modules'.DIRECTORY_SEPARATOR.$this->moduleDirName($moduleKey));
-        if (is_dir($target)) {
-            File::deleteDirectory($target);
-        }
-
-        $this->copyDirectorySafe($source, $target);
     }
 
     /**

@@ -20,6 +20,14 @@ class PublicResponseSupportService
             $hreflangs[$locale] = url($pathBuilder($locale, $slug));
         }
 
+        // Emit an x-default pointing at the default locale (falling back to the
+        // first available) so crawlers have an unambiguous default for users
+        // whose language doesn't match any alternate.
+        if ($hreflangs !== []) {
+            $defaultLocale = strtolower((string) config('cms.default_locale', 'en'));
+            $hreflangs['x-default'] = $hreflangs[$defaultLocale] ?? reset($hreflangs);
+        }
+
         return $hreflangs;
     }
 

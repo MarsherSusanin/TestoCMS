@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
 use App\Models\CategoryTranslation;
+use App\Models\Page;
 use App\Models\PageTranslation;
+use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Modules\Auth\Services\AdminProvisionerService;
 use App\Modules\Auth\Services\DefaultAdminBootstrapService;
@@ -41,7 +44,11 @@ use App\Modules\LLM\Providers\OpenAiProvider;
 use App\Modules\LLM\Services\LlmGatewayService;
 use App\Modules\SEO\Services\SeoResolverService;
 use App\Modules\Setup\Services\SetupFinalizationService;
+use App\Observers\ContentEntityCleanupObserver;
 use App\Observers\TranslationSlugObserver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -92,9 +99,15 @@ class CmsServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->registerApiRateLimiters();
+
         PostTranslation::observe(TranslationSlugObserver::class);
         PageTranslation::observe(TranslationSlugObserver::class);
         CategoryTranslation::observe(TranslationSlugObserver::class);
+
+        Page::observe(ContentEntityCleanupObserver::class);
+        Post::observe(ContentEntityCleanupObserver::class);
+        Category::observe(ContentEntityCleanupObserver::class);
 
         View::composer('cms.layout', function ($view): void {
             $view->with('siteTheme', $this->app->make(ThemeSettingsService::class)->resolvedTheme());
@@ -105,5 +118,25 @@ class CmsServiceProvider extends ServiceProvider
         View::composer('admin.layout', function ($view): void {
             $view->with('adminShell', $this->app->make(AdminShellViewModelFactory::class)->build(auth()->user()));
         });
+    }
+
+    /**
+     * Named rate limiters for the JSON APIs. Without these the content/admin
+     * APIs were unthrottled (DoS surface) and the paid LLM endpoints could be
+     * fanned out without bound (cost abuse).
+     */
+    private function registerApiRateLimiters(): void
+    {
+        RateLimiter::for('content-api', fn (Request $request) => Limit::perMinute(
+            (int) config('cms.content_api.rate_limit_per_minute', 120)
+        )->by($request->header('X-Api-Key') ?: $request->ip()));
+
+        RateLimiter::for('admin-api', fn (Request $request) => Limit::perMinute(
+            (int) config('cms.admin_api.rate_limit_per_minute', 120)
+        )->by(optional($request->user())->id ?: $request->ip()));
+
+        RateLimiter::for('llm', fn (Request $request) => Limit::perMinute(
+            (int) config('llm.rate_limit_per_minute', 30)
+        )->by(optional($request->user())->id ?: $request->ip()));
     }
 }

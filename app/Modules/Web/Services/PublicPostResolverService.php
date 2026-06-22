@@ -33,7 +33,18 @@ class PublicPostResolverService
             'structured_data' => $translation->structured_data,
         ]);
 
-        $structured = $seo['structured_data'] ?? $this->structuredDataFactory->article($post, $translation, url($canonical));
+        // Respect an explicit override; otherwise emit a JSON-LD @graph wiring
+        // Organization + WebSite(+SearchAction) + BlogPosting (with author,
+        // publisher and image when available).
+        if (is_array($seo['structured_data'] ?? null) && $seo['structured_data'] !== []) {
+            $structured = $seo['structured_data'];
+        } else {
+            $structured = $this->structuredDataFactory->graph([
+                $this->structuredDataFactory->organization(),
+                $this->structuredDataFactory->website(),
+                $this->structuredDataFactory->article($post, $translation, url($canonical)),
+            ]);
+        }
 
         $response = response()->view('cms.post', [
             'post' => $post,

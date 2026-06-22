@@ -1,14 +1,15 @@
 <?php
 
 use Illuminate\Support\Str;
+use Pdo\Mysql;
 
 $mysqlSslAttr = null;
 
 if (extension_loaded('pdo_mysql')) {
-    if (class_exists(\Pdo\Mysql::class)) {
-        $mysqlSslAttr = \Pdo\Mysql::ATTR_SSL_CA;
+    if (class_exists(Mysql::class)) {
+        $mysqlSslAttr = Mysql::ATTR_SSL_CA;
     } elseif (PHP_VERSION_ID < 80400 && defined('PDO::MYSQL_ATTR_SSL_CA')) {
-        $mysqlSslAttr = \PDO::MYSQL_ATTR_SSL_CA;
+        $mysqlSslAttr = PDO::MYSQL_ATTR_SSL_CA;
     }
 }
 

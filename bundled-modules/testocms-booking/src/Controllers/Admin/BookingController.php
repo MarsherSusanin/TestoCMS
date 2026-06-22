@@ -7,6 +7,7 @@ use App\Modules\Ops\Services\AuditLogger;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use TestoCms\Booking\Controllers\Admin\Concerns\EnsuresBookingPermissions;
@@ -237,7 +238,7 @@ class BookingController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, BookingService>  $services
+     * @param  Collection<int, BookingService>  $services
      * @return array{0: ?BookingService, 1: string, 2: ?int, 3: array<string, mixed>}
      */
     private function buildCreateFormState(Request $request, $services): array

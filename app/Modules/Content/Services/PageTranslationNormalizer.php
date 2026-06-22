@@ -30,6 +30,7 @@ class PageTranslationNormalizer
         $requireDefaultLocale = (bool) ($options['require_default_locale'] ?? $this->shouldRequireDefaultLocale($translationsInput));
         $ownerId = isset($options['owner_id']) ? (int) $options['owner_id'] : null;
         $assertUnique = (bool) ($options['assert_unique'] ?? true);
+        $allowCustomCode = (bool) ($options['allow_custom_code'] ?? false);
         $renderContext = is_array($options['render_context'] ?? null) ? $options['render_context'] : [];
         $normalized = [];
 
@@ -61,6 +62,9 @@ class PageTranslationNormalizer
             }
 
             $blocks = $this->pageLayoutNormalizer->normalize($contentBlocks, true);
+            if (! $allowCustomCode && $this->containsRestrictedCodeBlocks($blocks)) {
+                abort(403, 'Custom code / restricted embed blocks are limited to advanced roles.');
+            }
             $metaTitle = $this->normalizeTextarea($item['meta_title'] ?? null);
             $metaDescription = $this->normalizeTextarea($item['meta_description'] ?? null);
             $canonicalUrl = $this->normalizeTextarea($item['canonical_url'] ?? null);
@@ -68,6 +72,9 @@ class PageTranslationNormalizer
                 $canonicalUrl = $this->defaultCanonicalUrlForPage($locale, $slug);
             }
             $customHeadHtml = $this->normalizeTextarea($item['custom_head_html'] ?? null);
+            if ($customHeadHtml !== null && ! $allowCustomCode) {
+                abort(403, 'Custom head HTML is limited to advanced roles.');
+            }
             $robotsDirectives = isset($item['robots_directives']) && is_array($item['robots_directives'])
                 ? $item['robots_directives']
                 : null;
@@ -243,6 +250,11 @@ class PageTranslationNormalizer
         if ($type === 'gallery') {
             return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
         }
+        if ($type === 'carousel') {
+            $slides = $data['slides'] ?? [];
+
+            return is_array($slides) && count(array_filter($slides, static fn (mixed $slide): bool => trim((string) (is_array($slide) ? ($slide['src'] ?? '') : '')) !== '')) > 0;
+        }
         if ($type === 'list') {
             $items = $data['items'] ?? [];
 
@@ -256,6 +268,12 @@ class PageTranslationNormalizer
         }
         if ($type === 'faq') {
             return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
+        }
+        if ($type === 'stats' || $type === 'features' || $type === 'testimonial' || $type === 'pricing') {
+            return is_array($data['items'] ?? null) && count((array) $data['items']) > 0;
+        }
+        if ($type === 'hero') {
+            return trim((string) ($data['heading'] ?? '')) !== '' || trim((string) ($data['subheading'] ?? '')) !== '';
         }
         if ($type === 'video_embed') {
             return trim((string) ($data['url'] ?? '')) !== '';

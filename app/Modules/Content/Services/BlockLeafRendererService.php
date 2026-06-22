@@ -2,6 +2,7 @@
 
 namespace App\Modules\Content\Services;
 
+use App\Models\PostTranslation;
 use App\Modules\Core\Contracts\SanitizerContract;
 use App\Modules\Extensibility\Registry\ModuleWidgetRegistry;
 
@@ -24,6 +25,7 @@ class BlockLeafRendererService
             'image' => $this->renderImage($data),
             'video_embed' => $this->renderVideo($data),
             'gallery' => $this->renderGallery($data),
+            'carousel' => $this->renderCarousel($data),
             'list' => $this->renderList($data),
             'divider' => '<hr class="cms-divider" />',
             'cta' => $this->renderCta($data),
@@ -31,8 +33,13 @@ class BlockLeafRendererService
             'module_widget' => $this->renderModuleWidget($data, $context),
             'custom_code_embed' => $this->renderCustomCodeEmbed($data),
             'html_embed_restricted' => $this->renderRestrictedHtml($data),
-            'post_listing' => $this->renderPostListing($data),
+            'post_listing' => $this->renderPostListing($data, $context),
             'faq' => $this->renderFaq($data),
+            'stats' => $this->renderStats($data),
+            'hero' => $this->renderHero($data),
+            'features' => $this->renderFeatures($data),
+            'testimonial' => $this->renderTestimonial($data),
+            'pricing' => $this->renderPricing($data),
             default => '',
         };
     }
@@ -66,8 +73,23 @@ class BlockLeafRendererService
         $alt = e((string) ($data['alt'] ?? ''));
         $caption = (string) ($data['caption'] ?? '');
         $captionHtml = $caption !== '' ? '<figcaption>'.e($caption).'</figcaption>' : '';
+        $dimensions = $this->imageDimensionAttrs($data);
 
-        return "<figure><img src=\"{$src}\" alt=\"{$alt}\" loading=\"lazy\" />{$captionHtml}</figure>";
+        return "<figure><img src=\"{$src}\" alt=\"{$alt}\"{$dimensions} loading=\"lazy\" decoding=\"async\" />{$captionHtml}</figure>";
+    }
+
+    /**
+     * Emit intrinsic width/height attributes when known so the browser can
+     * reserve space and avoid layout shift (CLS).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function imageDimensionAttrs(array $data): string
+    {
+        $width = (int) ($data['width'] ?? 0);
+        $height = (int) ($data['height'] ?? 0);
+
+        return ($width > 0 && $height > 0) ? " width=\"{$width}\" height=\"{$height}\"" : '';
     }
 
     /**
@@ -75,12 +97,39 @@ class BlockLeafRendererService
      */
     private function renderVideo(array $data): string
     {
-        $url = (string) ($data['url'] ?? '');
-        if ($url === '') {
+        $url = trim((string) ($data['url'] ?? ''));
+        if ($url === '' || ! $this->isAllowedEmbedUrl($url)) {
             return '';
         }
 
-        return '<div class="cms-video"><iframe src="'.e($url).'" loading="lazy" referrerpolicy="no-referrer" allowfullscreen></iframe></div>';
+        return '<div class="cms-video"><iframe src="'.e($url).'" title="'.e((string) ($data['title'] ?? 'Embedded video')).'" loading="lazy" referrerpolicy="no-referrer" allowfullscreen></iframe></div>';
+    }
+
+    /**
+     * Only allow https iframe sources whose host is on the configured
+     * safe-embed allowlist, so the video block cannot embed an arbitrary
+     * (phishing / clickjacking / javascript:) origin.
+     */
+    private function isAllowedEmbedUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
+            return false;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($host === '') {
+            return false;
+        }
+
+        foreach ((array) config('cms.custom_code.safe_embed_domains', []) as $domain) {
+            $domain = strtolower(trim((string) $domain));
+            if ($domain !== '' && ($host === $domain || str_ends_with($host, '.'.$domain))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -101,10 +150,102 @@ class BlockLeafRendererService
 
             $src = e((string) ($item['src'] ?? ''));
             $alt = e((string) ($item['alt'] ?? ''));
-            $images[] = "<img src=\"{$src}\" alt=\"{$alt}\" loading=\"lazy\" />";
+            $dimensions = $this->imageDimensionAttrs($item);
+            $images[] = "<img src=\"{$src}\" alt=\"{$alt}\"{$dimensions} loading=\"lazy\" decoding=\"async\" />";
         }
 
         return '<div class="cms-gallery">'.implode('', $images).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderCarousel(array $data): string
+    {
+        $height = (string) ($data['height'] ?? 'lg');
+        if (! in_array($height, ['md', 'lg', 'xl'], true)) {
+            $height = 'lg';
+        }
+
+        $align = (string) ($data['overlay_align'] ?? 'left');
+        if (! in_array($align, ['left', 'center', 'right'], true)) {
+            $align = 'left';
+        }
+
+        $theme = (string) ($data['overlay_theme'] ?? 'gradient');
+        if (! in_array($theme, ['gradient', 'dark', 'light'], true)) {
+            $theme = 'gradient';
+        }
+
+        $autoplay = (bool) ($data['autoplay'] ?? false);
+        $interval = max(1500, min(30000, (int) ($data['interval_ms'] ?? 5000)));
+        $showArrows = ($data['show_arrows'] ?? true) !== false;
+        $showDots = ($data['show_dots'] ?? true) !== false;
+        $slides = is_array($data['slides'] ?? null) ? $data['slides'] : [];
+
+        $renderedSlides = [];
+        $dotButtons = [];
+
+        foreach ($slides as $index => $slide) {
+            if (! is_array($slide)) {
+                continue;
+            }
+
+            $src = trim((string) ($slide['src'] ?? ''));
+            if ($src === '') {
+                continue;
+            }
+
+            $title = trim((string) ($slide['title'] ?? ''));
+            $text = trim((string) ($slide['text'] ?? ''));
+            $ctaLabel = trim((string) ($slide['cta_label'] ?? ''));
+            $ctaUrl = trim((string) ($slide['cta_url'] ?? ''));
+            $targetBlank = (bool) ($slide['target_blank'] ?? false);
+            $nofollow = (bool) ($slide['nofollow'] ?? false);
+
+            $ctaHtml = '';
+            if ($ctaLabel !== '') {
+                $relParts = [];
+                if ($targetBlank) {
+                    $relParts[] = 'noopener';
+                    $relParts[] = 'noreferrer';
+                }
+                if ($nofollow) {
+                    $relParts[] = 'nofollow';
+                }
+                $targetAttr = $targetBlank ? ' target="_blank"' : '';
+                $relAttr = $relParts !== [] ? ' rel="'.e(implode(' ', array_values(array_unique($relParts)))).'"' : '';
+                $ctaHtml = '<a class="cms-cta" href="'.e($this->safeLinkUrl($ctaUrl)).'"'.$targetAttr.$relAttr.'>'.e($ctaLabel).'</a>';
+            }
+
+            $overlayParts = array_filter([
+                $title !== '' ? '<h3 class="cms-carousel-title">'.e($title).'</h3>' : '',
+                $text !== '' ? '<p class="cms-carousel-text">'.e($text).'</p>' : '',
+                $ctaHtml,
+            ]);
+            $overlayHtml = $overlayParts !== []
+                ? '<div class="cms-carousel-overlay"><div class="cms-carousel-copy">'.implode('', $overlayParts).'</div></div>'
+                : '';
+
+            $renderedSlides[] = '<article class="cms-carousel-slide'.($renderedSlides === [] ? ' is-active' : '').'" data-cms-carousel-slide>'
+                .'<img src="'.e($src).'" alt="'.e((string) ($slide['alt'] ?? '')).'" loading="lazy" />'
+                .$overlayHtml
+                .'</article>';
+            $dotButtons[] = '<button type="button" class="cms-carousel-dot'.($renderedSlides !== [] && count($renderedSlides) === 1 ? ' is-active' : '').'" data-cms-carousel-dot="'.count($dotButtons).'" aria-label="'.e($title !== '' ? $title : 'Слайд '.(count($dotButtons) + 1)).'"></button>';
+        }
+
+        if ($renderedSlides === []) {
+            return '';
+        }
+
+        $arrowsHtml = $showArrows && count($renderedSlides) > 1
+            ? '<div class="cms-carousel-arrows"><button type="button" class="cms-carousel-arrow prev" data-cms-carousel-prev aria-label="Предыдущий слайд">‹</button><button type="button" class="cms-carousel-arrow next" data-cms-carousel-next aria-label="Следующий слайд">›</button></div>'
+            : '';
+        $dotsHtml = $showDots && count($renderedSlides) > 1
+            ? '<div class="cms-carousel-dots" data-cms-carousel-dots>'.implode('', $dotButtons).'</div>'
+            : '';
+
+        return '<div class="cms-carousel cms-carousel--height-'.e($height).' cms-carousel--align-'.e($align).' cms-carousel--theme-'.e($theme).'" data-cms-carousel data-autoplay="'.($autoplay ? 'true' : 'false').'" data-interval-ms="'.e((string) $interval).'"><div class="cms-carousel-track">'.implode('', $renderedSlides).'</div>'.$arrowsHtml.$dotsHtml.'</div>';
     }
 
     /**
@@ -377,12 +518,52 @@ class BlockLeafRendererService
     /**
      * @param  array<int|string, mixed>  $data
      */
-    private function renderPostListing(array $data): string
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $context
+     */
+    private function renderPostListing(array $data, array $context = []): string
     {
-        $category = e((string) ($data['category_slug'] ?? ''));
+        $categorySlug = trim((string) ($data['category_slug'] ?? ''));
         $limit = max(1, min(100, (int) ($data['limit'] ?? 10)));
+        $locale = strtolower((string) ($context['locale'] ?? config('cms.default_locale', 'en')));
+        $postPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
 
-        return "<div class=\"cms-post-listing\" data-category=\"{$category}\" data-limit=\"{$limit}\"></div>";
+        $items = PostTranslation::query()
+            ->where('locale', $locale)
+            ->whereHas('post', function ($query) use ($categorySlug, $locale): void {
+                $query->published();
+                if ($categorySlug !== '') {
+                    $query->whereHas('categories.translations', function ($categoryQuery) use ($categorySlug, $locale): void {
+                        $categoryQuery->where('locale', $locale)->where('slug', $categorySlug);
+                    });
+                }
+            })
+            ->latest('id')
+            ->limit($limit)
+            ->get(['id', 'post_id', 'locale', 'slug', 'title', 'excerpt', 'meta_description']);
+
+        $attrs = 'data-category="'.e($categorySlug).'" data-limit="'.$limit.'"';
+
+        if ($items->isEmpty()) {
+            return '<div class="cms-post-listing" '.$attrs.'></div>';
+        }
+
+        $html = '<ul class="cms-post-listing" '.$attrs.'>';
+        foreach ($items as $translation) {
+            $url = e(url('/'.$locale.'/'.$postPrefix.'/'.$translation->slug));
+            $title = e((string) $translation->title);
+            $excerpt = trim((string) ($translation->excerpt ?: $translation->meta_description ?: ''));
+
+            $html .= '<li class="cms-post-listing__item"><a class="cms-post-listing__link" href="'.$url.'">'.$title.'</a>';
+            if ($excerpt !== '') {
+                $html .= '<p class="cms-post-listing__excerpt">'.e($excerpt).'</p>';
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+
+        return $html;
     }
 
     /**
@@ -407,6 +588,157 @@ class BlockLeafRendererService
         }
 
         return '<section class="cms-faq">'.implode('', $output).'</section>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderStats(array $data): string
+    {
+        $items = $data['items'] ?? [];
+        if (! is_array($items)) {
+            return '';
+        }
+
+        $cards = [];
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $value = trim((string) ($item['value'] ?? ''));
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($value === '' && $label === '') {
+                continue;
+            }
+
+            $cards[] = '<div class="cms-stat">'
+                .'<span class="cms-stat-value">'.e($value).'</span>'
+                .'<span class="cms-stat-label">'.e($label).'</span>'
+                .'</div>';
+        }
+
+        if ($cards === []) {
+            return '';
+        }
+
+        return '<div class="cms-stats">'.implode('', $cards).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderHero(array $data): string
+    {
+        $heading = trim((string) ($data['heading'] ?? ''));
+        $subheading = trim((string) ($data['subheading'] ?? ''));
+        if ($heading === '' && $subheading === '') {
+            return '';
+        }
+
+        $align = (string) ($data['align'] ?? 'left');
+        $align = in_array($align, ['left', 'center'], true) ? $align : 'left';
+        $image = trim((string) ($data['image'] ?? ''));
+        $style = ($image !== '' && (str_starts_with($image, '/') || str_starts_with($image, 'https://')))
+            ? ' style="background-image:url(\''.e($image).'\')"'
+            : '';
+
+        $ctaLabel = trim((string) ($data['cta_label'] ?? ''));
+        $cta = $ctaLabel !== ''
+            ? '<a class="cms-cta" href="'.e($this->safeLinkUrl((string) ($data['cta_url'] ?? '#'))).'">'.e($ctaLabel).'</a>'
+            : '';
+
+        return '<section class="cms-hero cms-hero--align-'.e($align).'"'.$style.'><div class="cms-hero-copy">'
+            .($heading !== '' ? '<h1 class="cms-hero-title">'.e($heading).'</h1>' : '')
+            .($subheading !== '' ? '<p class="cms-hero-sub">'.e($subheading).'</p>' : '')
+            .$cta
+            .'</div></section>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderFeatures(array $data): string
+    {
+        $cards = [];
+        foreach ((is_array($data['items'] ?? null) ? $data['items'] : []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $title = trim((string) ($item['title'] ?? ''));
+            $text = trim((string) ($item['text'] ?? ''));
+            $icon = trim((string) ($item['icon'] ?? ''));
+            if ($title === '' && $text === '') {
+                continue;
+            }
+            $cards[] = '<div class="cms-feature">'
+                .($icon !== '' ? '<div class="cms-feature-icon">'.e($icon).'</div>' : '')
+                .'<h3 class="cms-feature-title">'.e($title).'</h3>'
+                .'<p class="cms-feature-text">'.e($text).'</p></div>';
+        }
+
+        return $cards === [] ? '' : '<div class="cms-features">'.implode('', $cards).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderTestimonial(array $data): string
+    {
+        $cards = [];
+        foreach ((is_array($data['items'] ?? null) ? $data['items'] : []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $quote = trim((string) ($item['quote'] ?? ''));
+            if ($quote === '') {
+                continue;
+            }
+            $author = trim((string) ($item['author'] ?? ''));
+            $role = trim((string) ($item['role'] ?? ''));
+            $cards[] = '<figure class="cms-testimonial"><blockquote>'.e($quote).'</blockquote><figcaption>'
+                .'<span class="cms-testimonial-author">'.e($author).'</span>'
+                .($role !== '' ? '<span class="cms-testimonial-role">'.e($role).'</span>' : '')
+                .'</figcaption></figure>';
+        }
+
+        return $cards === [] ? '' : '<div class="cms-testimonials">'.implode('', $cards).'</div>';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     */
+    private function renderPricing(array $data): string
+    {
+        $cards = [];
+        foreach ((is_array($data['items'] ?? null) ? $data['items'] : []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $name = trim((string) ($item['name'] ?? ''));
+            $price = trim((string) ($item['price'] ?? ''));
+            if ($name === '' && $price === '') {
+                continue;
+            }
+            $period = trim((string) ($item['period'] ?? ''));
+            $features = '';
+            foreach ((is_array($item['features'] ?? null) ? $item['features'] : []) as $feature) {
+                $feature = trim((string) $feature);
+                if ($feature !== '') {
+                    $features .= '<li>'.e($feature).'</li>';
+                }
+            }
+            $ctaLabel = trim((string) ($item['cta_label'] ?? ''));
+            $cta = $ctaLabel !== ''
+                ? '<a class="cms-cta" href="'.e($this->safeLinkUrl((string) ($item['cta_url'] ?? '#'))).'">'.e($ctaLabel).'</a>'
+                : '';
+
+            $cards[] = '<div class="cms-price"><h3 class="cms-price-name">'.e($name).'</h3>'
+                .'<div class="cms-price-amount">'.e($price).($period !== '' ? '<span class="cms-price-period">/'.e($period).'</span>' : '').'</div>'
+                .'<ul class="cms-price-features">'.$features.'</ul>'.$cta.'</div>';
+        }
+
+        return $cards === [] ? '' : '<div class="cms-pricing">'.implode('', $cards).'</div>';
     }
 
     private function safeLinkUrl(string $url): string

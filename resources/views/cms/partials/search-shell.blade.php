@@ -4,6 +4,7 @@
         name="q"
         value="{{ $value ?? '' }}"
         placeholder="{{ $placeholder }}"
+        aria-label="{{ $placeholder }}"
         minlength="{{ $minLength }}"
     >
     <input type="hidden" name="type" value="{{ $scopeDefault }}">

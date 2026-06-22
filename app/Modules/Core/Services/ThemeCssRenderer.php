@@ -15,7 +15,12 @@ class ThemeCssRenderer
         return trim($this->baseCss())."\n\n".trim($this->dynamicCss($themeColors, $themeFonts));
     }
 
-    private function baseCss(): string
+    /**
+     * The large, theme-independent structural stylesheet. Served as an external
+     * cacheable file on public pages instead of being inlined into every
+     * (full-page-cached) document.
+     */
+    public function baseCss(): string
     {
         if ($this->baseCssCache !== null) {
             return $this->baseCssCache;
@@ -28,10 +33,20 @@ class ThemeCssRenderer
     }
 
     /**
+     * Short content hash of the base stylesheet, used to cache-bust the
+     * external link whenever theme-base.css changes (so it can be served
+     * immutable).
+     */
+    public function baseCssHash(): string
+    {
+        return substr(hash('xxh128', $this->baseCss()), 0, 12);
+    }
+
+    /**
      * @param  array<string, string>  $themeColors
      * @param  array<string, string>  $themeFonts
      */
-    private function dynamicCss(array $themeColors, array $themeFonts): string
+    public function dynamicCss(array $themeColors, array $themeFonts): string
     {
         $bg = $themeColors['bg'] ?? '#F4F1EA';
         $surface = $themeColors['surface'] ?? '#FFFFFF';

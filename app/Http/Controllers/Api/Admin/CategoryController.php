@@ -11,6 +11,7 @@ use App\Modules\Ops\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -116,7 +117,7 @@ class CategoryController extends Controller
             'cover_asset_id' => 'nullable|integer|exists:assets,id',
             'is_active' => 'nullable|boolean',
             'translations' => 'required|array|min:1',
-            'translations.*.locale' => 'required|string|max:8',
+            'translations.*.locale' => ['required', 'string', 'max:8', Rule::in(array_map(static fn ($l) => strtolower(trim((string) $l)), (array) config('cms.supported_locales', ['en'])))],
             'translations.*.title' => 'required|string|max:255',
             'translations.*.slug' => 'required|string|max:255',
             'translations.*.description' => 'nullable|string',

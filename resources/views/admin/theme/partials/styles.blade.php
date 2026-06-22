@@ -115,6 +115,10 @@
             display:grid;
             gap:10px;
         }
+        .chrome-item-card.chrome-item-card-child {
+            background:#f8fafc;
+            border-style:dashed;
+        }
         .chrome-item-row {
             display:grid;
             gap:8px;
@@ -135,6 +139,18 @@
         .chrome-kv label { font-size:12px; margin:0; color:var(--muted); }
         .chrome-kv input, .chrome-kv select { padding:8px 10px; }
         .chrome-check-grid { display:grid; gap:10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .chrome-child-shell {
+            display:grid;
+            gap:8px;
+            padding:10px;
+            border:1px dashed #d0d5dd;
+            border-radius:12px;
+            background:#fcfcfd;
+        }
+        .chrome-child-list {
+            display:grid;
+            gap:8px;
+        }
         .chrome-preview-shell {
             border:1px solid #dbe3ef;
             border-radius:14px;
@@ -160,6 +176,12 @@
             background:#fff;
         }
         .chrome-preview-brand {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-width:0;
+        }
+        .chrome-preview-brand-copy {
             display:grid;
             gap:2px;
             min-width:0;
@@ -172,12 +194,35 @@
             overflow:hidden;
             text-overflow:ellipsis;
         }
+        .chrome-preview-brand-mark {
+            width:34px;
+            height:34px;
+            border-radius:12px;
+            background:linear-gradient(135deg, #d9772b, #ef7f1a);
+            box-shadow: 0 8px 18px rgba(217,71,43,.18);
+            flex:0 0 auto;
+        }
+        .chrome-preview-brand-mark.has-image {
+            background:#fff;
+            border:1px solid #e5e7eb;
+            box-shadow:none;
+            overflow:hidden;
+        }
+        .chrome-preview-brand-mark img {
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:block;
+        }
         .chrome-preview-nav,
         .chrome-preview-footer-links {
             display:flex;
             gap:6px;
             flex-wrap:wrap;
         }
+        .chrome-preview-nav.pos-left { justify-content:flex-start; }
+        .chrome-preview-nav.pos-center { justify-content:center; }
+        .chrome-preview-nav.pos-right { justify-content:flex-end; }
         .chrome-preview-pill {
             border:1px solid #d0d5dd;
             border-radius:999px;
@@ -185,6 +230,10 @@
             padding:5px 8px;
             font-size:12px;
             font-weight:600;
+        }
+        .chrome-preview-pill.has-children::after {
+            content:" ▾";
+            color:#667085;
         }
         .chrome-preview-pill.primary { background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
         .chrome-preview-pill.secondary { background:#f8fafc; }

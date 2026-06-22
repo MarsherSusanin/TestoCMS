@@ -13,11 +13,14 @@ class SystemCheckService
             'php_version' => $this->checkPhpVersion(),
             'pdo_database' => $this->checkDatabaseDriverSupport(),
             'mbstring' => $this->checkExtension('mbstring', 'Mbstring'),
-            'intl' => $this->checkExtension('intl', 'Intl'),
+            // intl / bcmath / exif are not required by the CMS itself; flag them
+            // as informational so install is not blocked on shared hosts that
+            // omit them.
+            'intl' => $this->checkExtension('intl', 'Intl', optional: true),
             'gd' => $this->checkExtension('gd', 'GD'),
-            'bcmath' => $this->checkExtension('bcmath', 'BCMath'),
+            'bcmath' => $this->checkExtension('bcmath', 'BCMath', optional: true),
             'zip' => $this->checkExtension('zip', 'Zip'),
-            'exif' => $this->checkExtension('exif', 'Exif'),
+            'exif' => $this->checkExtension('exif', 'Exif', optional: true),
             'openssl' => $this->checkExtension('openssl', 'OpenSSL'),
             'curl' => $this->checkExtension('curl', 'cURL'),
             'fileinfo' => $this->checkExtension('fileinfo', 'Fileinfo'),
@@ -82,13 +85,13 @@ class SystemCheckService
         ];
     }
 
-    private function checkExtension(string $ext, string $label): array
+    private function checkExtension(string $ext, string $label, bool $optional = false): array
     {
         return [
             'passed' => $this->hasExtension($ext),
             'label' => $label,
             'detail' => $this->extensionDetail($ext),
-            'optional' => false,
+            'optional' => $optional,
         ];
     }
 

@@ -8,6 +8,6 @@
     </section>
 @endif
 
-<main class="content-shell">
+<main id="main" class="content-shell" tabindex="-1">
     @yield('content')
 </main>

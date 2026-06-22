@@ -9,6 +9,7 @@ use Database\Seeders\DemoContentSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Throwable;
 
 class SetupFinalizationService
@@ -86,7 +87,7 @@ class SetupFinalizationService
 
         if ($runStorageLink) {
             $this->runNonCriticalStep($steps, 'Storage link', function (): void {
-                Artisan::call('storage:link');
+                $this->linkOrCopyPublicStorage();
             });
         }
 
@@ -198,11 +199,49 @@ class SetupFinalizationService
 
             $value = $this->resolveEnvValue(substr($line, $separatorPosition + 1), $resolved);
 
-            putenv($key.'='.$value);
+            // putenv is frequently disabled on shared hosting; guard it so the
+            // finalize step does not abort. $_ENV/$_SERVER still carry the value.
+            if (function_exists('putenv')) {
+                putenv($key.'='.$value);
+            }
             $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
             $resolved[$key] = $value;
         }
+    }
+
+    /**
+     * Ensure the public/storage path resolves. Prefer a symlink, but fall back
+     * to copying the directory on shared hosts where symlink() is disabled, so
+     * media is not left broken (and the setup step does not silently no-op).
+     */
+    private function linkOrCopyPublicStorage(): void
+    {
+        $link = public_path('storage');
+        $target = storage_path('app/public');
+        File::ensureDirectoryExists($target);
+
+        if (is_link($link) || is_dir($link)) {
+            return;
+        }
+
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+        $canSymlink = function_exists('symlink') && ! in_array('symlink', $disabled, true);
+
+        if ($canSymlink) {
+            try {
+                Artisan::call('storage:link');
+            } catch (Throwable) {
+                // fall through to the copy fallback below
+            }
+
+            if (is_link($link) || is_dir($link)) {
+                return;
+            }
+        }
+
+        File::ensureDirectoryExists($link);
+        File::copyDirectory($target, $link);
     }
 
     private function applyRuntimePublicPathConfiguration(): void

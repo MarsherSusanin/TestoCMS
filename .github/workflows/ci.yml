@@ -11,6 +11,12 @@ jobs:
   php:
     name: PHP checks
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test the production floor (8.2), the primary shared-hosting target
+        # (8.3) and the latest supported runtime (8.4).
+        php: ['8.2', '8.3', '8.4']
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -18,12 +24,15 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, pdo_mysql, intl, gd, bcmath, exif
           coverage: none
 
       - name: Install PHP dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Security audit (dependencies)
+        run: composer audit --no-interaction
 
       - name: Prepare environment
         run: |
@@ -34,10 +43,14 @@ jobs:
       - name: Lint
         run: composer lint
 
+      - name: Static analysis
+        run: composer analyse
+
       - name: Test
         run: composer test
 
       - name: Validate Docker/VPS compose
+        if: matrix.php == '8.3'
         run: docker compose -f docker-compose.vps.yml config >/dev/null
 
   frontend:

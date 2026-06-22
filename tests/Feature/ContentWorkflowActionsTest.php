@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Models\PublishSchedule;
 use App\Models\User;
+use App\Modules\Content\Services\SlugResolverService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -25,7 +26,7 @@ class ContentWorkflowActionsTest extends TestCase
         $page = $this->createPage($superadmin, 'workflow-page');
 
         $this->seedPageCache();
-        app(\App\Modules\Content\Services\SlugResolverService::class)->resolve('ru', 'workflow-page');
+        app(SlugResolverService::class)->resolve('ru', 'workflow-page');
         $this->assertNotNull(Cache::get('cms:slug:ru:workflow-page'));
 
         $this->actingAs($superadmin)
@@ -87,7 +88,7 @@ class ContentWorkflowActionsTest extends TestCase
         $post = $this->createPost($superadmin, 'workflow-post');
 
         $this->seedPageCache();
-        app(\App\Modules\Content\Services\SlugResolverService::class)->resolve('ru', 'blog/workflow-post');
+        app(SlugResolverService::class)->resolve('ru', 'blog/workflow-post');
         $this->assertNotNull(Cache::get('cms:slug:ru:blog/workflow-post'));
 
         $this->actingAs($superadmin)

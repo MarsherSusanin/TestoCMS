@@ -28,6 +28,8 @@
     $headerEnabled = (bool) ($cms['header_enabled'] ?? true);
     $headerVariant = (string) ($cms['header_variant'] ?? 'split_nav');
     $headerClass = (string) ($cms['header_class'] ?? 'topbar topbar-split_nav');
+    $headerLogo = is_array($cms['header_logo'] ?? null) ? $cms['header_logo'] : [];
+    $headerMenuPosition = (string) ($cms['header_menu_position'] ?? 'right');
     $headerLeftNav = $cms['header_left_nav'] ?? [];
     $headerRightNav = $cms['header_right_nav'] ?? [];
     $footerClass = (string) ($cms['footer_class'] ?? 'site-footer footer-inline');
@@ -39,11 +41,14 @@
     @include('cms.partials.head-meta')
 </head>
 <body class="@yield('body_class')">
+<a class="skip-link" href="#main">{{ __('Перейти к содержимому') }}</a>
 {!! $publicChrome['body_start'] ?? '' !!}
 <div class="site-shell">
     @include('cms.partials.chrome-header')
     @include('cms.partials.content-frame')
     @include('cms.partials.chrome-footer')
 </div>
+@include('cms.partials.public-runtime')
+@include('cms.partials.cookie-consent')
 </body>
 </html>

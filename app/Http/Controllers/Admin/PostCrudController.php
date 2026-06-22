@@ -180,7 +180,7 @@ class PostCrudController extends Controller
             'audit_action' => 'post.update.web',
         ]);
 
-        return redirect()->route('admin.posts.edit', $post)->with('status', 'Post updated.');
+        return redirect()->route('admin.posts.edit', $post)->with('status', 'Post updated.')->with('content_saved', true);
     }
 
     public function destroy(Request $request, Post $post): RedirectResponse

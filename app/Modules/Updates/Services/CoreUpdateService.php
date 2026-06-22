@@ -19,6 +19,7 @@ class CoreUpdateService
         private readonly CorePackageApplier $packageApplier,
         private readonly DeployHookUpdateDriver $deployHookDriver,
         private readonly FilesystemUpdateDriver $filesystemDriver,
+        private readonly PackageSignatureVerifier $signatureVerifier,
     ) {}
 
     /**
@@ -117,16 +118,54 @@ class CoreUpdateService
     /**
      * @return array<string, mixed>
      */
-    public function uploadManualPackage(UploadedFile $zipFile, ?int $actorId = null): array
+    public function uploadManualPackage(UploadedFile $zipFile, string $signature = '', ?int $actorId = null): array
     {
+        // Fail closed: a manual package may only be accepted when a signing
+        // public key is configured AND the uploaded ZIP carries a valid
+        // detached Ed25519 signature. This is the same cryptographic gate the
+        // cloud path enforces, so an admin (or hijacked session) without the
+        // private key cannot ship arbitrary PHP into the application.
+        $publicKey = trim((string) ($this->settings->resolved()['public_key'] ?? ''));
+        if ($publicKey === '') {
+            throw new RuntimeException('A signing public key (CMS_UPDATE_PUBLIC_KEY) must be configured before a manual package can be uploaded.');
+        }
+
+        $signature = trim($signature);
+        if ($signature === '') {
+            throw new RuntimeException('A detached release signature is required for manual package uploads.');
+        }
+
         $packagesRoot = $this->environment->storageRoot().DIRECTORY_SEPARATOR.'packages';
         File::ensureDirectoryExists($packagesRoot);
 
         $targetPath = $packagesRoot.DIRECTORY_SEPARATOR.'manual_'.now()->format('Ymd_His').'_'.Str::random(8).'.zip';
         File::copy($zipFile->getRealPath(), $targetPath);
 
-        $inspection = $this->packageApplier->inspectArchive($targetPath);
+        if (! $this->signatureVerifier->verifyFile($targetPath, $signature, $publicKey)) {
+            @unlink($targetPath);
+            throw new RuntimeException('Manual package signature verification failed.');
+        }
+
+        try {
+            $inspection = $this->packageApplier->inspectArchive($targetPath);
+        } catch (\Throwable $e) {
+            @unlink($targetPath);
+            throw $e;
+        }
         $release = $inspection['release'];
+
+        // Reject downgrades / replays: never let the updater install a version
+        // older than what is currently running.
+        $installedVersion = $this->settings->installedVersion();
+        if (version_compare((string) $release['version'], $installedVersion, '<')) {
+            @unlink($targetPath);
+            throw new RuntimeException(sprintf(
+                'Refusing to install version %s over the currently installed %s (downgrade).',
+                (string) $release['version'],
+                $installedVersion
+            ));
+        }
+
         $hash = hash_file('sha256', $targetPath);
 
         $state = $this->settings->state();
@@ -135,6 +174,7 @@ class CoreUpdateService
             'version' => (string) $release['version'],
             'zip_path' => $targetPath,
             'sha256' => $hash,
+            'signature' => $signature,
             'release' => $release,
             'uploaded_at' => now()->toIso8601String(),
         ];
@@ -144,12 +184,13 @@ class CoreUpdateService
         $this->logAction(
             action: 'upload',
             status: 'success',
-            fromVersion: $this->settings->installedVersion(),
+            fromVersion: $installedVersion,
             toVersion: (string) $release['version'],
             message: 'Manual package uploaded.',
             context: [
                 'zip_path' => $targetPath,
                 'sha256' => $hash,
+                'signature_verified' => true,
             ],
             actorId: $actorId,
         );

@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\CoreBackup;
 use App\Models\ThemeSetting;
 use App\Models\User;
+use App\Modules\Updates\Services\CoreUpdateSettingsService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -77,12 +79,14 @@ class CoreUpdatesAdminTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         $superAdmin = $this->makeUser('superadmin2@testocms.local', 'superadmin');
 
-        $zipPath = $this->makeReleaseZip('1.2.0');
-        $uploaded = new UploadedFile($zipPath, 'core-release.zip', 'application/zip', null, true);
+        $zipPath = $this->makeUpdaterZip('1.2.0');
+        $signature = $this->signZipAndConfigureKey($zipPath);
+        $uploaded = new UploadedFile($zipPath, 'core-updater.zip', 'application/zip', null, true);
 
         $this->actingAs($superAdmin)
             ->post('/admin/updates/upload', [
                 'release_zip' => $uploaded,
+                'release_signature' => $signature,
             ])
             ->assertRedirect('/admin/updates')
             ->assertSessionHas('status');
@@ -94,12 +98,78 @@ class CoreUpdatesAdminTest extends TestCase
         $this->assertSame('manual', $pending['source'] ?? null);
         $this->assertSame('1.2.0', $pending['version'] ?? null);
         $this->assertFileExists((string) ($pending['zip_path'] ?? ''));
+        $this->assertSame('core-updater', data_get($pending, 'release.artifact'));
 
         $this->assertDatabaseHas('cms_core_update_logs', [
             'action' => 'upload',
             'status' => 'success',
             'to_version' => '1.2.0',
         ]);
+    }
+
+    public function test_superadmin_cannot_upload_zip_without_core_updater_artifact(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $superAdmin = $this->makeUser('superadmin-bad-updater@testocms.local', 'superadmin');
+
+        $zipPath = $this->makeUpdaterZip('1.2.0', includeArtifact: false);
+        $signature = $this->signZipAndConfigureKey($zipPath);
+        $uploaded = new UploadedFile($zipPath, 'bad-updater.zip', 'application/zip', null, true);
+
+        $this->actingAs($superAdmin)
+            ->from('/admin/updates')
+            ->post('/admin/updates/upload', [
+                'release_zip' => $uploaded,
+                'release_signature' => $signature,
+            ])
+            ->assertRedirect('/admin/updates')
+            ->assertSessionHasErrors('release_zip');
+    }
+
+    public function test_manual_upload_requires_a_configured_public_key(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $superAdmin = $this->makeUser('superadmin-nokey@testocms.local', 'superadmin');
+
+        config()->set('updates.public_key', '');
+
+        $zipPath = $this->makeUpdaterZip('1.2.0');
+        $uploaded = new UploadedFile($zipPath, 'core-updater.zip', 'application/zip', null, true);
+
+        $this->actingAs($superAdmin)
+            ->from('/admin/updates')
+            ->post('/admin/updates/upload', [
+                'release_zip' => $uploaded,
+                'release_signature' => base64_encode(str_repeat("\0", SODIUM_CRYPTO_SIGN_BYTES)),
+            ])
+            ->assertRedirect('/admin/updates')
+            ->assertSessionHasErrors('release_zip');
+
+        $state = ThemeSetting::query()->where('key', 'core_update_state')->first();
+        $this->assertNull($state->settings['pending_package'] ?? null);
+    }
+
+    public function test_manual_upload_rejects_invalid_or_tampered_signature(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $superAdmin = $this->makeUser('superadmin-badsig@testocms.local', 'superadmin');
+
+        $zipPath = $this->makeUpdaterZip('1.2.0');
+        // Configure a valid public key but submit a signature that does not match.
+        $this->signZipAndConfigureKey($zipPath);
+        $uploaded = new UploadedFile($zipPath, 'core-updater.zip', 'application/zip', null, true);
+
+        $this->actingAs($superAdmin)
+            ->from('/admin/updates')
+            ->post('/admin/updates/upload', [
+                'release_zip' => $uploaded,
+                'release_signature' => base64_encode(str_repeat("\0", SODIUM_CRYPTO_SIGN_BYTES)),
+            ])
+            ->assertRedirect('/admin/updates')
+            ->assertSessionHasErrors('release_zip');
+
+        $state = ThemeSetting::query()->where('key', 'core_update_state')->first();
+        $this->assertNull($state->settings['pending_package'] ?? null);
     }
 
     public function test_apply_update_in_deploy_hook_mode(): void
@@ -187,29 +257,104 @@ class CoreUpdatesAdminTest extends TestCase
         $this->assertSame('rolled_back', $backup->status);
     }
 
-    private function makeReleaseZip(string $version): string
+    public function test_deploy_hook_token_is_encrypted_at_rest(): void
+    {
+        $service = app(CoreUpdateSettingsService::class);
+        $service->save(['mode' => 'deploy-hook', 'deploy_hook_token' => 'super-secret-token']);
+
+        $record = ThemeSetting::query()->where('key', 'core_updates')->first();
+        $this->assertNotNull($record);
+        $storedToken = (string) ($record->settings['deploy_hook_token'] ?? '');
+        $this->assertNotSame('super-secret-token', $storedToken, 'token must not be stored in plaintext');
+        $this->assertNotSame('', $storedToken);
+
+        // resolved() transparently decrypts it back.
+        $this->assertSame('super-secret-token', $service->resolved()['deploy_hook_token'] ?? null);
+    }
+
+    private function makeUpdaterZip(string $version, bool $includeArtifact = true): string
     {
         $tmpDir = storage_path('framework/testing/core-updates-zip-'.uniqid('', true));
-        @mkdir($tmpDir, 0777, true);
-        file_put_contents($tmpDir.'/release.json', json_encode([
+        File::ensureDirectoryExists($tmpDir.'/app');
+        File::ensureDirectoryExists($tmpDir.'/bootstrap');
+        File::ensureDirectoryExists($tmpDir.'/bundled-modules');
+        File::ensureDirectoryExists($tmpDir.'/config');
+        File::ensureDirectoryExists($tmpDir.'/database');
+        File::ensureDirectoryExists($tmpDir.'/html_public/brand');
+        File::ensureDirectoryExists($tmpDir.'/lang');
+        File::ensureDirectoryExists($tmpDir.'/resources');
+        File::ensureDirectoryExists($tmpDir.'/routes');
+        File::ensureDirectoryExists($tmpDir.'/vendor');
+
+        $release = [
             'version' => $version,
             'build' => 'test',
             'signed_at' => now()->toIso8601String(),
             'compat' => [
-                'php' => '>=8.1',
-                'cms_from' => '1.0.0',
+                'php' => '>=8.2',
+                'cms_from' => '>=1.0.0',
             ],
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        ];
+
+        if ($includeArtifact) {
+            $release['artifact'] = 'core-updater';
+        }
+
+        file_put_contents($tmpDir.'/release.json', json_encode($release, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        file_put_contents($tmpDir.'/app/version.txt', 'v'.$version);
+        file_put_contents($tmpDir.'/bootstrap/app.php', '<?php return [];');
+        file_put_contents($tmpDir.'/composer.json', '{"name":"testocms/testocms"}');
+        file_put_contents($tmpDir.'/composer.lock', '{"packages":[]}');
+        file_put_contents($tmpDir.'/artisan', "#!/usr/bin/env php\n<?php echo 'artisan';\n");
+        file_put_contents($tmpDir.'/config/app.php', '<?php return [];');
+        file_put_contents($tmpDir.'/database/.gitkeep', '');
+        file_put_contents($tmpDir.'/html_public/index.php', '<?php echo "ok";');
+        file_put_contents($tmpDir.'/html_public/brand/logo.svg', '<svg></svg>');
+        file_put_contents($tmpDir.'/lang/.gitkeep', '');
+        file_put_contents($tmpDir.'/resources/.gitkeep', '');
+        file_put_contents($tmpDir.'/routes/web.php', '<?php');
+        file_put_contents($tmpDir.'/vendor/autoload.php', '<?php');
 
         $zipPath = storage_path('framework/testing/core-release-'.uniqid('', true).'.zip');
         $zip = new ZipArchive;
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             $this->fail('Failed to create ZIP');
         }
-        $zip->addFile($tmpDir.'/release.json', 'release.json');
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($tmpDir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $pathname = (string) $item->getPathname();
+            $relative = ltrim(str_replace($tmpDir, '', $pathname), DIRECTORY_SEPARATOR);
+            if ($item->isDir()) {
+                $zip->addEmptyDir(str_replace('\\', '/', $relative));
+            } else {
+                $zip->addFile($pathname, str_replace('\\', '/', $relative));
+            }
+        }
         $zip->close();
 
         return $zipPath;
+    }
+
+    /**
+     * Generate an Ed25519 keypair, configure its public key as the update
+     * signing key, and return a base64 detached signature over the ZIP bytes.
+     */
+    private function signZipAndConfigureKey(string $zipPath): string
+    {
+        $keypair = sodium_crypto_sign_keypair();
+        config()->set('updates.public_key', base64_encode(sodium_crypto_sign_publickey($keypair)));
+
+        $signature = sodium_crypto_sign_detached(
+            (string) file_get_contents($zipPath),
+            sodium_crypto_sign_secretkey($keypair)
+        );
+
+        return base64_encode($signature);
     }
 
     private function makeUser(string $email, string $role): User

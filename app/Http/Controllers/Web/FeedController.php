@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CategoryTranslation;
 use App\Models\Post;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 
 class FeedController extends Controller
 {
@@ -43,7 +44,7 @@ class FeedController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Post>  $posts
+     * @param  Collection<int, Post>  $posts
      */
     private function renderFeed($posts, string $locale, string $title): Response
     {

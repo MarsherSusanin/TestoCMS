@@ -1443,6 +1443,7 @@
         'markdownImportUrl' => route('admin.posts.markdown.import'),
         'postUrlPrefix' => (string) config('cms.post_url_prefix', 'blog'),
         'isEditMode' => (bool) $post,
+        'justSaved' => (bool) session('content_saved'),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
     <script src="{{ route('admin.runtime.show', ['runtime' => 'editor-shared.js']) }}"></script>
     <script src="{{ route('admin.runtime.show', ['runtime' => 'post-form.js']) }}"></script>

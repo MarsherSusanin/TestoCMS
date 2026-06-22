@@ -30,7 +30,7 @@ class AssetCrudController extends Controller
         $this->authorize('create', Asset::class);
 
         $validated = $request->validate([
-            'file' => 'nullable|file|max:51200',
+            'file' => ['nullable', 'file', 'max:'.(int) config('cms.uploads.max_kb', 51200), 'mimes:'.implode(',', (array) config('cms.uploads.allowed_extensions', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']))],
             'type' => 'nullable|string|max:32',
             'disk' => 'nullable|string|max:64',
             'storage_path' => 'nullable|string|max:2048',

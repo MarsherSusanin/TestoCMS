@@ -25,6 +25,7 @@
                 image: 'Изображение',
                 video_embed: 'Видео',
                 gallery: 'Галерея',
+                carousel: 'Карусель',
                 list: 'Список',
                 divider: 'Разделитель',
                 cta: 'CTA',
@@ -34,6 +35,11 @@
                 html_embed_restricted: 'Ограниченный embed',
                 post_listing: 'Список постов',
                 faq: 'FAQ',
+                stats: 'Показатели',
+                hero: 'Hero',
+                features: 'Преимущества',
+                testimonial: 'Отзывы',
+                pricing: 'Тарифы',
             };
 
             const moduleWidgetFieldOptions = (options) => (Array.isArray(options) ? options : []).map((option) => ({
@@ -304,6 +310,148 @@
                     const [src, ...rest] = line.split('|');
                     return { src: (src || '').trim(), alt: rest.join('|').trim() };
                 });
+            const toStatsLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.value || ''} | ${item?.label || ''}`)
+                .join('\\n');
+            const fromStatsLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const [value, ...rest] = line.split('|');
+                    return { value: (value || '').trim(), label: rest.join('|').trim() };
+                });
+            const toFeatureLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.icon || ''} | ${item?.title || ''} | ${item?.text || ''}`)
+                .join('\\n');
+            const fromFeatureLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const [icon, title, ...rest] = line.split('|');
+                    return { icon: (icon || '').trim(), title: (title || '').trim(), text: rest.join('|').trim() };
+                });
+            const toTestimonialLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.quote || ''} | ${item?.author || ''} | ${item?.role || ''}`)
+                .join('\\n');
+            const fromTestimonialLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const [quote, author, ...rest] = line.split('|');
+                    return { quote: (quote || '').trim(), author: (author || '').trim(), role: rest.join('|').trim() };
+                });
+            const toPricingLines = (items) => (Array.isArray(items) ? items : [])
+                .map((item) => `${item?.name || ''} | ${item?.price || ''} | ${item?.period || ''} | ${(Array.isArray(item?.features) ? item.features : []).join('; ')} | ${item?.cta_label || ''} | ${item?.cta_url || ''}`)
+                .join('\\n');
+            const fromPricingLines = (text) => String(text || '')
+                .split('\\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                    const parts = line.split('|').map((part) => part.trim());
+                    return {
+                        name: parts[0] || '',
+                        price: parts[1] || '',
+                        period: parts[2] || '',
+                        features: (parts[3] || '').split(';').map((f) => f.trim()).filter(Boolean),
+                        cta_label: parts[4] || '',
+                        cta_url: parts[5] || '',
+                    };
+                });
+
+            const carouselHeightOptions = ['md', 'lg', 'xl'];
+            const carouselAlignOptions = ['left', 'center', 'right'];
+            const carouselThemeOptions = ['gradient', 'dark', 'light'];
+            const defaultCarouselSlide = (overrides = {}) => ({
+                src: '',
+                alt: '',
+                title: '',
+                text: '',
+                cta_label: '',
+                cta_url: '',
+                target_blank: false,
+                nofollow: false,
+                ...((overrides && typeof overrides === 'object') ? overrides : {}),
+            });
+            // Keep every slide while editing — filtering empty-src slides here
+            // dropped/re-indexed them on each keystroke (so "add slide" no-op'd
+            // and editing one slide overwrote another). Empty slides are skipped
+            // only for the visual preview and dropped server-side on save.
+            const normalizeCarouselSlides = (slides) => (Array.isArray(slides) ? slides : [])
+                .map((slide) => defaultCarouselSlide((slide && typeof slide === 'object') ? slide : {}));
+            const renderableCarouselSlides = (slides) => (Array.isArray(slides) ? slides : [])
+                .filter((slide) => String(slide.src || '').trim() !== '');
+            const normalizeCarouselData = (data) => {
+                const safe = (data && typeof data === 'object') ? data : {};
+                const interval = Number(safe.interval_ms || 5000);
+                return {
+                    height: carouselHeightOptions.includes(String(safe.height || '')) ? String(safe.height) : 'lg',
+                    overlay_align: carouselAlignOptions.includes(String(safe.overlay_align || '')) ? String(safe.overlay_align) : 'left',
+                    overlay_theme: carouselThemeOptions.includes(String(safe.overlay_theme || '')) ? String(safe.overlay_theme) : 'gradient',
+                    autoplay: !!safe.autoplay,
+                    interval_ms: Number.isFinite(interval) ? Math.max(1500, Math.min(30000, Math.round(interval))) : 5000,
+                    show_arrows: safe.show_arrows !== false,
+                    show_dots: safe.show_dots !== false,
+                    slides: normalizeCarouselSlides(safe.slides),
+                };
+            };
+            const previewRenderCarousel = (rawData) => {
+                const data = normalizeCarouselData(rawData);
+                const slides = renderableCarouselSlides(data.slides);
+                if (slides.length === 0) {
+                    return '';
+                }
+
+                const slidesHtml = slides.map((slide, index) => {
+                    const relParts = [];
+                    if (slide.target_blank) relParts.push('noopener', 'noreferrer');
+                    if (slide.nofollow) relParts.push('nofollow');
+                    const ctaHref = escapeHtml(slide.cta_url || '#');
+                    const ctaTarget = slide.target_blank ? ' target="_blank"' : '';
+                    const ctaRel = relParts.length ? ` rel="${escapeHtml(Array.from(new Set(relParts)).join(' '))}"` : '';
+                    const ctaHtml = String(slide.cta_label || '').trim() !== ''
+                        ? `<a class="cms-cta" href="${ctaHref}"${ctaTarget}${ctaRel}>${escapeHtml(slide.cta_label || 'Подробнее')}</a>`
+                        : '';
+                    const overlayParts = [
+                        String(slide.title || '').trim() !== '' ? `<h3 class="cms-carousel-title">${escapeHtml(slide.title)}</h3>` : '',
+                        String(slide.text || '').trim() !== '' ? `<p class="cms-carousel-text">${escapeHtml(slide.text)}</p>` : '',
+                        ctaHtml,
+                    ].filter(Boolean).join('');
+                    return `
+                        <article class="cms-carousel-slide ${index === 0 ? 'is-active' : ''}" data-cms-carousel-slide>
+                            <img src="${escapeHtml(slide.src || '')}" alt="${escapeHtml(slide.alt || '')}" loading="lazy">
+                            ${overlayParts ? `<div class="cms-carousel-overlay"><div class="cms-carousel-copy">${overlayParts}</div></div>` : ''}
+                        </article>
+                    `;
+                }).join('');
+
+                const dotsHtml = data.show_dots && slides.length > 1
+                    ? `<div class="cms-carousel-dots" data-cms-carousel-dots="">${slides.map((slide, index) => `<button type="button" class="cms-carousel-dot ${index === 0 ? 'is-active' : ''}" data-cms-carousel-dot="${index}" aria-label="${escapeHtml(slide.title || `Слайд ${index + 1}`)}"></button>`).join('')}</div>`
+                    : '';
+                const arrowsHtml = data.show_arrows && slides.length > 1
+                    ? `
+                        <div class="cms-carousel-arrows">
+                            <button type="button" class="cms-carousel-arrow prev" data-cms-carousel-prev aria-label="Предыдущий слайд">‹</button>
+                            <button type="button" class="cms-carousel-arrow next" data-cms-carousel-next aria-label="Следующий слайд">›</button>
+                        </div>
+                    `
+                    : '';
+
+                return `
+                    <div
+                        class="cms-carousel cms-carousel--height-${escapeHtml(data.height)} cms-carousel--align-${escapeHtml(data.overlay_align)} cms-carousel--theme-${escapeHtml(data.overlay_theme)}"
+                        data-cms-carousel
+                        data-autoplay="${data.autoplay ? 'true' : 'false'}"
+                        data-interval-ms="${escapeHtml(String(data.interval_ms))}">
+                        <div class="cms-carousel-track">${slidesHtml}</div>
+                        ${arrowsHtml}
+                        ${dotsHtml}
+                    </div>
+                `;
+            };
 
             const toListLines = (items) => (Array.isArray(items) ? items : []).map((v) => String(v ?? '')).join('\\n');
             const fromListLines = (text) => String(text || '').split('\\n').map((v) => v.trim()).filter(Boolean);
@@ -348,6 +496,28 @@
                         return { type, data: { url: 'https://www.youtube.com/embed/dQw4w9WgXcQ' } };
                     case 'gallery':
                         return { type, data: { items: [{ src: 'https://picsum.photos/600/400?1', alt: 'Элемент галереи 1' }, { src: 'https://picsum.photos/600/400?2', alt: 'Элемент галереи 2' }] } };
+                    case 'carousel':
+                        return {
+                            type,
+                            data: normalizeCarouselData({
+                                slides: [
+                                    defaultCarouselSlide({
+                                        src: 'https://picsum.photos/1400/780?carousel-1',
+                                        alt: 'Слайд 1',
+                                        title: 'Главный акцент страницы',
+                                        text: 'Добавьте подзаголовок и короткий оффер поверх изображения.',
+                                        cta_label: 'Подробнее',
+                                        cta_url: '/ru/blog',
+                                    }),
+                                    defaultCarouselSlide({
+                                        src: 'https://picsum.photos/1400/780?carousel-2',
+                                        alt: 'Слайд 2',
+                                        title: 'Второй слайд',
+                                        text: 'Используйте для промо, hero и storytelling-блоков.',
+                                    }),
+                                ],
+                            }),
+                        };
                     case 'list':
                         return { type, data: { ordered: false, items: ['Пункт 1', 'Пункт 2', 'Пункт 3'] } };
                     case 'divider':
@@ -378,6 +548,16 @@
                         return { type, data: { category_slug: '', limit: 6 } };
                     case 'faq':
                         return { type, data: { items: [{ question: 'Вопрос?', answer: '<p>Ответ с форматированием.</p>' }] } };
+                    case 'stats':
+                        return { type, data: { items: [{ value: '500+', label: 'Клиентов' }, { value: '99%', label: 'Аптайм' }, { value: '24/7', label: 'Поддержка' }] } };
+                    case 'hero':
+                        return { type, data: { heading: 'Заголовок лендинга', subheading: 'Короткий оффер в одну-две строки.', cta_label: 'Начать', cta_url: '/ru/blog', image: '', align: 'left' } };
+                    case 'features':
+                        return { type, data: { items: [{ icon: '⚡', title: 'Быстро', text: 'Описание преимущества.' }, { icon: '🔒', title: 'Надёжно', text: 'Описание преимущества.' }, { icon: '🎯', title: 'Точно', text: 'Описание преимущества.' }] } };
+                    case 'testimonial':
+                        return { type, data: { items: [{ quote: 'Отличный продукт, рекомендуем.', author: 'Имя Фамилия', role: 'CEO, Компания' }] } };
+                    case 'pricing':
+                        return { type, data: { items: [{ name: 'Старт', price: '0₽', period: 'мес', features: ['Базовые функции', 'Email-поддержка'], cta_label: 'Выбрать', cta_url: '/ru/blog' }, { name: 'Pro', price: '990₽', period: 'мес', features: ['Все функции', 'Приоритетная поддержка'], cta_label: 'Выбрать', cta_url: '/ru/blog' }] } };
                     default:
                         return { type, data: {} };
                 }
@@ -487,6 +667,12 @@
                 if (type === 'image') return data.alt || data.src || 'Изображение';
                 if (type === 'faq') return `FAQ (${Array.isArray(data.items) ? data.items.length : 0})`;
                 if (type === 'gallery') return `Галерея (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'stats') return `Показатели (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'features') return `Преимущества (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'testimonial') return `Отзывы (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'pricing') return `Тарифы (${Array.isArray(data.items) ? data.items.length : 0})`;
+                if (type === 'hero') return `Hero: ${String(data.heading || '').slice(0, 40)}`;
+                if (type === 'carousel') return `Карусель (${Array.isArray(data.slides) ? data.slides.length : 0})`;
                 return typeLabels[type] || type;
             };
 
@@ -575,6 +761,45 @@
                 });
             };
 
+            const walkNodesWithPath = (nodes, cb, basePath = '') => {
+                if (!Array.isArray(nodes) || typeof cb !== 'function') return;
+                nodes.forEach((node, index) => {
+                    const nodePath = basePath ? `${basePath}.${index}` : String(index);
+                    cb(node, nodePath);
+                    if (!node || typeof node !== 'object') return;
+                    if (Array.isArray(node.children)) {
+                        walkNodesWithPath(node.children, cb, `${nodePath}.children`);
+                    }
+                    const columns = node?.data?.columns;
+                    if (Array.isArray(columns)) {
+                        columns.forEach((column, columnIndex) => {
+                            if (Array.isArray(column?.children)) {
+                                walkNodesWithPath(column.children, cb, `${nodePath}.data.columns.${columnIndex}.children`);
+                            }
+                        });
+                    }
+                });
+            };
+
+            const getNodeByPath = (nodes, path) => {
+                const tokens = String(path || '').split('.').filter(Boolean);
+                let current = nodes;
+                for (const token of tokens) {
+                    if (Array.isArray(current)) {
+                        const index = Number(token);
+                        if (!Number.isInteger(index) || !current[index]) return null;
+                        current = current[index];
+                        continue;
+                    }
+                    if (!current || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, token)) {
+                        return null;
+                    }
+                    current = current[token];
+                }
+
+                return current && typeof current === 'object' ? current : null;
+            };
+
             const previewRenderBlock = (block) => {
                 const type = block.type;
                 const data = block.data || {};
@@ -600,6 +825,44 @@
                     const items = Array.isArray(data.items) ? data.items : [];
                     const images = items.map((item) => `<img src="${escapeHtml(item?.src || '')}" alt="${escapeHtml(item?.alt || '')}" loading="lazy">`).join('');
                     return `<div class="cms-gallery">${images}</div>`;
+                }
+                if (type === 'stats') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.value || '').trim() !== '' || String(item?.label || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => `<div class="cms-stat"><span class="cms-stat-value">${escapeHtml(item?.value || '')}</span><span class="cms-stat-label">${escapeHtml(item?.label || '')}</span></div>`).join('');
+                    return `<div class="cms-stats">${cards}</div>`;
+                }
+                if (type === 'hero') {
+                    const cta = String(data.cta_label || '').trim() !== ''
+                        ? `<a class="cms-cta" href="${escapeHtml(data.cta_url || '#')}">${escapeHtml(data.cta_label)}</a>`
+                        : '';
+                    const bg = String(data.image || '').trim() !== '' ? ` style="background-image:url('${escapeHtml(data.image)}')"` : '';
+                    return `<section class="cms-hero cms-hero--align-${escapeHtml(String(data.align || 'left'))}"${bg}><div class="cms-hero-copy"><h1 class="cms-hero-title">${escapeHtml(data.heading || '')}</h1><p class="cms-hero-sub">${escapeHtml(data.subheading || '')}</p>${cta}</div></section>`;
+                }
+                if (type === 'features') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.title || '').trim() !== '' || String(item?.text || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => `<div class="cms-feature">${String(item?.icon || '').trim() !== '' ? `<div class="cms-feature-icon">${escapeHtml(item.icon)}</div>` : ''}<h3 class="cms-feature-title">${escapeHtml(item?.title || '')}</h3><p class="cms-feature-text">${escapeHtml(item?.text || '')}</p></div>`).join('');
+                    return `<div class="cms-features">${cards}</div>`;
+                }
+                if (type === 'testimonial') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.quote || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => `<figure class="cms-testimonial"><blockquote>${escapeHtml(item?.quote || '')}</blockquote><figcaption><span class="cms-testimonial-author">${escapeHtml(item?.author || '')}</span>${String(item?.role || '').trim() !== '' ? `<span class="cms-testimonial-role">${escapeHtml(item.role)}</span>` : ''}</figcaption></figure>`).join('');
+                    return `<div class="cms-testimonials">${cards}</div>`;
+                }
+                if (type === 'pricing') {
+                    const items = (Array.isArray(data.items) ? data.items : []).filter((item) => String(item?.name || '').trim() !== '' || String(item?.price || '').trim() !== '');
+                    if (items.length === 0) return '';
+                    const cards = items.map((item) => {
+                        const feats = (Array.isArray(item?.features) ? item.features : []).map((f) => `<li>${escapeHtml(f)}</li>`).join('');
+                        const cta = String(item?.cta_label || '').trim() !== '' ? `<a class="cms-cta" href="${escapeHtml(item?.cta_url || '#')}">${escapeHtml(item.cta_label)}</a>` : '';
+                        return `<div class="cms-price"><h3 class="cms-price-name">${escapeHtml(item?.name || '')}</h3><div class="cms-price-amount">${escapeHtml(item?.price || '')}${String(item?.period || '').trim() !== '' ? `<span class="cms-price-period">/${escapeHtml(item.period)}</span>` : ''}</div><ul class="cms-price-features">${feats}</ul>${cta}</div>`;
+                    }).join('');
+                    return `<div class="cms-pricing">${cards}</div>`;
+                }
+                if (type === 'carousel') {
+                    return previewRenderCarousel(data);
                 }
                 if (type === 'list') {
                     const tag = data.ordered ? 'ol' : 'ul';
@@ -719,6 +982,51 @@
                 return `<div class="field"><label>${escapeHtml(label)}</label>${control}${hint}</div>`;
             };
 
+            const buildCarouselSlideCard = (slideInput, index, total, options = {}) => {
+                const slide = defaultCarouselSlide((slideInput && typeof slideInput === 'object') ? slideInput : {});
+                const cardAttrs = options.cardAttrs || '';
+                const actionPrefix = String(options.actionPrefix || 'data-carousel-slide-action');
+                const mediaPrefix = String(options.mediaPrefix || 'data-carousel-media-pick');
+                const summary = String(slide.title || slide.alt || slide.src || 'Без изображения').trim();
+                const previewMarkup = String(slide.src || '').trim() !== ''
+                    ? `<div class="block-carousel-preview"><img src="${escapeHtml(slide.src || '')}" alt="${escapeHtml(slide.alt || '')}" loading="lazy"></div>`
+                    : '<div class="block-carousel-preview is-empty">Изображение не выбрано</div>';
+
+                return `
+                    <article class="block-carousel-card"${cardAttrs}>
+                        <div class="block-carousel-card-head">
+                            <div>
+                                <strong>Слайд ${index + 1}</strong>
+                                <div class="block-subtle">${escapeHtml(summary)}</div>
+                            </div>
+                            <div class="block-controls">
+                                <button type="button" class="icon-btn" ${actionPrefix}="up" data-carousel-slide-index="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                                <button type="button" class="icon-btn" ${actionPrefix}="down" data-carousel-slide-index="${index}" ${index >= total - 1 ? 'disabled' : ''}>↓</button>
+                                <button type="button" class="icon-btn danger" ${actionPrefix}="remove" data-carousel-slide-index="${index}">✕</button>
+                            </div>
+                        </div>
+                        ${previewMarkup}
+                        <div class="inline" style="margin-bottom:8px;">
+                            <button type="button" class="btn btn-small" ${mediaPrefix}="${index}">Выбрать изображение из Assets</button>
+                        </div>
+                        ${buildField('Изображение', `data.slides.${index}.src`, slide.src || '', { placeholder: 'https://...' })}
+                        <div class="block-fields-grid">
+                            ${buildField('Alt-текст', `data.slides.${index}.alt`, slide.alt || '')}
+                            ${buildField('Заголовок', `data.slides.${index}.title`, slide.title || '')}
+                        </div>
+                        ${buildField('Текст overlay', `data.slides.${index}.text`, slide.text || '', { type: 'textarea', rows: 3 })}
+                        <div class="block-fields-grid">
+                            ${buildField('CTA label', `data.slides.${index}.cta_label`, slide.cta_label || '')}
+                            ${buildField('CTA URL', `data.slides.${index}.cta_url`, slide.cta_url || '', { placeholder: '/ru/blog или https://...' })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Новая вкладка', `data.slides.${index}.target_blank`, !!slide.target_blank, { type: 'checkbox', checkboxLabel: 'target=_blank + noopener/noreferrer' })}
+                            ${buildField('Nofollow', `data.slides.${index}.nofollow`, !!slide.nofollow, { type: 'checkbox', checkboxLabel: 'Добавить rel=nofollow' })}
+                        </div>
+                    </article>
+                `;
+            };
+
             const buildModuleWidgetFields = (data) => {
                 const moduleKey = String(data.module || '').trim();
                 const widgetKey = String(data.widget || '').trim();
@@ -824,6 +1132,85 @@
                     `;
                 }
 
+                if (type === 'stats') {
+                    return buildField('Показатели', 'data._stats_lines', toStatsLines(data.items), {
+                        type: 'textarea',
+                        rows: 5,
+                        hint: 'Каждая строка: значение | подпись (например: 500+ | Клиентов)',
+                    });
+                }
+
+                if (type === 'hero') {
+                    return `
+                        <div class="block-fields-grid">
+                            ${buildField('Заголовок', 'data.heading', data.heading || '')}
+                            ${buildField('Подзаголовок', 'data.subheading', data.subheading || '', { type: 'textarea', rows: 2 })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Текст кнопки', 'data.cta_label', data.cta_label || '')}
+                            ${buildField('URL кнопки', 'data.cta_url', data.cta_url || '', { placeholder: '/ru/blog или https://...' })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Фоновое изображение (URL)', 'data.image', data.image || '', { placeholder: 'https://...' })}
+                            ${buildField('Выравнивание', 'data.align', data.align || 'left', { type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }] })}
+                        </div>
+                    `;
+                }
+
+                if (type === 'features') {
+                    return buildField('Преимущества', 'data._features_lines', toFeatureLines(data.items), {
+                        type: 'textarea',
+                        rows: 6,
+                        hint: 'Каждая строка: иконка | заголовок | текст (например: ⚡ | Быстро | Описание)',
+                    });
+                }
+
+                if (type === 'testimonial') {
+                    return buildField('Отзывы', 'data._testimonial_lines', toTestimonialLines(data.items), {
+                        type: 'textarea',
+                        rows: 6,
+                        hint: 'Каждая строка: цитата | автор | роль',
+                    });
+                }
+
+                if (type === 'pricing') {
+                    return buildField('Тарифы', 'data._pricing_lines', toPricingLines(data.items), {
+                        type: 'textarea',
+                        rows: 6,
+                        hint: 'Строка тарифа: название | цена | период | фича; фича | текст кнопки | URL',
+                    });
+                }
+
+                if (type === 'carousel') {
+                    const carousel = normalizeCarouselData(data);
+                    return `
+                        <div class="block-fields-grid">
+                            ${buildField('Высота', 'data.height', carousel.height, { type: 'select', options: [{ value: 'md', label: 'MD' }, { value: 'lg', label: 'LG' }, { value: 'xl', label: 'XL' }] })}
+                            ${buildField('Выравнивание overlay', 'data.overlay_align', carousel.overlay_align, { type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }] })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Тема overlay', 'data.overlay_theme', carousel.overlay_theme, { type: 'select', options: [{ value: 'gradient', label: 'Gradient' }, { value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }] })}
+                            ${buildField('Интервал autoplay (ms)', 'data.interval_ms', carousel.interval_ms, { type: 'number', min: 1500, max: 30000, step: 100 })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Autoplay', 'data.autoplay', !!carousel.autoplay, { type: 'checkbox', checkboxLabel: 'Автопрокрутка' })}
+                            ${buildField('Стрелки', 'data.show_arrows', !!carousel.show_arrows, { type: 'checkbox', checkboxLabel: 'Показывать arrows' })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Dots', 'data.show_dots', !!carousel.show_dots, { type: 'checkbox', checkboxLabel: 'Показывать dots' })}
+                        </div>
+                        <div class="inline" style="justify-content:space-between; margin:8px 0 0;">
+                            <div class="block-subtle">Слайды редактируются карточками, без line-format textarea.</div>
+                            <button type="button" class="btn btn-small" data-carousel-add-slide>Добавить слайд</button>
+                        </div>
+                        <div class="block-carousel-list">
+                            ${carousel.slides.length > 0
+                                ? carousel.slides.map((slide, index) => buildCarouselSlideCard(slide, index, carousel.slides.length)).join('')
+                                : '<div class="block-subtle">Добавьте хотя бы один слайд с изображением.</div>'}
+                        </div>
+                    `;
+                }
+
                 if (type === 'list') {
                     return `
                         ${buildField('Ordered list', 'data.ordered', !!data.ordered, { type: 'checkbox', checkboxLabel: 'Render as <ol>' })}
@@ -899,6 +1286,52 @@
                 return `<div class="block-subtle">Для этого типа блока редактор недоступен.</div>`;
             };
 
+            const structuredCarouselEditorMarkup = (node, path, index) => {
+                const carousel = normalizeCarouselData(node?.data || {});
+                return `
+                    <section class="builder-structured-carousel-shell" data-structured-carousel-path="${escapeHtml(path)}">
+                        <div class="builder-structured-carousel-head">
+                            <div>
+                                <strong>Карусель ${index + 1}</strong>
+                                <p>Редактирование прямо в обычном builder. Для layout/placement используйте fullscreen canvas.</p>
+                            </div>
+                            <div class="builder-structured-summary-stats">
+                                <span class="builder-structured-summary-stat">Слайдов: ${carousel.slides.length}</span>
+                                <span class="builder-structured-summary-stat">Height: ${escapeHtml(carousel.height.toUpperCase())}</span>
+                            </div>
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Высота', 'data.height', carousel.height, { type: 'select', options: [{ value: 'md', label: 'MD' }, { value: 'lg', label: 'LG' }, { value: 'xl', label: 'XL' }] })}
+                            ${buildField('Выравнивание overlay', 'data.overlay_align', carousel.overlay_align, { type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }] })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Тема overlay', 'data.overlay_theme', carousel.overlay_theme, { type: 'select', options: [{ value: 'gradient', label: 'Gradient' }, { value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }] })}
+                            ${buildField('Интервал autoplay (ms)', 'data.interval_ms', carousel.interval_ms, { type: 'number', min: 1500, max: 30000, step: 100 })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Autoplay', 'data.autoplay', !!carousel.autoplay, { type: 'checkbox', checkboxLabel: 'Автопрокрутка' })}
+                            ${buildField('Стрелки', 'data.show_arrows', !!carousel.show_arrows, { type: 'checkbox', checkboxLabel: 'Показывать arrows' })}
+                        </div>
+                        <div class="block-fields-grid">
+                            ${buildField('Dots', 'data.show_dots', !!carousel.show_dots, { type: 'checkbox', checkboxLabel: 'Показывать dots' })}
+                        </div>
+                        <div class="inline" style="justify-content:space-between; margin:8px 0 0;">
+                            <div class="block-subtle">Слайды этой карусели редактируются без fullscreen-перехода.</div>
+                            <button type="button" class="btn btn-small" data-structured-carousel-add-slide>Добавить слайд</button>
+                        </div>
+                        <div class="block-carousel-list">
+                            ${carousel.slides.length > 0
+                                ? carousel.slides.map((slide, slideIndex) => buildCarouselSlideCard(slide, slideIndex, carousel.slides.length, {
+                                    cardAttrs: ` data-structured-carousel-path="${escapeHtml(path)}"`,
+                                    actionPrefix: 'data-structured-carousel-slide-action',
+                                    mediaPrefix: 'data-structured-carousel-media-pick',
+                                })).join('')
+                                : '<div class="block-subtle">Добавьте хотя бы один слайд с изображением.</div>'}
+                        </div>
+                    </section>
+                `;
+            };
+
             const createBuilder = (root) => {
                 const locale = root.getAttribute('data-page-builder');
                 const blocksJsonField = root.querySelector('[data-blocks-json]');
@@ -928,6 +1361,24 @@
                     rawNodes: initialNodes,
                     isStructured: true,
                     collapsed: {},
+                };
+
+                const primaryStructuredChildren = () => {
+                    if (!Array.isArray(state.rawNodes) || state.rawNodes.length === 0) {
+                        state.rawNodes = [createStructuredSection()];
+                    }
+                    let section = state.rawNodes.find((node) => String(node?.type || '') === 'section');
+                    if (!section) {
+                        state.rawNodes = normalizeLayoutNodes(state.rawNodes, {
+                            fallbackHtml: richHtmlField ? richHtmlField.value : '',
+                        });
+                        section = state.rawNodes.find((node) => String(node?.type || '') === 'section') || state.rawNodes[0];
+                    }
+                    if (!Array.isArray(section.children)) {
+                        section.children = [];
+                    }
+
+                    return section.children;
                 };
 
                 const syncJson = () => {
@@ -989,11 +1440,17 @@
                     syncStructuredUiState();
                     const rootCount = Array.isArray(state.rawNodes) ? state.rawNodes.length : 0;
                     const stats = [];
+                    const structuredCarousels = [];
                     walkNodes(state.rawNodes, (node) => {
                         const type = String(node?.type || '');
                         if (type === 'section') stats.push('section');
                         else if (type === 'columns') stats.push('columns');
                         else stats.push('leaf');
+                    });
+                    walkNodesWithPath(state.rawNodes, (node, path) => {
+                        if (String(node?.type || '') === 'carousel') {
+                            structuredCarousels.push({ node, path });
+                        }
                     });
                     const sectionsCount = stats.filter((type) => type === 'section').length;
                     const columnsCount = stats.filter((type) => type === 'columns').length;
@@ -1019,7 +1476,21 @@
                             <div class="builder-structured-summary-note">
                                 Предпросмотр справа показывает текущую структуру. JSON и fallback HTML ниже остаются доступными как продвинутый режим.
                             </div>
+                            <div class="builder-structured-summary-note">
+                                Быстрое добавление из палитры вставляет leaf-блоки в первую секцию. Для точного placement используйте fullscreen canvas.
+                            </div>
                         </div>
+                        ${structuredCarousels.length > 0 ? `
+                            <div class="builder-structured-carousel-section">
+                                <div class="builder-structured-carousel-section-head">
+                                    <strong>Inline editor для carousel</strong>
+                                    <span class="builder-structured-summary-stat">Найдено: ${structuredCarousels.length}</span>
+                                </div>
+                                <div class="builder-structured-carousel-grid">
+                                    ${structuredCarousels.map((entry, index) => structuredCarouselEditorMarkup(entry.node, entry.path, index)).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     `;
                     syncJson();
                     renderPreview();
@@ -1029,6 +1500,26 @@
                     if (!fieldPath.startsWith('data.')) return;
                     const key = fieldPath.slice(5);
                     const data = block.data || (block.data = {});
+
+                    const slideMatch = key.match(/^slides\.(\d+)\.([a-z_]+)$/);
+                    if (slideMatch) {
+                        const slideIndex = Number(slideMatch[1]);
+                        const slideField = slideMatch[2];
+                        const carouselData = normalizeCarouselData(data);
+                        Object.assign(data, carouselData);
+                        if (!Array.isArray(data.slides)) data.slides = [];
+                        while (data.slides.length <= slideIndex) {
+                            data.slides.push(defaultCarouselSlide());
+                        }
+                        const slide = defaultCarouselSlide(data.slides[slideIndex]);
+                        if (slideField === 'target_blank' || slideField === 'nofollow') {
+                            slide[slideField] = !!(inputEl && inputEl.checked);
+                        } else {
+                            slide[slideField] = String(rawValue || '');
+                        }
+                        data.slides[slideIndex] = slide;
+                        return;
+                    }
 
                     if (key === 'level') {
                         data.level = Math.min(6, Math.max(1, Number(rawValue || 2)));
@@ -1081,6 +1572,27 @@
                         data.items = fromGalleryLines(rawValue);
                         return;
                     }
+                    if (key === '_stats_lines') {
+                        data.items = fromStatsLines(rawValue);
+                        return;
+                    }
+                    if (key === '_features_lines') {
+                        data.items = fromFeatureLines(rawValue);
+                        return;
+                    }
+                    if (key === '_testimonial_lines') {
+                        data.items = fromTestimonialLines(rawValue);
+                        return;
+                    }
+                    if (key === '_pricing_lines') {
+                        data.items = fromPricingLines(rawValue);
+                        return;
+                    }
+                    if (key === 'interval_ms') {
+                        const interval = Number(rawValue || 5000);
+                        data.interval_ms = Number.isFinite(interval) ? Math.max(1500, Math.min(30000, Math.round(interval))) : 5000;
+                        return;
+                    }
                     if (key === '_list_lines') {
                         data.items = fromListLines(rawValue);
                         return;
@@ -1098,18 +1610,29 @@
                 };
 
                 const addBlock = (type) => {
-                    if (state.isStructured) return;
                     if (!allowedTypes.includes(type)) return;
+                    if (state.isStructured) {
+                        primaryStructuredChildren().push(defaultBlock(type));
+                        setBuilderSubtab('blocks');
+                        renderBlocks();
+                        return;
+                    }
                     state.blocks.push(defaultBlock(type));
                     setBuilderSubtab('blocks');
                     renderBlocks();
                 };
 
                 const addPreset = (key) => {
-                    if (state.isStructured) return;
                     const factory = presetBlocks[key];
                     if (!factory) return;
                     const blocks = factory().filter((b) => allowedTypes.includes(b.type));
+                    if (state.isStructured) {
+                        const target = primaryStructuredChildren();
+                        blocks.forEach((block) => target.push(block));
+                        setBuilderSubtab('blocks');
+                        renderBlocks();
+                        return;
+                    }
                     state.blocks = state.blocks.concat(blocks);
                     setBuilderSubtab('blocks');
                     renderBlocks();
@@ -1159,6 +1682,56 @@
 
                 blocksList.addEventListener('click', (e) => {
                     if (state.isStructured) {
+                        const structuredCarouselCard = e.target.closest('[data-structured-carousel-path]');
+                        if (structuredCarouselCard) {
+                            const path = structuredCarouselCard.getAttribute('data-structured-carousel-path');
+                            const node = getNodeByPath(state.rawNodes, path);
+                            if (node && String(node.type || '') === 'carousel') {
+                                node.data = normalizeCarouselData(node.data);
+                                const slides = Array.isArray(node.data.slides) ? node.data.slides : [];
+                                if (e.target.closest('[data-structured-carousel-add-slide]')) {
+                                    slides.push(defaultCarouselSlide());
+                                    renderBlocks();
+                                    return;
+                                }
+                                const actionBtn = e.target.closest('[data-structured-carousel-slide-action]');
+                                if (actionBtn) {
+                                    const index = Number(actionBtn.getAttribute('data-carousel-slide-index'));
+                                    const action = String(actionBtn.getAttribute('data-structured-carousel-slide-action') || '');
+                                    if (!Number.isInteger(index) || !slides[index]) return;
+                                    if (action === 'remove') {
+                                        slides.splice(index, 1);
+                                    } else if (action === 'up' && index > 0) {
+                                        [slides[index - 1], slides[index]] = [slides[index], slides[index - 1]];
+                                    } else if (action === 'down' && index < slides.length - 1) {
+                                        [slides[index + 1], slides[index]] = [slides[index], slides[index + 1]];
+                                    }
+                                    renderBlocks();
+                                    return;
+                                }
+                                const mediaBtn = e.target.closest('[data-structured-carousel-media-pick]');
+                                if (mediaBtn) {
+                                    const index = Number(mediaBtn.getAttribute('data-structured-carousel-media-pick'));
+                                    if (!Number.isInteger(index) || !slides[index]) return;
+                                    openMediaPicker({
+                                        accept: 'image',
+                                        multiple: false,
+                                        title: 'Выбор изображения',
+                                        subtitle: 'Выберите изображение из Assets для слайда карусели',
+                                    }).then((asset) => {
+                                        if (!asset?.public_url) return;
+                                        const slide = defaultCarouselSlide(slides[index]);
+                                        slide.src = asset.public_url;
+                                        if (!String(slide.alt || '').trim()) {
+                                            slide.alt = asset.alt || asset.title || '';
+                                        }
+                                        slides[index] = slide;
+                                        renderBlocks();
+                                    }).catch(() => {});
+                                    return;
+                                }
+                            }
+                        }
                         const openBtn = e.target.closest('[data-builder-open-fullscreen], [data-builder-open-fullscreen-inline]');
                         if (openBtn && visualBuilderOpenBtn) visualBuilderOpenBtn.click();
                         return;
@@ -1198,6 +1771,38 @@
                             renderBlocks();
                             return;
                         }
+                    }
+
+                    const carouselAddBtn = e.target.closest('[data-carousel-add-slide]');
+                    if (carouselAddBtn && card) {
+                        const idx = Number(card.getAttribute('data-block-index'));
+                        const block = state.blocks[idx];
+                        if (!block || block.type !== 'carousel') return;
+                        block.data = normalizeCarouselData(block.data);
+                        block.data.slides.push(defaultCarouselSlide());
+                        renderBlocks();
+                        return;
+                    }
+
+                    const carouselActionBtn = e.target.closest('[data-carousel-slide-action]');
+                    if (carouselActionBtn && card) {
+                        const idx = Number(card.getAttribute('data-block-index'));
+                        const block = state.blocks[idx];
+                        if (!block || block.type !== 'carousel') return;
+                        block.data = normalizeCarouselData(block.data);
+                        const slides = Array.isArray(block.data.slides) ? block.data.slides : [];
+                        const slideIndex = Number(carouselActionBtn.getAttribute('data-carousel-slide-index'));
+                        const action = String(carouselActionBtn.getAttribute('data-carousel-slide-action') || '');
+                        if (!Number.isInteger(slideIndex) || !slides[slideIndex]) return;
+                        if (action === 'remove') {
+                            slides.splice(slideIndex, 1);
+                        } else if (action === 'up' && slideIndex > 0) {
+                            [slides[slideIndex - 1], slides[slideIndex]] = [slides[slideIndex], slides[slideIndex - 1]];
+                        } else if (action === 'down' && slideIndex < slides.length - 1) {
+                            [slides[slideIndex + 1], slides[slideIndex]] = [slides[slideIndex], slides[slideIndex + 1]];
+                        }
+                        renderBlocks();
+                        return;
                     }
 
                     const mediaPickBtn = e.target.closest('[data-block-media-pick]');
@@ -1247,6 +1852,33 @@
                             }).catch(() => {});
                             return;
                         }
+                    }
+
+                    const carouselMediaBtn = e.target.closest('[data-carousel-media-pick]');
+                    if (carouselMediaBtn && card) {
+                        const idx = Number(card.getAttribute('data-block-index'));
+                        const block = state.blocks[idx];
+                        if (!block || block.type !== 'carousel') return;
+                        block.data = normalizeCarouselData(block.data);
+                        const slides = Array.isArray(block.data.slides) ? block.data.slides : [];
+                        const slideIndex = Number(carouselMediaBtn.getAttribute('data-carousel-media-pick'));
+                        if (!Number.isInteger(slideIndex) || !slides[slideIndex]) return;
+                        openMediaPicker({
+                            accept: 'image',
+                            multiple: false,
+                            title: 'Выбор изображения',
+                            subtitle: 'Выберите изображение из Assets для слайда карусели',
+                        }).then((asset) => {
+                            if (!asset?.public_url) return;
+                            const slide = defaultCarouselSlide(slides[slideIndex]);
+                            slide.src = asset.public_url;
+                            if (!String(slide.alt || '').trim()) {
+                                slide.alt = asset.alt || asset.title || '';
+                            }
+                            slides[slideIndex] = slide;
+                            renderBlocks();
+                        }).catch(() => {});
+                        return;
                     }
 
                     const richSnippetBtn = e.target.closest('[data-rich-snippet]');
@@ -1330,7 +1962,18 @@
                 });
 
                 blocksList.addEventListener('input', (e) => {
-                    if (state.isStructured) return;
+                    if (state.isStructured) {
+                        const input = e.target.closest('[data-block-input]');
+                        const structuredCarouselCard = e.target.closest('[data-structured-carousel-path]');
+                        if (!input || !structuredCarouselCard) return;
+                        const path = structuredCarouselCard.getAttribute('data-structured-carousel-path');
+                        const node = getNodeByPath(state.rawNodes, path);
+                        if (!node || String(node.type || '') !== 'carousel') return;
+                        applyBlockField(node, input.getAttribute('data-block-input'), input.type === 'checkbox' ? input.checked : input.value, input);
+                        syncJson();
+                        renderPreview();
+                        return;
+                    }
                     const input = e.target.closest('[data-block-input]');
                     const card = e.target.closest('.block-card');
                     if (!input || !card) return;
@@ -1343,7 +1986,17 @@
                 });
 
                 blocksList.addEventListener('change', (e) => {
-                    if (state.isStructured) return;
+                    if (state.isStructured) {
+                        const input = e.target.closest('[data-block-input]');
+                        const structuredCarouselCard = e.target.closest('[data-structured-carousel-path]');
+                        if (!input || !structuredCarouselCard) return;
+                        const path = structuredCarouselCard.getAttribute('data-structured-carousel-path');
+                        const node = getNodeByPath(state.rawNodes, path);
+                        if (!node || String(node.type || '') !== 'carousel') return;
+                        applyBlockField(node, input.getAttribute('data-block-input'), input.type === 'checkbox' ? input.checked : input.value, input);
+                        renderBlocks();
+                        return;
+                    }
                     const input = e.target.closest('[data-block-input]');
                     const card = e.target.closest('.block-card');
                     if (!input || !card) return;
@@ -1603,12 +2256,22 @@
                 previewRenderBlock,
                 previewRenderNode,
                 previewRenderNodes,
+                normalizeCarouselData,
+                defaultCarouselSlide,
                 isStructuredLayoutNode,
                 containsStructuredLayout,
                 normalizeLayoutNodes,
                 createStructuredSection,
                 fromGalleryLines,
                 toGalleryLines,
+                fromStatsLines,
+                toStatsLines,
+                fromFeatureLines,
+                toFeatureLines,
+                fromTestimonialLines,
+                toTestimonialLines,
+                fromPricingLines,
+                toPricingLines,
                 fromListLines,
                 toListLines,
                 fromTableLines,
@@ -2106,7 +2769,16 @@
             cleanupCreateAutosaveAfterRedirect();
             serverInitialPayload = serializeForm();
             updateAutosaveSummary(serverInitialPayload);
-            recoverAutosaveIfNeeded();
+            if (boot.justSaved && autosaveStorage) {
+                // The page was just successfully saved (edit mode posts back to
+                // the same URL), so any local draft snapshot is now stale — drop
+                // it instead of offering to restore it over the saved content.
+                try { autosaveStorage.removeItem(autosaveKey); } catch (_) {}
+                lastSavedFingerprint = JSON.stringify(serverInitialPayload);
+                setAutosaveStatus('Сохранено');
+            } else {
+                recoverAutosaveIfNeeded();
+            }
 
             form.addEventListener('submit', () => {
                 builders.forEach((builder) => builder.sync());

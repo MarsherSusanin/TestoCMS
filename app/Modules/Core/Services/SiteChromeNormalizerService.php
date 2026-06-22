@@ -14,14 +14,19 @@ class SiteChromeNormalizerService
             'header' => [
                 'enabled' => true,
                 'variant' => 'split_nav',
+                'logo' => [
+                    'src' => '',
+                    'alt' => '',
+                ],
+                'menu_position' => 'right',
                 'show_brand_subtitle' => true,
                 'show_locale_switcher' => true,
                 'show_search' => true,
                 'search_placement' => 'header',
                 'nav_items' => [
-                    ['id' => 'home', 'enabled' => true, 'url' => '/{locale}', 'new_tab' => false, 'nofollow' => false, 'label_translations' => ['ru' => 'Главная', 'en' => 'Home']],
-                    ['id' => 'blog', 'enabled' => true, 'url' => '/{locale}/'.trim((string) config('cms.post_url_prefix', 'blog'), '/'), 'new_tab' => false, 'nofollow' => false, 'label_translations' => ['ru' => 'Блог', 'en' => 'Blog']],
-                    ['id' => 'rss', 'enabled' => true, 'url' => '/feed/{locale}.xml', 'new_tab' => false, 'nofollow' => false, 'label_translations' => ['ru' => 'RSS', 'en' => 'RSS']],
+                    ['id' => 'home', 'enabled' => true, 'url' => '/{locale}', 'new_tab' => false, 'nofollow' => false, 'label_translations' => ['ru' => 'Главная', 'en' => 'Home'], 'children' => []],
+                    ['id' => 'blog', 'enabled' => true, 'url' => '/{locale}/'.trim((string) config('cms.post_url_prefix', 'blog'), '/'), 'new_tab' => false, 'nofollow' => false, 'label_translations' => ['ru' => 'Блог', 'en' => 'Blog'], 'children' => []],
+                    ['id' => 'rss', 'enabled' => true, 'url' => '/feed/{locale}.xml', 'new_tab' => false, 'nofollow' => false, 'label_translations' => ['ru' => 'RSS', 'en' => 'RSS'], 'children' => []],
                 ],
                 'cta_buttons' => [],
             ],
@@ -78,11 +83,13 @@ class SiteChromeNormalizerService
             'header' => [
                 'enabled' => $this->boolValue($header['enabled'] ?? $defaults['header']['enabled']),
                 'variant' => $this->enumValue((string) ($header['variant'] ?? ''), ['split_nav', 'center_logo', 'stacked_compact'], (string) $defaults['header']['variant']),
+                'logo' => $this->normalizeLogo($header['logo'] ?? $defaults['header']['logo']),
+                'menu_position' => $this->enumValue((string) ($header['menu_position'] ?? ''), ['left', 'center', 'right'], (string) $defaults['header']['menu_position']),
                 'show_brand_subtitle' => $this->boolValue($header['show_brand_subtitle'] ?? $defaults['header']['show_brand_subtitle']),
                 'show_locale_switcher' => $this->boolValue($header['show_locale_switcher'] ?? $defaults['header']['show_locale_switcher']),
                 'show_search' => $this->boolValue($header['show_search'] ?? $defaults['header']['show_search']),
                 'search_placement' => $this->enumValue((string) ($header['search_placement'] ?? ''), ['header', 'footer', 'both', 'none'], (string) $defaults['header']['search_placement']),
-                'nav_items' => $this->normalizeLinkItems($header['nav_items'] ?? $defaults['header']['nav_items'], 8, $locales),
+                'nav_items' => $this->normalizeLinkItems($header['nav_items'] ?? $defaults['header']['nav_items'], 8, $locales, false, true),
                 'cta_buttons' => $this->normalizeLinkItems($header['cta_buttons'] ?? $defaults['header']['cta_buttons'], 2, $locales, true),
             ],
             'footer' => [
@@ -131,7 +138,7 @@ class SiteChromeNormalizerService
      * @param  array<int, string>  $locales
      * @return array<int, array<string, mixed>>
      */
-    private function normalizeLinkItems(mixed $items, int $max, array $locales, bool $withStyle = false): array
+    private function normalizeLinkItems(mixed $items, int $max, array $locales, bool $withStyle = false, bool $allowChildren = false): array
     {
         $items = is_array($items) ? array_values($items) : [];
         $normalized = [];
@@ -144,8 +151,11 @@ class SiteChromeNormalizerService
             $labels = $this->normalizeTranslationsMap($item['label_translations'] ?? [], $locales);
             $url = trim((string) ($item['url'] ?? ''));
             $linkTarget = $this->normalizeLinkTarget($item['link_target'] ?? null);
+            $children = $allowChildren
+                ? $this->normalizeLinkItems($item['children'] ?? [], 6, $locales, false, false)
+                : [];
             $hasAnyLabel = collect($labels)->contains(static fn (string $value): bool => trim($value) !== '');
-            if ($url === '' && ! $hasAnyLabel && $linkTarget === null) {
+            if ($url === '' && ! $hasAnyLabel && $linkTarget === null && $children === []) {
                 continue;
             }
 
@@ -157,6 +167,10 @@ class SiteChromeNormalizerService
                 'nofollow' => $this->boolValue($item['nofollow'] ?? false),
                 'label_translations' => $labels,
             ];
+
+            if ($allowChildren) {
+                $row['children'] = $children;
+            }
 
             if ($linkTarget !== null) {
                 $row['link_target'] = $linkTarget;
@@ -173,6 +187,39 @@ class SiteChromeNormalizerService
         }
 
         return $normalized;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function normalizeLogo(mixed $value): array
+    {
+        $logo = is_array($value) ? $value : [];
+
+        return [
+            'src' => $this->normalizeLogoSrc((string) ($logo['src'] ?? '')),
+            'alt' => mb_substr(trim((string) ($logo['alt'] ?? '')), 0, 255),
+        ];
+    }
+
+    /**
+     * Restrict the logo src to same-origin paths, http(s) and data:image URLs.
+     * Anything else (javascript:, vbscript:, other schemes) is dropped.
+     */
+    private function normalizeLogoSrc(string $src): string
+    {
+        $src = mb_substr(trim($src), 0, 2048);
+        if ($src === '') {
+            return '';
+        }
+
+        if (str_starts_with($src, '/')
+            || preg_match('#^https?://#i', $src) === 1
+            || preg_match('#^data:image/#i', $src) === 1) {
+            return $src;
+        }
+
+        return '';
     }
 
     /**

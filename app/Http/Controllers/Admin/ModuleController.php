@@ -65,7 +65,7 @@ class ModuleController extends Controller
 
     public function upload(Request $request): RedirectResponse
     {
-        $this->ensureCanManage($request);
+        $this->ensureCanInstall($request);
 
         $maxMb = (int) config('modules.max_zip_size_mb', 30);
         $validated = $request->validate([
@@ -94,7 +94,7 @@ class ModuleController extends Controller
 
     public function installLocal(Request $request): RedirectResponse
     {
-        $this->ensureCanManage($request);
+        $this->ensureCanInstall($request);
 
         $validated = $request->validate([
             'local_path' => ['required', 'string', 'max:1024'],
@@ -128,7 +128,7 @@ class ModuleController extends Controller
 
     public function installBundled(Request $request, string $moduleKey): RedirectResponse
     {
-        $this->ensureCanManage($request);
+        $this->ensureCanInstall($request);
 
         $bundled = $this->bundledCatalog->findByRouteKey($moduleKey);
         if (! is_array($bundled)) {
@@ -156,7 +156,7 @@ class ModuleController extends Controller
 
     public function activate(Request $request, CmsModule $module): RedirectResponse
     {
-        $this->ensureCanManage($request);
+        $this->ensureCanInstall($request);
 
         try {
             $module = $this->moduleManager->activate($module, $request->user()?->id);
@@ -192,7 +192,7 @@ class ModuleController extends Controller
 
     public function update(Request $request, CmsModule $module): RedirectResponse
     {
-        $this->ensureCanManage($request);
+        $this->ensureCanInstall($request);
 
         $maxMb = (int) config('modules.max_zip_size_mb', 30);
         $request->validate([
@@ -243,5 +243,16 @@ class ModuleController extends Controller
     {
         $user = $request->user();
         abort_unless($user && ($user->hasRole('superadmin') || $user->can('settings:write')), 403);
+    }
+
+    /**
+     * Installing, updating or activating a module executes that module's PHP
+     * (service providers, migrations, routes). Restrict these code-introducing
+     * operations to superadmin only — a settings:write admin must not be able
+     * to ship arbitrary code into the application.
+     */
+    private function ensureCanInstall(Request $request): void
+    {
+        abort_unless((bool) $request->user()?->hasRole('superadmin'), 403);
     }
 }

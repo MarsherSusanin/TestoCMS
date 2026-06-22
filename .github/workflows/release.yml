@@ -21,7 +21,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, pdo_mysql, intl, gd, bcmath, exif
+          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_sqlite, sqlite3, pdo_pgsql, pgsql, pdo_mysql, intl, gd, bcmath, exif, sodium
           coverage: none
 
       - name: Setup Node.js
@@ -53,17 +53,21 @@ jobs:
       - name: Install production PHP dependencies
         run: composer install --prefer-dist --no-dev --no-interaction --optimize-autoloader --no-progress
 
-      - name: Prepare staging directory
+      - name: Prepare release artifacts
         run: |
           rm -rf node_modules
           VERSION=${GITHUB_REF#refs/tags/v}
-          PACKAGE_ROOT="${RUNNER_TEMP}/testocms"
-          ZIP_NAME="testocms-v${VERSION}-shared-hosting.zip"
-          ZIP_PATH="${RUNNER_TEMP}/${ZIP_NAME}"
+          BUILD_SHA="${GITHUB_SHA}"
+          PHP_CONSTRAINT=$(php -r '$composer = json_decode(file_get_contents("composer.json"), true); echo $composer["require"]["php"] ?? "^8.2";')
+          CMS_FROM="${CMS_MIN_UPGRADE_VERSION:->=1.0.0}"
 
-          mkdir -p "$PACKAGE_ROOT"
+          SHARED_PACKAGE_ROOT="${RUNNER_TEMP}/testocms"
+          SHARED_ZIP_NAME="testocms-v${VERSION}-shared-hosting.zip"
+          SHARED_ZIP_PATH="${RUNNER_TEMP}/${SHARED_ZIP_NAME}"
 
-          rsync -a ./ "$PACKAGE_ROOT"/ \
+          mkdir -p "$SHARED_PACKAGE_ROOT"
+
+          rsync -a ./ "$SHARED_PACKAGE_ROOT"/ \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude '.idea/' \
@@ -90,29 +94,125 @@ jobs:
             --exclude 'vite.config.js'
 
           mkdir -p \
-            "$PACKAGE_ROOT/storage/app/public" \
-            "$PACKAGE_ROOT/storage/framework/cache" \
-            "$PACKAGE_ROOT/storage/framework/sessions" \
-            "$PACKAGE_ROOT/storage/framework/views" \
-            "$PACKAGE_ROOT/bootstrap/cache"
+            "$SHARED_PACKAGE_ROOT/storage/app/public" \
+            "$SHARED_PACKAGE_ROOT/storage/framework/cache" \
+            "$SHARED_PACKAGE_ROOT/storage/framework/sessions" \
+            "$SHARED_PACKAGE_ROOT/storage/framework/views" \
+            "$SHARED_PACKAGE_ROOT/bootstrap/cache"
 
-          (cd "${RUNNER_TEMP}" && zip -r "$ZIP_PATH" "testocms")
+          UPDATER_PACKAGE_ROOT="${RUNNER_TEMP}/testocms-updater"
+          UPDATER_ZIP_NAME="testocms-v${VERSION}-updater.zip"
+          UPDATER_ZIP_PATH="${RUNNER_TEMP}/${UPDATER_ZIP_NAME}"
+          UPDATER_SIG_PATH="${RUNNER_TEMP}/${UPDATER_ZIP_NAME}.sig"
 
-          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+          rm -rf "$UPDATER_PACKAGE_ROOT"
+          mkdir -p "$UPDATER_PACKAGE_ROOT"
+
+          for path in app bootstrap bundled-modules config database html_public lang resources routes vendor; do
+            if [ -e "$path" ]; then
+              rsync -a "$path" "$UPDATER_PACKAGE_ROOT"/
+            fi
+          done
+
+          for path in artisan composer.json composer.lock; do
+            if [ -e "$path" ]; then
+              cp "$path" "$UPDATER_PACKAGE_ROOT"/
+            fi
+          done
+
+          cat > "$UPDATER_PACKAGE_ROOT/release.json" <<JSON
+          {
+            "artifact": "core-updater",
+            "version": "${VERSION}",
+            "build": "${BUILD_SHA}",
+            "signed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "compat": {
+              "php": "${PHP_CONSTRAINT}",
+              "cms_from": "${CMS_FROM}"
+            }
+          }
+          JSON
+
+          (cd "${RUNNER_TEMP}" && zip -r "$SHARED_ZIP_PATH" "testocms")
+          (cd "${RUNNER_TEMP}" && zip -r "$UPDATER_ZIP_PATH" "testocms-updater")
+
+          echo "SHARED_ZIP_NAME=$SHARED_ZIP_NAME" >> $GITHUB_ENV
+          echo "SHARED_ZIP_PATH=$SHARED_ZIP_PATH" >> $GITHUB_ENV
+          echo "UPDATER_ZIP_NAME=$UPDATER_ZIP_NAME" >> $GITHUB_ENV
+          echo "UPDATER_ZIP_PATH=$UPDATER_ZIP_PATH" >> $GITHUB_ENV
+          echo "UPDATER_SIG_PATH=$UPDATER_SIG_PATH" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "PACKAGE_ROOT=$PACKAGE_ROOT" >> $GITHUB_ENV
-          echo "ZIP_PATH=$ZIP_PATH" >> $GITHUB_ENV
+          echo "SHARED_PACKAGE_ROOT=$SHARED_PACKAGE_ROOT" >> $GITHUB_ENV
+          echo "UPDATER_PACKAGE_ROOT=$UPDATER_PACKAGE_ROOT" >> $GITHUB_ENV
 
       - name: Smoke test shared-hosting package
         run: |
           UNPACK_DIR="${RUNNER_TEMP}/release-smoke"
           rm -rf "$UNPACK_DIR"
           mkdir -p "$UNPACK_DIR"
-          unzip -q "${ZIP_PATH}" -d "$UNPACK_DIR"
+          unzip -q "${SHARED_ZIP_PATH}" -d "$UNPACK_DIR"
           PACKAGE_DIR="$UNPACK_DIR/testocms"
           test -f "$PACKAGE_DIR/html_public/index.php"
           cp "$PACKAGE_DIR/.env.hosting.example" "$PACKAGE_DIR/.env"
           (cd "$PACKAGE_DIR" && php artisan key:generate --force && php artisan about > /dev/null)
+
+      - name: Smoke test updater package
+        run: |
+          UNPACK_DIR="${RUNNER_TEMP}/updater-smoke"
+          rm -rf "$UNPACK_DIR"
+          mkdir -p "$UNPACK_DIR"
+          unzip -q "${UPDATER_ZIP_PATH}" -d "$UNPACK_DIR"
+          PACKAGE_DIR="$UNPACK_DIR/testocms-updater"
+          php -r '$release = json_decode(file_get_contents($argv[1]), true); if (! is_array($release) || ($release["artifact"] ?? "") !== "core-updater") { fwrite(STDERR, "Invalid updater package\n"); exit(1); }' "$PACKAGE_DIR/release.json"
+          test -f "$PACKAGE_DIR/html_public/index.php"
+          mkdir -p \
+            "$PACKAGE_DIR/storage/app/public" \
+            "$PACKAGE_DIR/storage/framework/cache" \
+            "$PACKAGE_DIR/storage/framework/sessions" \
+            "$PACKAGE_DIR/storage/framework/views" \
+            "$PACKAGE_DIR/storage/logs" \
+            "$PACKAGE_DIR/bootstrap/cache"
+          touch "$PACKAGE_DIR/database/database.sqlite"
+          cat > "$PACKAGE_DIR/.env" <<ENV
+          APP_ENV=production
+          APP_KEY=
+          APP_URL=https://example.test
+          DB_CONNECTION=sqlite
+          DB_DATABASE=$PACKAGE_DIR/database/database.sqlite
+          ENV
+          (cd "$PACKAGE_DIR" && php artisan key:generate --force && php artisan about > /dev/null)
+
+      - name: Sign updater package
+        env:
+          CMS_UPDATE_PRIVATE_KEY: ${{ secrets.CMS_UPDATE_PRIVATE_KEY }}
+        run: |
+          if [ -z "${CMS_UPDATE_PRIVATE_KEY}" ]; then
+            echo "CMS_UPDATE_PRIVATE_KEY secret is required to sign updater package." >&2
+            exit 1
+          fi
+
+          php -r '
+          $encoded = trim((string) getenv("CMS_UPDATE_PRIVATE_KEY"));
+          $decoded = base64_decode(strtr($encoded, "-_", "+/"), true);
+          if ($decoded === false || $decoded === "") {
+              fwrite(STDERR, "Invalid CMS_UPDATE_PRIVATE_KEY secret.\n");
+              exit(1);
+          }
+          if (strlen($decoded) === SODIUM_CRYPTO_SIGN_SEEDBYTES) {
+              $decoded = sodium_crypto_sign_seed_keypair($decoded);
+              $decoded = sodium_crypto_sign_secretkey($decoded);
+          }
+          if (strlen($decoded) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES) {
+              fwrite(STDERR, "CMS_UPDATE_PRIVATE_KEY must decode to an Ed25519 seed or secret key.\n");
+              exit(1);
+          }
+          $payload = file_get_contents($argv[1]);
+          if ($payload === false) {
+              fwrite(STDERR, "Unable to read updater zip for signing.\n");
+              exit(1);
+          }
+          echo base64_encode(sodium_crypto_sign_detached($payload, $decoded));
+          ' "${UPDATER_ZIP_PATH}" > "${UPDATER_SIG_PATH}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -166,7 +266,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: TestoCMS v${{ env.VERSION }}
-          files: ${{ env.ZIP_PATH }}
+          files: |
+            ${{ env.SHARED_ZIP_PATH }}
+            ${{ env.UPDATER_ZIP_PATH }}
+            ${{ env.UPDATER_SIG_PATH }}
           draft: false
           prerelease: false
           generate_release_notes: true

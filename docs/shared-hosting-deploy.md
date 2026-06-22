@@ -82,14 +82,16 @@ php artisan cms:setup
 Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 ```
 
-### 7. Cron (опционально)
+### 7. Cron (обязательно)
+
+**Обязательный шаг.** Без cron отложенная публикация/снятие с публикации и обслуживающие задачи не выполняются. Есть аварийный fallback при просмотре страниц, но полагаться на него нельзя.
 
 Через cPanel → «Задания Cron»:
 ```
 * * * * * cd /home/USERNAME/testocms && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-> На shared hosting baseline используется `QUEUE_CONNECTION=sync`, поэтому отдельный queue worker не требуется. Scheduler через cron всё равно нужен.
+> На shared hosting baseline используется `QUEUE_CONNECTION=sync`, поэтому отдельный queue worker не требуется. Scheduler через cron всё равно обязателен.
 
 ### 8. Оптимизация (SSH)
 
@@ -116,7 +118,9 @@ php artisan cms:setup --redo
 ## Обновление
 
 1. Сделать бэкап БД
-2. Скачать новый shared-hosting архив из GitHub Releases
+2. Выбрать способ обновления:
+   - manual deploy: скачать новый `testocms-vX.Y.Z-shared-hosting.zip`
+   - admin updater: загрузить `testocms-vX.Y.Z-updater.zip` в `/admin/updates`
 3. Загрузить новые файлы поверх `~/testocms`
 4. Повторно синхронизировать `~/testocms/html_public/` → `~/public_html/`
 5. Через SSH:
@@ -128,3 +132,5 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 ```
+
+Если используете admin updater, он сам обновит codebase, selectively синхронизирует core-managed файлы из `html_public` в активный `public_html`, пересоздаст `storage` symlink и republish'ит module assets. Host-managed файлы вроде `.well-known` он не трогает.
