@@ -39,6 +39,17 @@ class CoreUpdateHealthCheckService
                 ->withHeaders(['X-CMS-Health-Check' => '1'])
                 ->get($url);
         } catch (\Throwable $e) {
+            // Strict mode: an unreachable site counts as a failed check (and
+            // triggers rollback) instead of "unverifiable". Off by default so
+            // hosts with blocked loopback don't roll back healthy updates.
+            if ((bool) config('updates.health_check_strict', false)) {
+                throw new RuntimeException(sprintf(
+                    'Post-update health check failed: %s is unreachable (%s).',
+                    $url,
+                    $e->getMessage()
+                ), 0, $e);
+            }
+
             report($e);
 
             return;
@@ -55,13 +66,15 @@ class CoreUpdateHealthCheckService
 
     private function resolveHealthUrl(): ?string
     {
-        if (app()->environment('testing')) {
-            return null;
-        }
-
+        // An explicitly configured URL wins even under testing, so the
+        // failed-health-check → rollback path is exercisable with Http::fake.
         $explicit = trim((string) config('updates.health_check_url', ''));
         if ($explicit !== '') {
             return $explicit;
+        }
+
+        if (app()->environment('testing')) {
+            return null;
         }
 
         $base = trim((string) config('app.url', ''));

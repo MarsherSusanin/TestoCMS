@@ -230,8 +230,73 @@ class BlockSchemaValidator
                 continue;
             }
 
+            if ($type === 'hero') {
+                foreach (['heading', 'subheading', 'image', 'cta_label', 'cta_url'] as $stringKey) {
+                    if (array_key_exists($stringKey, $data) && ! is_string($data[$stringKey])) {
+                        $errors[] = "Block schema path {$nodePath}.data.{$stringKey} must be a string.";
+                    }
+                }
+                $align = (string) ($data['align'] ?? 'left');
+                if (! in_array($align, ['left', 'center'], true)) {
+                    $errors[] = "Block schema path {$nodePath}.data.align must be one of left|center.";
+                }
+            }
+
+            if (isset(self::ITEM_STRING_FIELDS[$type])) {
+                $this->validateItems($type, $data, $nodePath, $errors);
+            }
+
             if (array_key_exists('children', $node)) {
                 $errors[] = "Block schema path {$nodePath} type '{$type}' does not support children.";
+            }
+        }
+    }
+
+    private const ITEM_STRING_FIELDS = [
+        'stats' => ['value', 'label'],
+        'features' => ['icon', 'title', 'text'],
+        'testimonial' => ['quote', 'author', 'role'],
+        'pricing' => ['name', 'price', 'period', 'cta_label', 'cta_url'],
+    ];
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     * @param  array<int, string>  $errors
+     */
+    private function validateItems(string $type, array $data, string $nodePath, array &$errors): void
+    {
+        $items = $data['items'] ?? null;
+        if (! is_array($items)) {
+            $errors[] = "Block schema path {$nodePath}.data.items must be an array.";
+
+            return;
+        }
+
+        foreach ($items as $itemIndex => $item) {
+            $itemPath = "{$nodePath}.data.items[{$itemIndex}]";
+            if (! is_array($item)) {
+                $errors[] = "Block schema path {$itemPath} must be an object.";
+
+                continue;
+            }
+
+            foreach (self::ITEM_STRING_FIELDS[$type] as $stringKey) {
+                if (array_key_exists($stringKey, $item) && ! is_string($item[$stringKey])) {
+                    $errors[] = "Block schema path {$itemPath}.{$stringKey} must be a string.";
+                }
+            }
+
+            if ($type === 'pricing' && array_key_exists('features', $item)) {
+                if (! is_array($item['features'])) {
+                    $errors[] = "Block schema path {$itemPath}.features must be an array.";
+
+                    continue;
+                }
+                foreach ($item['features'] as $featureIndex => $feature) {
+                    if (! is_string($feature)) {
+                        $errors[] = "Block schema path {$itemPath}.features[{$featureIndex}] must be a string.";
+                    }
+                }
             }
         }
     }
