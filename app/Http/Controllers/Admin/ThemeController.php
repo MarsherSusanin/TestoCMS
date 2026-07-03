@@ -30,6 +30,7 @@ class ThemeController extends Controller
             'adminThemeBootPayload' => array_merge(
                 $themeData['themeBootPayload'] ?? [],
                 $chromeData['chromeBootPayload'] ?? [],
+                ['justSaved' => (bool) session('chrome_saved')],
             ),
         ]));
     }
@@ -68,7 +69,9 @@ class ThemeController extends Controller
 
         $this->siteChromeEditor->saveFromJson((string) $validated['chrome_payload'], $request);
 
-        return redirect()->route('admin.theme.edit')->with('status', 'Header/Footer/Search settings saved.');
+        return redirect()->route('admin.theme.edit')
+            ->with('status', 'Header/Footer/Search settings saved.')
+            ->with('chrome_saved', true);
     }
 
     /**

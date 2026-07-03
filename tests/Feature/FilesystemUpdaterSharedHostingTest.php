@@ -7,7 +7,10 @@ use App\Models\CoreBackup;
 use App\Modules\Updates\Services\CorePackageApplier;
 use App\Modules\Updates\Services\FilesystemUpdateDriver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -83,6 +86,122 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
 
         $backup->refresh();
         $this->assertSame('rolled_back', $backup->status);
+    }
+
+    public function test_failed_health_check_triggers_automatic_rollback(): void
+    {
+        [$baseRoot, $publicRoot, $updateStorageRoot] = $this->makeWorkspaceRoots();
+        $this->seedBaseInstall($baseRoot, 'OLD');
+        $this->seedSharedHostingPublicRoot($publicRoot, 'OLD');
+        $this->installModuleFixture('acme/demo');
+        $zipPath = $this->makeUpdaterZip('1.2.0', 'NEW');
+
+        config()->set('updates.health_check_url', 'https://health.test/up');
+        // The broken new code 500s; after the rollback restores the old code
+        // the endpoint recovers — mirror that with a stateful fake.
+        $healthCalls = 0;
+        Http::fake(function () use (&$healthCalls) {
+            $healthCalls++;
+
+            return $healthCalls === 1 ? Http::response('boom', 500) : Http::response('ok', 200);
+        });
+
+        try {
+            $this->applyUpdate($baseRoot, $publicRoot, $updateStorageRoot, $zipPath);
+            $this->fail('Expected the failed health check to abort the update.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('health check failed', $e->getMessage());
+        }
+
+        // The auto-rollback restored the pre-update install.
+        $this->assertSame('OLD', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
+        $this->assertSame('rolled_back', CoreBackup::query()->latest('id')->firstOrFail()->status);
+    }
+
+    public function test_strict_mode_rolls_back_when_health_endpoint_is_unreachable(): void
+    {
+        [$baseRoot, $publicRoot, $updateStorageRoot] = $this->makeWorkspaceRoots();
+        $this->seedBaseInstall($baseRoot, 'OLD');
+        $this->seedSharedHostingPublicRoot($publicRoot, 'OLD');
+        $this->installModuleFixture('acme/demo');
+        $zipPath = $this->makeUpdaterZip('1.2.0', 'NEW');
+
+        config()->set('updates.health_check_url', 'https://health.test/up');
+        config()->set('updates.health_check_strict', true);
+        // Unreachable while the broken code is live, reachable again once the
+        // rollback restores the old code.
+        $healthCalls = 0;
+        Http::fake(function () use (&$healthCalls) {
+            $healthCalls++;
+            if ($healthCalls === 1) {
+                throw new ConnectionException('Connection timed out');
+            }
+
+            return Http::response('ok', 200);
+        });
+
+        try {
+            $this->applyUpdate($baseRoot, $publicRoot, $updateStorageRoot, $zipPath);
+            $this->fail('Expected the unreachable health endpoint to abort the update in strict mode.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('unreachable', $e->getMessage());
+        }
+
+        $this->assertSame('OLD', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
+        $this->assertSame('rolled_back', CoreBackup::query()->latest('id')->firstOrFail()->status);
+    }
+
+    public function test_unreachable_health_endpoint_is_tolerated_by_default(): void
+    {
+        [$baseRoot, $publicRoot, $updateStorageRoot] = $this->makeWorkspaceRoots();
+        $this->seedBaseInstall($baseRoot, 'OLD');
+        $this->seedSharedHostingPublicRoot($publicRoot, 'OLD');
+        $this->installModuleFixture('acme/demo');
+        $zipPath = $this->makeUpdaterZip('1.2.0', 'NEW');
+
+        // Default (non-strict): blocked loopback must not roll back a healthy
+        // update — the check is unverifiable, not failed.
+        config()->set('updates.health_check_url', 'https://health.test/up');
+        Http::fake(function (): void {
+            throw new ConnectionException('Connection refused');
+        });
+
+        $result = $this->applyUpdate($baseRoot, $publicRoot, $updateStorageRoot, $zipPath);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame('NEW', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
+    }
+
+    public function test_whole_window_outage_still_marks_the_rollback_as_rolled_back(): void
+    {
+        [$baseRoot, $publicRoot, $updateStorageRoot] = $this->makeWorkspaceRoots();
+        $this->seedBaseInstall($baseRoot, 'OLD');
+        $this->seedSharedHostingPublicRoot($publicRoot, 'OLD');
+        $this->installModuleFixture('acme/demo');
+        $zipPath = $this->makeUpdaterZip('1.2.0', 'NEW');
+
+        // Strict mode AND the endpoint is unreachable for the ENTIRE window —
+        // both the apply health check and the post-rollback health check fail.
+        // The files are still correctly restored, so the backup must read
+        // rolled_back (health_unverified), never failed.
+        config()->set('updates.health_check_url', 'https://health.test/up');
+        config()->set('updates.health_check_strict', true);
+        Http::fake(function (): void {
+            throw new ConnectionException('Connection refused');
+        });
+
+        try {
+            $this->applyUpdate($baseRoot, $publicRoot, $updateStorageRoot, $zipPath);
+            $this->fail('Expected the failed update to throw.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('unreachable', $e->getMessage());
+        }
+
+        $this->assertSame('OLD', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
+
+        $backup = CoreBackup::query()->latest('id')->firstOrFail();
+        $this->assertSame('rolled_back', $backup->status);
+        $this->assertSame('health_unverified', $backup->restore_status);
     }
 
     /**

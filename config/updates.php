@@ -73,6 +73,11 @@ return [
 
     'health_check_timeout' => (int) env('CMS_UPDATE_HEALTH_TIMEOUT', 10),
 
+    // When true, an unreachable health-check URL counts as a FAILED check and
+    // triggers rollback. Off by default: some shared hosts block loopback
+    // requests, and a healthy update must not be rolled back over that.
+    'health_check_strict' => (bool) env('CMS_UPDATE_HEALTH_STRICT', false),
+
     // Hard limits for update-package extraction (zip-bomb protection).
     'max_uncompressed_mb' => (int) env('CMS_UPDATE_MAX_UNCOMPRESSED_MB', 1024),
 

@@ -209,8 +209,15 @@ class CoreBackupService
 
     private function restoreDatabaseDump(string $dbDumpPath): void
     {
-        if ($dbDumpPath === '' || ! is_file($dbDumpPath)) {
+        // Empty = the backup was file-only by design (no dump was taken).
+        if ($dbDumpPath === '') {
             return;
+        }
+
+        // A recorded dump that vanished must fail the restore loudly: silently
+        // restoring code without the DB it was backed up with is a data trap.
+        if (! is_file($dbDumpPath)) {
+            throw new RuntimeException('Database dump referenced by backup is missing: '.$dbDumpPath);
         }
 
         $connection = (string) config('database.default', 'pgsql');

@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\CategoryTranslation;
+use App\Models\Page;
 use App\Models\PageTranslation;
+use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Models\SeoSetting;
+use App\Modules\SEO\Services\SeoCacheKeys;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 class SeoController extends Controller
@@ -46,29 +50,52 @@ class SeoController extends Controller
 
     public function sitemapIndex(): Response
     {
-        $items = [];
-        foreach (config('cms.supported_locales', ['en']) as $locale) {
-            $items[] = [
-                'loc' => url('/sitemaps/'.strtolower((string) $locale).'.xml'),
-                'lastmod' => now()->toAtomString(),
-            ];
-        }
+        $xml = Cache::remember(SeoCacheKeys::sitemapIndex(), (int) config('seo.sitemap.cache_ttl', 3600), function (): string {
+            $entries = [];
+            foreach (config('cms.supported_locales', ['en']) as $locale) {
+                $locale = strtolower((string) $locale);
+                $entries[] = sprintf(
+                    '<sitemap><loc>%s</loc><lastmod>%s</lastmod></sitemap>',
+                    e(url('/sitemaps/'.$locale.'.xml')),
+                    e($this->latestContentChange($locale)->toAtomString()),
+                );
+            }
 
-        $entries = [];
-        foreach ($items as $item) {
-            $entries[] = sprintf(
-                '<sitemap><loc>%s</loc><lastmod>%s</lastmod></sitemap>',
-                e($item['loc']),
-                e($item['lastmod']),
-            );
-        }
-
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>'
-            .'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            .implode('', $entries)
-            .'</sitemapindex>';
+            return '<?xml version="1.0" encoding="UTF-8"?>'
+                .'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                .implode('', $entries)
+                .'</sitemapindex>';
+        });
 
         return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+    }
+
+    /**
+     * The real last-modification moment of a locale's public content, so the
+     * sitemap index doesn't advertise a fresh lastmod on every crawl.
+     */
+    private function latestContentChange(string $locale): Carbon
+    {
+        $timestamps = array_filter([
+            PostTranslation::query()
+                ->where('locale', $locale)
+                ->whereIn('post_id', Post::query()->published()->select('id'))
+                ->max('updated_at'),
+            PageTranslation::query()
+                ->where('locale', $locale)
+                ->whereIn('page_id', Page::query()->published()->select('id'))
+                ->max('updated_at'),
+            CategoryTranslation::query()
+                ->where('locale', $locale)
+                ->whereHas('category', fn ($q) => $q->where('is_active', true))
+                ->max('updated_at'),
+        ]);
+
+        if ($timestamps === []) {
+            return now();
+        }
+
+        return Carbon::parse(max($timestamps));
     }
 
     public function sitemapLocale(string $locale): Response
@@ -81,7 +108,7 @@ class SeoController extends Controller
         $postPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
         $categoryPrefix = trim((string) config('cms.category_url_prefix', 'category'), '/');
 
-        $xml = Cache::remember('seo:sitemap:'.$locale, (int) config('seo.sitemap.cache_ttl', 3600), function () use ($locale, $postPrefix, $categoryPrefix): string {
+        $xml = Cache::remember(SeoCacheKeys::sitemap($locale), (int) config('seo.sitemap.cache_ttl', 3600), function () use ($locale, $postPrefix, $categoryPrefix): string {
             ob_start();
             echo '<?xml version="1.0" encoding="UTF-8"?>'."\n";
             echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
@@ -145,7 +172,7 @@ class SeoController extends Controller
         $locale = config('cms.default_locale', 'en');
         $postPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
 
-        $body = Cache::remember('seo:llms:'.$locale, (int) config('seo.sitemap.cache_ttl', 3600), function () use ($locale, $postPrefix): string {
+        $body = Cache::remember(SeoCacheKeys::llms($locale), (int) config('seo.sitemap.cache_ttl', 3600), function () use ($locale, $postPrefix): string {
             ob_start();
             $settings = SeoSetting::global();
 

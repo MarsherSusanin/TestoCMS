@@ -2,6 +2,7 @@
 
 namespace App\Modules\Caching\Services;
 
+use App\Modules\SEO\Services\SeoCacheKeys;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -45,12 +46,19 @@ class PageCacheService
 
         $key = $this->keyFromRequest($request);
 
+        // Preserve SEO-relevant headers: a noindex page must stay noindex
+        // when served from cache, not fall back to crawlable defaults.
+        $headers = [
+            'Content-Type' => $response->headers->get('Content-Type', 'text/html; charset=UTF-8'),
+        ];
+        if ($response->headers->has('X-Robots-Tag')) {
+            $headers['X-Robots-Tag'] = (string) $response->headers->get('X-Robots-Tag');
+        }
+
         Cache::put($key, [
             'content' => $response->getContent(),
             'status' => $response->getStatusCode(),
-            'headers' => [
-                'Content-Type' => $response->headers->get('Content-Type', 'text/html; charset=UTF-8'),
-            ],
+            'headers' => $headers,
         ], config('cms.full_page_cache_ttl', 300));
 
         $keys = Cache::get(self::KEY_LIST, []);
@@ -69,5 +77,12 @@ class PageCacheService
         }
 
         Cache::forget(self::KEY_LIST);
+
+        // Every flushAll() call means "public content changed", so the cached
+        // SEO endpoints (sitemaps, llms.txt) are stale too — without this a
+        // just-published page can stay out of the sitemap for the full TTL.
+        foreach (SeoCacheKeys::all() as $seoKey) {
+            Cache::forget($seoKey);
+        }
     }
 }

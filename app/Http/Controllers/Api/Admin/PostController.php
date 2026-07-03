@@ -138,7 +138,7 @@ class PostController extends Controller
             'translations.*.content_markdown' => 'nullable|string',
             'translations.*.excerpt' => 'nullable|string',
             'translations.*.meta_title' => 'nullable|string|max:255',
-            'translations.*.meta_description' => 'nullable|string',
+            'translations.*.meta_description' => 'nullable|string|max:1000',
             'translations.*.canonical_url' => 'nullable|string|max:2048',
             'translations.*.robots_directives' => 'nullable|array',
             'translations.*.structured_data' => 'nullable|array',

@@ -230,9 +230,105 @@ class BlockSchemaValidator
                 continue;
             }
 
+            if ($type === 'hero') {
+                foreach (['heading', 'subheading', 'image', 'cta_label', 'cta_url'] as $stringKey) {
+                    if (array_key_exists($stringKey, $data)) {
+                        $this->checkString($data[$stringKey], "{$nodePath}.data.{$stringKey}", $errors);
+                    }
+                }
+                $align = (string) ($data['align'] ?? 'left');
+                if (! in_array($align, ['left', 'center'], true)) {
+                    $errors[] = "Block schema path {$nodePath}.data.align must be one of left|center.";
+                }
+            }
+
+            if (isset(self::ITEM_STRING_FIELDS[$type])) {
+                $this->validateItems($type, $data, $nodePath, $errors);
+            }
+
             if (array_key_exists('children', $node)) {
                 $errors[] = "Block schema path {$nodePath} type '{$type}' does not support children.";
             }
+        }
+    }
+
+    private const ITEM_STRING_FIELDS = [
+        'stats' => ['value', 'label'],
+        'features' => ['icon', 'title', 'text'],
+        'testimonial' => ['quote', 'author', 'role'],
+        'pricing' => ['name', 'price', 'period', 'cta_label', 'cta_url'],
+    ];
+
+    // Bounds so an authenticated writer can't store a multi-megabyte block that
+    // is then expanded into every cached render of the page.
+    private const MAX_ITEMS = 60;
+
+    private const MAX_STRING_LENGTH = 2000;
+
+    /**
+     * @param  array<int|string, mixed>  $data
+     * @param  array<int, string>  $errors
+     */
+    private function validateItems(string $type, array $data, string $nodePath, array &$errors): void
+    {
+        $items = $data['items'] ?? null;
+        if (! is_array($items)) {
+            $errors[] = "Block schema path {$nodePath}.data.items must be an array.";
+
+            return;
+        }
+
+        if (count($items) > self::MAX_ITEMS) {
+            $errors[] = "Block schema path {$nodePath}.data.items exceeds the maximum of ".self::MAX_ITEMS.' items.';
+
+            return;
+        }
+
+        foreach ($items as $itemIndex => $item) {
+            $itemPath = "{$nodePath}.data.items[{$itemIndex}]";
+            if (! is_array($item)) {
+                $errors[] = "Block schema path {$itemPath} must be an object.";
+
+                continue;
+            }
+
+            foreach (self::ITEM_STRING_FIELDS[$type] as $stringKey) {
+                if (array_key_exists($stringKey, $item)) {
+                    $this->checkString($item[$stringKey], "{$itemPath}.{$stringKey}", $errors);
+                }
+            }
+
+            if ($type === 'pricing' && array_key_exists('features', $item)) {
+                if (! is_array($item['features'])) {
+                    $errors[] = "Block schema path {$itemPath}.features must be an array.";
+
+                    continue;
+                }
+                if (count($item['features']) > self::MAX_ITEMS) {
+                    $errors[] = "Block schema path {$itemPath}.features exceeds the maximum of ".self::MAX_ITEMS.' entries.';
+
+                    continue;
+                }
+                foreach ($item['features'] as $featureIndex => $feature) {
+                    $this->checkString($feature, "{$itemPath}.features[{$featureIndex}]", $errors);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $errors
+     */
+    private function checkString(mixed $value, string $path, array &$errors): void
+    {
+        if (! is_string($value)) {
+            $errors[] = "Block schema path {$path} must be a string.";
+
+            return;
+        }
+
+        if (mb_strlen($value) > self::MAX_STRING_LENGTH) {
+            $errors[] = "Block schema path {$path} exceeds the maximum length of ".self::MAX_STRING_LENGTH.' characters.';
         }
     }
 }

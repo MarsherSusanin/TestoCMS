@@ -176,6 +176,7 @@
 
     const syncPayload = () => {
         payloadInput.value = JSON.stringify(state);
+        scheduleChromeAutosave();
     };
 
     const applyScalarInputsFromState = () => {
@@ -603,6 +604,86 @@
         syncPayload();
     });
 
+    // --- Autosave: chrome edits survive a crashed tab, like the page editor ---
+    const autosaveStorage = (() => {
+        try {
+            const probe = '__testocms_chrome_autosave_probe__';
+            window.localStorage.setItem(probe, '1');
+            window.localStorage.removeItem(probe);
+            return window.localStorage;
+        } catch (_) { return null; }
+    })();
+    const chromeAutosaveKey = `testocms:autosave:chrome:${window.location.pathname}`;
+    let chromeAutosaveTimer = null;
+    let chromeAutosaveReady = false;
+    let lastChromeSnapshot = '';
+
+    const writeChromeSnapshot = () => {
+        if (!autosaveStorage) return;
+        const fingerprint = JSON.stringify(state);
+        if (fingerprint === lastChromeSnapshot) return;
+        try {
+            autosaveStorage.setItem(chromeAutosaveKey, JSON.stringify({
+                version: 1,
+                savedAt: new Date().toISOString(),
+                state: JSON.parse(fingerprint),
+            }));
+            lastChromeSnapshot = fingerprint;
+        } catch (_) {}
+    };
+
+    function scheduleChromeAutosave() {
+        if (!autosaveStorage || !chromeAutosaveReady) return;
+        if (chromeAutosaveTimer) window.clearTimeout(chromeAutosaveTimer);
+        chromeAutosaveTimer = window.setTimeout(writeChromeSnapshot, 1200);
+    }
+
+    const dropChromeSnapshot = () => {
+        if (!autosaveStorage) return;
+        try { autosaveStorage.removeItem(chromeAutosaveKey); } catch (_) {}
+    };
+
+    const initChromeAutosave = () => {
+        if (!autosaveStorage) return;
+
+        // A successful save just happened (the form posts back to the same
+        // URL): the local draft is stale — drop it, don't offer to restore.
+        if (boot.justSaved) {
+            dropChromeSnapshot();
+            lastChromeSnapshot = JSON.stringify(state);
+            chromeAutosaveReady = true;
+            return;
+        }
+
+        let snapshot = null;
+        try {
+            snapshot = JSON.parse(autosaveStorage.getItem(chromeAutosaveKey) || 'null');
+        } catch (_) { snapshot = null; }
+
+        const snapshotState = (snapshot && typeof snapshot === 'object' && snapshot.state && typeof snapshot.state === 'object')
+            ? snapshot.state
+            : null;
+        if (snapshotState && JSON.stringify(snapshotState) !== JSON.stringify(state)) {
+            const stamp = snapshot.savedAt ? new Date(snapshot.savedAt) : null;
+            const stampText = stamp && !Number.isNaN(stamp.getTime()) ? stamp.toLocaleString() : 'ранее';
+            if (dialogs.confirm(`Найден несохранённый черновик настроек шапки/подвала (${stampText}). Восстановить?`)) {
+                state = clone(snapshotState);
+                lastChromeSnapshot = JSON.stringify(state);
+                chromeAutosaveReady = true;
+                rerender();
+                return;
+            }
+        }
+
+        dropChromeSnapshot();
+        lastChromeSnapshot = JSON.stringify(state);
+        chromeAutosaveReady = true;
+    };
+
+    window.addEventListener('beforeunload', () => {
+        if (chromeAutosaveReady) writeChromeSnapshot();
+    });
+
     [
         'header.nav_items',
         'header.cta_buttons',
@@ -624,4 +705,5 @@
 
     ensureHeaderState();
     rerender();
+    initChromeAutosave();
 })();

@@ -153,7 +153,7 @@ class CategoryCrudController extends Controller
             'translations.*.slug' => 'nullable|string|max:255',
             'translations.*.description' => 'nullable|string',
             'translations.*.meta_title' => 'nullable|string|max:255',
-            'translations.*.meta_description' => 'nullable|string',
+            'translations.*.meta_description' => 'nullable|string|max:1000',
             'translations.*.canonical_url' => 'nullable|string|max:2048',
         ]);
     }

@@ -5,6 +5,7 @@ namespace App\Modules\Core\Services;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Post;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
 class ResolvedChromeViewModelFactory
@@ -13,6 +14,14 @@ class ResolvedChromeViewModelFactory
         private readonly SiteChromeSettingsService $siteChromeSettings,
         private readonly Request $request,
     ) {}
+
+    /**
+     * Per-build memo for menu link targets: header/footer/legal menus often
+     * reference the same pages, and each used to cost its own query.
+     *
+     * @var array<string, Model|null>
+     */
+    private array $entityLinkRecords = [];
 
     /**
      * @param  array<string, mixed>  $viewData
@@ -280,11 +289,15 @@ class ResolvedChromeViewModelFactory
             return null;
         }
 
-        $record = match ($type) {
-            'page' => Page::query()->with('translations')->find($id),
-            'post' => Post::query()->with('translations')->find($id),
-            default => Category::query()->with('translations')->find($id),
-        };
+        $cacheKey = $type.':'.$id;
+        if (! array_key_exists($cacheKey, $this->entityLinkRecords)) {
+            $this->entityLinkRecords[$cacheKey] = match ($type) {
+                'page' => Page::query()->with('translations')->find($id),
+                'post' => Post::query()->with('translations')->find($id),
+                default => Category::query()->with('translations')->find($id),
+            };
+        }
+        $record = $this->entityLinkRecords[$cacheKey];
         if ($record === null) {
             return null;
         }
