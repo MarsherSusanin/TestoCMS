@@ -113,24 +113,51 @@ class FilesystemUpdateDriver
                 $maintenanceDown = $this->healthChecks->artisanCall('down', ['--retry' => 60], false);
             }
 
-            $this->backupService->restoreSnapshot($backup);
-            $this->healthChecks->artisanCall('optimize:clear', [], false);
-            $this->healthChecks->artisanCall('storage:link', ['--force' => true], false);
-            $this->publicAssetsPublisher->republishInstalledModules();
-            $this->healthChecks->artisanCall('cms:modules:cache', [], false);
-            $this->healthChecks->runHealthCheck();
+            // The restore itself is the pass/fail line: only a failure HERE
+            // means the site may be in a broken half-state.
+            try {
+                $this->backupService->restoreSnapshot($backup);
+            } catch (\Throwable $e) {
+                $backup->forceFill([
+                    'status' => 'failed',
+                    'restore_status' => 'failed',
+                    'last_error' => $e->getMessage(),
+                ])->save();
+
+                throw $e;
+            }
+
+            // Files are reverted. Post-restore refresh + health verification are
+            // best-effort: a health-check failure here (e.g. an unreachable
+            // endpoint under strict mode) must NOT relabel a successful restore
+            // as failed and send the operator chasing a healthy site.
+            $healthWarning = null;
+            try {
+                $this->healthChecks->artisanCall('optimize:clear', [], false);
+                $this->healthChecks->artisanCall('storage:link', ['--force' => true], false);
+                $this->publicAssetsPublisher->republishInstalledModules();
+                $this->healthChecks->artisanCall('cms:modules:cache', [], false);
+                $this->healthChecks->runHealthCheck();
+            } catch (\Throwable $e) {
+                $healthWarning = $e->getMessage();
+            }
 
             $backup->forceFill([
                 'status' => 'rolled_back',
-                'restore_status' => $isAutoRollback ? 'auto' : 'manual',
-                'last_error' => null,
+                'restore_status' => $healthWarning === null
+                    ? ($isAutoRollback ? 'auto' : 'manual')
+                    : 'health_unverified',
+                'last_error' => $healthWarning,
             ])->save();
 
+            // Always resync installed_version to the reverted code — even when
+            // the post-restore health check couldn't verify — so the next
+            // update's compat checks evaluate against what is actually running.
             $state = $this->settings->state();
             if (trim((string) $backup->from_version) !== '') {
                 $state['installed_version'] = (string) $backup->from_version;
             }
-            $state['last_error'] = '';
+            $state['last_error'] = $healthWarning ?? '';
             $this->settings->saveState($state, $actorId);
 
             return [
@@ -138,15 +165,8 @@ class FilesystemUpdateDriver
                 'backup_key' => $backup->backup_key,
                 'restored_version' => (string) $backup->from_version,
                 'auto' => $isAutoRollback,
+                'health_warning' => $healthWarning,
             ];
-        } catch (\Throwable $e) {
-            $backup->forceFill([
-                'status' => 'failed',
-                'restore_status' => 'failed',
-                'last_error' => $e->getMessage(),
-            ])->save();
-
-            throw $e;
         } finally {
             if ($maintenanceDown) {
                 $this->healthChecks->artisanCall('up', [], false);

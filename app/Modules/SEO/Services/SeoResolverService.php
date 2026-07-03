@@ -5,7 +5,6 @@ namespace App\Modules\SEO\Services;
 use App\Models\SeoOverride;
 use App\Modules\Core\Contracts\SeoResolverContract;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class SeoResolverService implements SeoResolverContract
 {
@@ -13,7 +12,10 @@ class SeoResolverService implements SeoResolverContract
 
     public const META_TITLE_MAX = 255;
 
-    public const META_DESCRIPTION_MAX = 500;
+    // Matches the write-path validation ceiling (max:1000) so a saved value is
+    // never silently truncated at render — this is a safety cap against
+    // multi-kilobyte junk, not an SEO-optimal length.
+    public const META_DESCRIPTION_MAX = 1000;
 
     public function resolve(string $entityType, int $entityId, string $locale, array $fallback = []): array
     {
@@ -51,13 +53,22 @@ class SeoResolverService implements SeoResolverContract
 
         // Length guard: nothing upstream should ship a multi-kilobyte string
         // into <title>/<meta name="description">, whatever the data source.
-        if (is_string($merged['meta_title'])) {
-            $merged['meta_title'] = Str::limit(trim($merged['meta_title']), self::META_TITLE_MAX, '');
-        }
-        if (is_string($merged['meta_description'])) {
-            $merged['meta_description'] = Str::limit(trim($merged['meta_description']), self::META_DESCRIPTION_MAX, '');
-        }
+        // Clamp by CHARACTER count (mb_substr), matching the max:N validation
+        // rules — Str::limit counts display width and would over-truncate CJK.
+        $merged['meta_title'] = $this->clampChars($merged['meta_title'], self::META_TITLE_MAX);
+        $merged['meta_description'] = $this->clampChars($merged['meta_description'], self::META_DESCRIPTION_MAX);
 
         return $merged;
+    }
+
+    private function clampChars(mixed $value, int $max): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        return mb_strlen($value) > $max ? mb_substr($value, 0, $max) : $value;
     }
 }

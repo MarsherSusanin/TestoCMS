@@ -65,4 +65,30 @@ class LandingBlockSchemaTest extends TestCase
         $this->expectException(ValidationException::class);
         $this->validate([['type' => 'hero', 'data' => ['heading' => 'H'], 'children' => []]]);
     }
+
+    public function test_item_count_is_capped(): void
+    {
+        $items = array_fill(0, 200, ['value' => '1', 'label' => 'x']);
+
+        $this->expectException(ValidationException::class);
+        $this->validate([['type' => 'stats', 'data' => ['items' => $items]]]);
+    }
+
+    public function test_per_field_string_length_is_capped(): void
+    {
+        try {
+            $this->validate([['type' => 'features', 'data' => ['items' => [
+                ['title' => str_repeat('x', 5000), 'text' => 'ok'],
+            ]]]]);
+            $this->fail('Expected an over-long field to be rejected.');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('exceeds the maximum length', implode(' ', $e->errors()['content_blocks'] ?? []));
+        }
+    }
+
+    public function test_hero_string_length_is_capped(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->validate([['type' => 'hero', 'data' => ['heading' => str_repeat('x', 5000)]]]);
+    }
 }

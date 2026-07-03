@@ -142,4 +142,43 @@ class SeoCacheHardeningTest extends TestCase
         $after = $resolver->resolve('page', $page->id, 'en', ['meta_title' => 'Fallback']);
         $this->assertSame('Overridden', $after['meta_title']);
     }
+
+    public function test_deleting_the_parent_entity_busts_the_override_cache(): void
+    {
+        $page = $this->publishedPage('override-delete');
+        SeoOverride::query()->create([
+            'entity_type' => 'page',
+            'entity_id' => $page->id,
+            'locale' => 'en',
+            'meta_title' => 'Phantom',
+        ]);
+        $resolver = app(SeoResolverService::class);
+
+        // Prime the cache with the override present.
+        $this->assertSame('Phantom', $resolver->resolve('page', $page->id, 'en', ['meta_title' => 'Fallback'])['meta_title']);
+
+        // Deleting the page purges seo_overrides via a query-builder delete (no
+        // model event) — the observer must forget the resolver cache, else a
+        // reused id would serve the deleted override's meta for the full TTL.
+        $page->delete();
+
+        $after = $resolver->resolve('page', $page->id, 'en', ['meta_title' => 'Fallback']);
+        $this->assertSame('Fallback', $after['meta_title']);
+    }
+
+    public function test_meta_is_clamped_by_character_count_not_display_width(): void
+    {
+        $page = $this->publishedPage('cjk-clamp');
+        $resolver = app(SeoResolverService::class);
+
+        // 300 full-width CJK chars: char count 300 > 255. Width-based truncation
+        // (the old Str::limit) would cut to ~127; char-based cuts to exactly 255.
+        $seo = $resolver->resolve('page', $page->id, 'en', [
+            'meta_title' => str_repeat('中', 300),
+            'meta_description' => str_repeat('あ', 800), // 800 <= 1000 → untouched
+        ]);
+
+        $this->assertSame(255, mb_strlen($seo['meta_title']));
+        $this->assertSame(800, mb_strlen($seo['meta_description']));
+    }
 }

@@ -6,7 +6,9 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\RedirectRule;
+use App\Modules\SEO\Services\SeoCacheKeys;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -60,6 +62,14 @@ class ContentEntityCleanupObserver
                     ->delete();
             }
         });
+
+        // The seo_overrides rows are deleted via the query builder above, which
+        // fires no model events — so SeoOverride's own cache-busting never runs.
+        // Forget the resolver's per-entity override cache here or a deleted
+        // (and possibly id-reused) entity keeps serving a phantom meta/robots.
+        foreach ((array) config('cms.supported_locales', ['en']) as $locale) {
+            Cache::forget(SeoCacheKeys::override($entityType, $entityId, (string) $locale));
+        }
     }
 
     /**

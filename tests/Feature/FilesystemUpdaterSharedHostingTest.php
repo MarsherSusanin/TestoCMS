@@ -172,6 +172,38 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
         $this->assertSame('NEW', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
     }
 
+    public function test_whole_window_outage_still_marks_the_rollback_as_rolled_back(): void
+    {
+        [$baseRoot, $publicRoot, $updateStorageRoot] = $this->makeWorkspaceRoots();
+        $this->seedBaseInstall($baseRoot, 'OLD');
+        $this->seedSharedHostingPublicRoot($publicRoot, 'OLD');
+        $this->installModuleFixture('acme/demo');
+        $zipPath = $this->makeUpdaterZip('1.2.0', 'NEW');
+
+        // Strict mode AND the endpoint is unreachable for the ENTIRE window —
+        // both the apply health check and the post-rollback health check fail.
+        // The files are still correctly restored, so the backup must read
+        // rolled_back (health_unverified), never failed.
+        config()->set('updates.health_check_url', 'https://health.test/up');
+        config()->set('updates.health_check_strict', true);
+        Http::fake(function (): void {
+            throw new ConnectionException('Connection refused');
+        });
+
+        try {
+            $this->applyUpdate($baseRoot, $publicRoot, $updateStorageRoot, $zipPath);
+            $this->fail('Expected the failed update to throw.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('unreachable', $e->getMessage());
+        }
+
+        $this->assertSame('OLD', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
+
+        $backup = CoreBackup::query()->latest('id')->firstOrFail();
+        $this->assertSame('rolled_back', $backup->status);
+        $this->assertSame('health_unverified', $backup->restore_status);
+    }
+
     /**
      * @return array{0: string, 1: string, 2: string}
      */
