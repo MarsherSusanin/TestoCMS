@@ -1,0 +1,18 @@
+{
+    "result": {
+        "mode": "filesystem-updater",
+        "status": "success",
+        "target_version": "1.2.0-rc.1",
+        "backup_key": "bkp_20260930165313_6sqr7x",
+        "preflight": {
+            "ok": true,
+            "issues": [],
+            "warnings": [],
+            "mode": "filesystem-updater"
+        },
+        "from_version": "1.0.0"
+    },
+    "migration_count_before": 14,
+    "migration_count_after": 14,
+    "maintenance": false
+}

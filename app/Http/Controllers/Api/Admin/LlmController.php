@@ -3,177 +3,101 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Page;
-use App\Models\PageTranslation;
-use App\Models\Post;
-use App\Models\PostTranslation;
-use App\Modules\Content\Services\BlockSchemaValidator;
-use App\Modules\Core\Contracts\BlockRendererContract;
-use App\Modules\Core\Contracts\ContentRevisionServiceContract;
+use App\Modules\Content\Services\ContentPublicationGuard;
+use App\Modules\Content\Services\PageContentService;
+use App\Modules\Content\Services\PostContentService;
 use App\Modules\LLM\Services\LlmGatewayService;
 use App\Modules\Ops\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class LlmController extends Controller
 {
     public function __construct(
-        private readonly LlmGatewayService $llmGatewayService,
-        private readonly BlockSchemaValidator $blockSchemaValidator,
-        private readonly BlockRendererContract $blockRenderer,
-        private readonly ContentRevisionServiceContract $revisionService,
-        private readonly AuditLogger $auditLogger,
+        private readonly LlmGatewayService $gateway,
+        private readonly ContentPublicationGuard $publication,
+        private readonly PageContentService $pages,
+        private readonly PostContentService $posts,
+        private readonly AuditLogger $audit,
     ) {}
 
     public function generatePost(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'prompt' => 'required|string|min:10',
-            'locale' => 'nullable|string|max:8',
-            'provider' => 'nullable|string|max:64',
-            'save_as_draft' => 'nullable|boolean',
-        ]);
-
-        $result = $this->llmGatewayService->generate('generate-post', $validated, $request->user()?->id);
-
-        if (($result['status'] ?? '') !== 'ok') {
-            return response()->json(['error' => $result['message'] ?? 'Generation failed'], 422);
-        }
-
-        $draft = null;
-        if ((bool) ($validated['save_as_draft'] ?? true)) {
-            $locale = strtolower((string) ($validated['locale'] ?? config('cms.default_locale')));
-            $rawText = $this->extractText($result['output'] ?? []);
-
-            $post = Post::query()->create([
-                'author_id' => $request->user()?->id,
-                'status' => 'draft',
-            ]);
-
-            PostTranslation::query()->create([
-                'post_id' => $post->id,
-                'locale' => $locale,
-                'title' => mb_substr($rawText ?: 'Generated draft', 0, 120),
-                'slug' => 'draft-'.time().'-'.$post->id,
-                'content_html' => '<p>'.e($rawText).'</p>',
-                'content_plain' => $rawText,
-            ]);
-
-            $this->revisionService->snapshot('post', $post->id, $post->toArray(), $request->user()?->id, $locale);
-            $this->auditLogger->log('llm.generate_post', $post, ['generation_id' => $result['generation_id'] ?? null], $request);
-
-            $draft = $post->load('translations');
-        }
-
-        return response()->json([
-            'data' => [
-                'generation' => $result,
-                'draft' => $draft,
-                'draft_only' => true,
-            ],
-        ], 201);
+        return $this->generateContent($request, 'post');
     }
 
     public function generatePage(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'prompt' => 'required|string|min:10',
-            'locale' => 'nullable|string|max:8',
-            'provider' => 'nullable|string|max:64',
-            'save_as_draft' => 'nullable|boolean',
-        ]);
+        return $this->generateContent($request, 'page');
+    }
 
-        $result = $this->llmGatewayService->generate('generate-page', $validated, $request->user()?->id);
+    /** @return array<string, mixed> */
+    private function validateInput(Request $request, bool $content): array
+    {
+        if (is_string($request->input('locale'))) {
+            $request->merge(['locale' => strtolower(trim($request->input('locale')))]);
+        }
+        if (is_string($request->input('provider'))) {
+            $request->merge(['provider' => strtolower(trim($request->input('provider')))]);
+        }
+        $rules = [
+            'prompt' => ['required', 'string', 'min:10', 'max:'.(int) config('llm.max_input_chars', 12000)],
+            'provider' => ['nullable', 'string', Rule::in(array_keys((array) config('llm.providers', [])))],
+        ];
+        if ($content) {
+            $rules['locale'] = ['nullable', 'string', Rule::in((array) config('cms.supported_locales', ['en']))];
+            $rules['save_as_draft'] = 'nullable|boolean';
+        }
 
+        return $request->validate($rules);
+    }
+
+    private function generateContent(Request $request, string $type): JsonResponse
+    {
+        $input = $this->validateInput($request, true);
+        $save = (bool) ($input['save_as_draft'] ?? true);
+        if ($save) {
+            // Guard role and PAT scope before a paid call; service checks again
+            // afterwards in case access changes while generation is running.
+            $this->publication->assertCanMutate($request->user(), $type, null, 'draft');
+        }
+        $result = $this->gateway->generate('generate-'.$type, $input, $request->user()?->id);
         if (($result['status'] ?? '') !== 'ok') {
-            return response()->json(['error' => $result['message'] ?? 'Generation failed'], 422);
+            return $this->failed($result);
         }
-
         $draft = null;
-        if ((bool) ($validated['save_as_draft'] ?? true)) {
-            $locale = strtolower((string) ($validated['locale'] ?? config('cms.default_locale')));
-            $rawText = $this->extractText($result['output'] ?? []);
-
-            $blocks = [
-                [
-                    'type' => 'rich_text',
-                    'data' => [
-                        'html' => '<p>'.e($rawText).'</p>',
-                    ],
-                ],
-            ];
-            $this->blockSchemaValidator->validateOrFail($blocks);
-
-            $page = Page::query()->create([
-                'author_id' => $request->user()?->id,
-                'status' => 'draft',
-                'page_type' => 'landing',
-            ]);
-
-            PageTranslation::query()->create([
-                'page_id' => $page->id,
-                'locale' => $locale,
-                'title' => mb_substr($rawText ?: 'Generated page', 0, 120),
-                'slug' => 'draft-'.time().'-'.$page->id,
-                'content_blocks' => $blocks,
-                'rendered_html' => $this->blockRenderer->render($blocks),
-            ]);
-
-            $this->revisionService->snapshot('page', $page->id, $page->toArray(), $request->user()?->id, $locale);
-            $this->auditLogger->log('llm.generate_page', $page, ['generation_id' => $result['generation_id'] ?? null], $request);
-
-            $draft = $page->load('translations');
+        if ($save) {
+            $text = $result['text'];
+            $locale = $input['locale'] ?? config('cms.default_locale');
+            $translation = ['locale' => $locale, 'title' => mb_substr($text, 0, 120), 'slug' => 'draft-'.Str::uuid(),
+                'content_format' => 'html', 'content_html' => '<p>'.e($text).'</p>',
+                'content_blocks' => [['type' => 'rich_text', 'data' => ['html' => '<p>'.e($text).'</p>']]]];
+            $payload = ['status' => 'draft', 'translations' => [$translation]];
+            $draft = $type === 'page' ? $this->pages->createFromValidated($payload, $request->user()) : $this->posts->createFromValidated($payload, $request->user());
+            $this->audit->log('llm.generate_'.$type, $draft, ['generation_id' => $result['generation_id']], $request);
         }
 
-        return response()->json([
-            'data' => [
-                'generation' => $result,
-                'draft' => $draft,
-                'draft_only' => true,
-            ],
-        ], 201);
+        return response()->json(['data' => ['generation' => $result, 'draft' => $draft, 'draft_only' => true]], 201);
     }
 
     public function generateSeo(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'prompt' => 'required|string|min:10',
-            'provider' => 'nullable|string|max:64',
-        ]);
-
-        $result = $this->llmGatewayService->generate('generate-seo', $validated, $request->user()?->id);
-
+        $result = $this->gateway->generate('generate-seo', $this->validateInput($request, false), $request->user()?->id);
         if (($result['status'] ?? '') !== 'ok') {
-            return response()->json(['error' => $result['message'] ?? 'Generation failed'], 422);
+            return $this->failed($result);
         }
 
-        $text = $this->extractText($result['output'] ?? []);
-
-        return response()->json([
-            'data' => [
-                'generation' => $result,
-                'suggestions' => [
-                    'meta_title' => mb_substr($text, 0, 60),
-                    'meta_description' => mb_substr($text, 0, 160),
-                ],
-                'draft_only' => true,
-            ],
-        ]);
+        return response()->json(['data' => ['generation' => $result, 'suggestions' => [
+            'meta_title' => mb_substr($result['text'], 0, 60), 'meta_description' => mb_substr($result['text'], 0, 160),
+        ], 'draft_only' => true]]);
     }
 
-    /**
-     * @param  array<string, mixed>  $output
-     */
-    private function extractText(array $output): string
+    /** @param array<string, mixed> $result */
+    private function failed(array $result): JsonResponse
     {
-        if (isset($output['output_text']) && is_string($output['output_text'])) {
-            return trim($output['output_text']);
-        }
-
-        if (isset($output['content'][0]['text']) && is_string($output['content'][0]['text'])) {
-            return trim($output['content'][0]['text']);
-        }
-
-        return trim((string) json_encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        return response()->json(['error' => $result['message'] ?? 'Generation failed',
+            'error_code' => $result['error_code'] ?? 'llm_generation_failed', 'generation_id' => $result['generation_id'] ?? null], 422);
     }
 }

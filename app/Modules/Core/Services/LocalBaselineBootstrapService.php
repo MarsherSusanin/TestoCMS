@@ -4,7 +4,7 @@ namespace App\Modules\Core\Services;
 
 use App\Modules\Auth\Services\DefaultAdminBootstrapService;
 use App\Modules\Caching\Services\PageCacheService;
-use App\Modules\Content\Services\SlugResolverService;
+use App\Modules\Caching\Services\PublicContentVersionService;
 use Database\Seeders\DemoContentSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +15,6 @@ class LocalBaselineBootstrapService
     public function __construct(
         private readonly DefaultAdminBootstrapService $defaultAdminBootstrap,
         private readonly PageCacheService $pageCacheService,
-        private readonly SlugResolverService $slugResolverService,
     ) {}
 
     public function ensureBaseline(): void
@@ -31,10 +30,15 @@ class LocalBaselineBootstrapService
                 return;
             }
 
-            $this->pageCacheService->flushAll();
-            $this->slugResolverService->flushAll();
-
-            app(DemoContentSeeder::class)->run();
+            DB::transaction(function (): void {
+                // Serialize baseline initialization with all other public mutations.
+                DB::table('public_content_versions')->where('id', 1)->lockForUpdate()->first();
+                if ($this->isContentBaselineEmpty()) {
+                    app(DemoContentSeeder::class)->run();
+                    app(PublicContentVersionService::class)->bump();
+                }
+            }, 3);
+            $this->pageCacheService->flushAll(false);
 
             Log::info('Local baseline demo content restored from empty database.');
         } catch (\Throwable $e) {

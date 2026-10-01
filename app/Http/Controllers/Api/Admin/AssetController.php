@@ -4,15 +4,21 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
+use App\Modules\Content\Exceptions\AssetInUseException;
+use App\Modules\Content\Exceptions\AssetStorageException;
+use App\Modules\Content\Services\AssetDeletionService;
+use App\Modules\Content\Services\AssetUsageService;
+use App\Modules\Content\Services\ContentMutationGuard;
 use App\Modules\Ops\Services\AuditLogger;
 use App\Support\AdminAssetPickerPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class AssetController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(private readonly AuditLogger $auditLogger, private readonly AssetDeletionService $deletion, private readonly ContentMutationGuard $guard, private readonly AssetUsageService $usage) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -76,22 +82,28 @@ class AssetController extends Controller
 
         abort_if($path === null, 422, 'Either file upload or storage_path is required.');
 
-        $asset = Asset::query()->create([
-            'type' => $validated['type'] ?? $this->resolveAssetType($mimeType),
-            'disk' => $disk,
-            'storage_path' => $path,
-            'public_url' => $publicUrl,
-            'mime_type' => $mimeType,
-            'size' => $size,
-            'width' => $width,
-            'height' => $height,
-            'checksum' => null,
-            'alt' => $validated['alt'] ?? null,
-            'title' => $validated['title'] ?? null,
-            'caption' => $validated['caption'] ?? null,
-            'credits' => $validated['credits'] ?? null,
-            'metadata' => $validated['metadata'] ?? null,
-        ]);
+        $asset = DB::transaction(function () use ($validated, $disk, $path, $publicUrl, $mimeType, $size, $width, $height): Asset {
+            $this->guard->lockMedia();
+            $this->usage->assertReferencesAvailable(Storage::disk($disk)->url($path));
+
+            return Asset::query()->create([
+                'type' => $validated['type'] ?? $this->resolveAssetType($mimeType),
+                'disk' => $disk,
+                'storage_path' => $path,
+                'public_url' => $publicUrl,
+                'mime_type' => $mimeType,
+                'size' => $size,
+                'width' => $width,
+                'height' => $height,
+                'checksum' => null,
+                'alt' => $validated['alt'] ?? null,
+                'title' => $validated['title'] ?? null,
+                'caption' => $validated['caption'] ?? null,
+                'credits' => $validated['credits'] ?? null,
+                'metadata' => $validated['metadata'] ?? null,
+            ]);
+
+        });
 
         $this->auditLogger->log('asset.create', $asset, [], $request);
 
@@ -113,8 +125,13 @@ class AssetController extends Controller
             'metadata' => 'nullable|array',
         ]);
 
-        $asset->fill($validated);
-        $asset->save();
+        $asset = DB::transaction(function () use ($asset, $validated): Asset {
+            $this->guard->lockMedia();
+            $locked = Asset::query()->lockForUpdate()->findOrFail($asset->id);
+            $locked->fill($validated)->save();
+
+            return $locked;
+        });
 
         $this->auditLogger->log('asset.update', $asset, [], $request);
 
@@ -123,8 +140,13 @@ class AssetController extends Controller
 
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
-        $asset->delete();
-
+        try {
+            $this->deletion->delete($asset);
+        } catch (AssetInUseException $exception) {
+            return response()->json(['error' => 'asset_in_use', 'message' => $exception->getMessage(), 'usages' => $exception->usages], 409);
+        } catch (AssetStorageException $exception) {
+            return response()->json(['error' => 'asset_storage_cleanup_failed', 'message' => $exception->getMessage()], 503);
+        }
         $this->auditLogger->log('asset.delete', $asset, [], $request);
 
         return response()->json([], 204);

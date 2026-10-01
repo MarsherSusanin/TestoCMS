@@ -4,6 +4,7 @@ namespace App\Modules\Web\Services;
 
 use App\Models\PageTranslation;
 use App\Models\PostTranslation;
+use App\Modules\Content\Services\SearchTextProjectionService;
 use App\Modules\Core\Services\SiteChromeSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -156,6 +157,7 @@ class PublicSearchService
                 'post_translations.slug',
                 'post_translations.excerpt',
                 'post_translations.content_plain',
+                'post_translations.search_text',
                 'post_translations.meta_description',
                 'posts.published_at',
                 'posts.updated_at',
@@ -171,7 +173,7 @@ class PublicSearchService
             $driver,
             $query,
             ['post_translations.title', 'post_translations.excerpt', 'post_translations.meta_description'],
-            ['title', 'content_plain'],
+            ['search_text'],
         );
 
         return $builder
@@ -179,7 +181,7 @@ class PublicSearchService
             ->limit(500)
             ->get()
             ->map(function (PostTranslation $translation) use ($locale, $blogPrefix): array {
-                $excerpt = trim((string) ($translation->excerpt ?: $translation->meta_description ?: $translation->content_plain ?: ''));
+                $excerpt = app(SearchTextProjectionService::class)->plainText((string) ($translation->excerpt ?: $translation->meta_description ?: $translation->content_plain ?: ''));
 
                 return [
                     'type' => 'post',
@@ -203,6 +205,8 @@ class PublicSearchService
                 'page_translations.page_id',
                 'page_translations.title',
                 'page_translations.slug',
+                'page_translations.search_text',
+                'page_translations.content_blocks',
                 'page_translations.rendered_html',
                 'page_translations.meta_description',
                 'pages.published_at',
@@ -219,7 +223,7 @@ class PublicSearchService
             $driver,
             $query,
             ['page_translations.title', 'page_translations.meta_description'],
-            ['title', 'rendered_html'],
+            ['search_text'],
         );
 
         return $builder
@@ -227,7 +231,7 @@ class PublicSearchService
             ->limit(500)
             ->get()
             ->map(function (PageTranslation $translation) use ($locale): array {
-                $html = strip_tags((string) ($translation->rendered_html ?? ''));
+                $html = app(SearchTextProjectionService::class)->pageText($translation->attributesToArray());
                 $excerpt = trim((string) ($translation->meta_description ?: $html));
                 $slug = (string) $translation->slug;
                 $url = $slug === 'home'
@@ -249,7 +253,7 @@ class PublicSearchService
      * GIN to_tsvector (PostgreSQL) indexes for the large body columns instead
      * of a non-sargable leading-wildcard LIKE on LONGTEXT, while keeping a
      * substring LIKE on the short columns (title/excerpt/meta) for partial
-     * matches. Other drivers (sqlite/dev) search only the short columns.
+     * matches. SQLite scans the normalized, Unicode-folded author projection.
      *
      * @param  \Illuminate\Database\Eloquent\Builder<*>  $builder
      * @param  list<string>  $shortColumns  qualified short columns for substring LIKE
@@ -257,12 +261,13 @@ class PublicSearchService
      */
     private function applyTextSearch(object $builder, string $driver, string $term, array $shortColumns, array $fulltextColumns): void
     {
-        $like = '%'.$term.'%';
+        $term = app(SearchTextProjectionService::class)->fold($term);
+        $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term).'%';
         $likeOperator = $driver === 'pgsql' ? 'ilike' : 'like';
 
         $builder->where(function ($q) use ($driver, $term, $like, $likeOperator, $shortColumns, $fulltextColumns): void {
             foreach ($shortColumns as $column) {
-                $q->orWhere($column, $likeOperator, $like);
+                $q->orWhereRaw($column.' '.$likeOperator." ? ESCAPE '!'", [$like]);
             }
 
             if ($driver === 'mysql' || $driver === 'mariadb') {
@@ -273,9 +278,9 @@ class PublicSearchService
                     $fulltextColumns
                 ));
                 $q->orWhereRaw("to_tsvector('simple', {$vector}) @@ plainto_tsquery('simple', ?)", [$term]);
+            } else {
+                $q->orWhereRaw("search_text LIKE ? ESCAPE '!'", [$like]);
             }
-            // sqlite / other drivers: the short columns above cover search; the
-            // LONGTEXT body is intentionally not scanned with a leading wildcard.
         });
     }
 }

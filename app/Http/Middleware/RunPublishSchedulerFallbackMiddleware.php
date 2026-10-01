@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Modules\Caching\Services\PublicContentVersionService;
 use App\Modules\Ops\Services\PublishSchedulerService;
+use App\Modules\Setup\Services\EnvWriterService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +16,13 @@ class RunPublishSchedulerFallbackMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
+        if ((! app()->runningUnitTests() && ! EnvWriterService::isInstalled())
+            || $request->is('setup*', 'storage*', 'up', 'healthz', 'preview*', 'admin/updates/apply', 'admin/updates/rollback/*')
+            || app()->isDownForMaintenance()
+            || ! app(PublicContentVersionService::class)->available()) {
+            return $next($request);
+        }
+
         $lastRun = (int) Cache::get('cms:scheduler:last-run', 0);
 
         if ((now()->timestamp - $lastRun) > 30) {

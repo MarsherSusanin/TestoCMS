@@ -228,10 +228,6 @@ trait LocalizedContentHelpers
         string $entityLabel
     ): void {
         foreach ($translations as $locale => $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
             $slug = trim((string) ($item['slug'] ?? ''));
             if ($slug === '') {
                 continue;

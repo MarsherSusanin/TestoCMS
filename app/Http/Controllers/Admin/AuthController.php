@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Modules\Core\Services\LocalBaselineBootstrapService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,7 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->put(EnsureActiveUser::SESSION_VERSION, (int) $user?->auth_version);
 
         if ($user !== null) {
             $user->last_login_at = now();

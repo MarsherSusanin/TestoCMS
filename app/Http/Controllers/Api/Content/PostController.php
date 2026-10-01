@@ -7,9 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Modules\Core\DTO\PostDto;
-use Carbon\Carbon;
+use App\Modules\Web\Services\PublicVisibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
@@ -17,27 +18,28 @@ class PostController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        DB::connection()->useWriteConnectionWhenReading();
         $locale = $this->resolveLocaleFromRequest($request);
         $perPage = min((int) config('cms.max_per_page', 100), max(1, (int) $request->query('per_page', config('cms.default_per_page', 20))));
 
         $query = Post::query()
             ->published()
+            ->whereHas('translations', fn ($q) => $q->where('locale', $locale))
             ->with([
                 'translations' => fn ($q) => $q->where('locale', $locale),
+                'categories' => fn ($q) => $q->where('is_active', true)->whereHas('translations', fn ($t) => $t->where('locale', $locale)),
                 'categories.translations' => fn ($q) => $q->where('locale', $locale),
             ]);
 
         if ($request->filled('category')) {
             $categorySlug = (string) $request->query('category');
-            $query->whereHas('categories.translations', function ($q) use ($locale, $categorySlug): void {
-                $q->where('locale', $locale)->where('slug', $categorySlug);
-            });
+            $query->whereHas('categories', fn ($q) => $q->where('is_active', true)->whereHas('translations', fn ($t) => $t->where('locale', $locale)->where('slug', $categorySlug)));
         }
 
-        $paginator = $query->orderByDesc('published_at')->paginate($perPage)->withQueryString();
+        $paginator = $query->orderByDesc('published_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
 
         $items = collect($paginator->items())->map(function (Post $post): array {
-            $translation = $post->translations->first() ?? $post->translations()->where('locale', config('cms.default_locale'))->first();
+            $translation = $post->translations->first();
             $dto = PostDto::fromModels($post, $translation);
 
             return array_merge($dto->toArray(), [
@@ -53,9 +55,6 @@ class PostController extends Controller
             ]);
         })->values()->all();
 
-        $lastModified = $paginator->getCollection()->max('updated_at');
-        $lastModifiedCarbon = $lastModified instanceof Carbon ? $lastModified : null;
-
         return $this->cacheableJson($request, [
             'data' => $items,
             'meta' => [
@@ -64,21 +63,25 @@ class PostController extends Controller
                 'total' => $paginator->total(),
                 'locale' => $locale,
             ],
-        ], $lastModifiedCarbon);
+        ], null);
     }
 
     public function show(Request $request, string $slug): JsonResponse
     {
+        DB::connection()->useWriteConnectionWhenReading();
         $locale = $this->resolveLocaleFromRequest($request);
 
         $translation = PostTranslation::query()
             ->where('locale', $locale)
             ->where('slug', $slug)
-            ->with(['post.categories.translations' => fn ($q) => $q->where('locale', $locale)])
+            ->with([
+                'post.categories' => fn ($q) => $q->where('is_active', true)->whereHas('translations', fn ($t) => $t->where('locale', $locale)),
+                'post.categories.translations' => fn ($q) => $q->where('locale', $locale),
+            ])
             ->firstOrFail();
 
         $post = $translation->post;
-        abort_unless($post !== null && $post->status === 'published', 404);
+        abort_unless($post !== null && app(PublicVisibilityService::class)->isLive($post), 404);
 
         $dto = PostDto::fromModels($post, $translation);
 
@@ -94,6 +97,6 @@ class PostController extends Controller
                     ];
                 })->values()->all(),
             ]),
-        ], $post->updated_at);
+        ], null);
     }
 }

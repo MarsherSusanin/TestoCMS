@@ -1,18 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Offset ''optional'' on array\{passed\: false, label\: string, detail\: string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Console/Commands/CmsSetupCommand.php
-
-		-
-			message: '#^Ternary operator condition is always false\.$#'
-			identifier: ternary.alwaysFalse
-			count: 1
-			path: app/Console/Commands/CmsSetupCommand.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between non\-empty\-string and '''' will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -41,18 +29,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Http/Controllers/Admin/AssetCrudController.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/Admin/AssetCrudController.php
-
-		-
-			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Http/Controllers/Admin/CategoryCrudController.php
 
 		-
 			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
@@ -115,12 +91,6 @@ parameters:
 			path: app/Http/Controllers/Api/Content/CategoryController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$updated_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Content/CategoryController.php
-
-		-
 			message: '#^Parameter \#1 \$category of static method App\\Modules\\Core\\DTO\\CategoryDto\:\:fromModels\(\) expects App\\Models\\Category, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
@@ -131,18 +101,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Api/Content/CategoryController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Content/PageController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$updated_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Content/PageController.php
 
 		-
 			message: '#^Parameter \#1 \$page of static method App\\Modules\\Core\\DTO\\PageDto\:\:fromModels\(\) expects App\\Models\\Page, Illuminate\\Database\\Eloquent\\Model given\.$#'
@@ -169,19 +127,7 @@ parameters:
 			path: app/Http/Controllers/Api/Content/PostController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Content/PostController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$translations\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Content/PostController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$updated_at\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Api/Content/PostController.php
@@ -213,12 +159,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/FeedController.php
-
-		-
-			message: '#^Cannot call method toRssString\(\) on string\.$#'
-			identifier: method.nonObject
 			count: 1
 			path: app/Http/Controllers/Web/FeedController.php
 
@@ -355,12 +295,6 @@ parameters:
 			path: app/Modules/Content/Services/PageContentService.php
 
 		-
-			message: '#^Call to an undefined method App\\Modules\\Content\\Services\\PageContentService\:\:shouldRequireDefaultLocale\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Content/Services/PageContentService.php
-
-		-
 			message: '#^Method App\\Modules\\Content\\Services\\PageContentService\:\:createFromValidated\(\) should return App\\Models\\Page but returns Illuminate\\Database\\Eloquent\\Model\.$#'
 			identifier: return.type
 			count: 1
@@ -475,12 +409,6 @@ parameters:
 			path: app/Modules/Content/Services/PostContentService.php
 
 		-
-			message: '#^Call to an undefined method App\\Modules\\Content\\Services\\PostContentService\:\:shouldRequireDefaultLocale\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Content/Services/PostContentService.php
-
-		-
 			message: '#^Method App\\Modules\\Content\\Services\\PostContentService\:\:createFromValidated\(\) should return App\\Models\\Post but returns Illuminate\\Database\\Eloquent\\Model\.$#'
 			identifier: return.type
 			count: 1
@@ -519,7 +447,7 @@ parameters:
 		-
 			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
-			count: 2
+			count: 1
 			path: app/Modules/Content/Services/PostTranslationNormalizer.php
 
 		-
@@ -565,12 +493,6 @@ parameters:
 			path: app/Modules/Core/DTO/CategoryDto.php
 
 		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Core/DTO/PageDto.php
-
-		-
 			message: '#^Parameter \$robotsDirectives of class App\\Modules\\Core\\DTO\\PageDto constructor expects array\|null, string\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -605,12 +527,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Core/DTO/PageDto.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Core/DTO/PostDto.php
 
 		-
 			message: '#^Parameter \$robotsDirectives of class App\\Modules\\Core\\DTO\\PostDto constructor expects array\|null, string\|null given\.$#'
@@ -775,12 +691,6 @@ parameters:
 			path: app/Modules/SEO/Services/StructuredDataFactory.php
 
 		-
-			message: '#^Cannot call method toAtomString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/SEO/Services/StructuredDataFactory.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -791,30 +701,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/SEO/Services/StructuredDataFactory.php
-
-		-
-			message: '#^Left side of \|\| is always false\.$#'
-			identifier: booleanOr.leftAlwaysFalse
-			count: 1
-			path: app/Modules/Setup/Services/SetupFinalizationService.php
-
-		-
-			message: '#^Offset 1 on array\{non\-falsy\-string, non\-empty\-string\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Modules/Setup/Services/SetupFinalizationService.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
-			path: app/Modules/Setup/Services/SystemCheckService.php
-
-		-
-			message: '#^Offset ''optional'' on array\{passed\: bool, label\: string, detail\: string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Modules/Setup/Services/SystemCheckService.php
 
 		-
 			message: '#^PHPDoc tag @param references unknown parameter\: \$command$#'

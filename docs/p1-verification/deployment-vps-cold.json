@@ -1,0 +1,21 @@
+{
+    "health_up": 200,
+    "healthz": 200,
+    "login_form": 200,
+    "login_post": 302,
+    "admin_pages": 200,
+    "media_get": 200,
+    "media_head": 200,
+    "media_range": 206,
+    "uploads_and_deletes": true,
+    "installed": true,
+    "admin_count": 1,
+    "admin_hash_fingerprint": "363af61b2f98aff04ec09c601f089df0c67168e47422327b270b57a7433361be",
+    "provided_password_valid": true,
+    "dotenv_shell_not_executed": true,
+    "env_sha256": "8d5e2e12044f4a3ebc0ee9e4d912283fd4a6e9a6f844f47b9ad39b1c5dec3a5d",
+    "database_driver": "pgsql",
+    "database_version": "PostgreSQL 16.14 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "physical_media_link_absent": true,
+    "pg_dump_version": "pg_dump (PostgreSQL) 16.15"
+}

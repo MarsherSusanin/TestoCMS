@@ -13,6 +13,7 @@ class CoreBackupService
         private readonly CoreUpdateSettingsService $settings,
         private readonly CoreUpdateEnvironment $environment,
         private readonly ManagedPublicRootSyncService $publicRootSync,
+        private readonly PostgresSnapshotService $postgresSnapshots,
     ) {}
 
     public function createBackup(string $fromVersion, string $toVersion, ?int $actorId = null): CoreBackup
@@ -26,6 +27,7 @@ class CoreBackupService
         File::ensureDirectoryExists($codePath);
 
         $manifest = [
+            'format_version' => 2,
             'created_at' => now()->toIso8601String(),
             'paths' => [],
             'public_root' => $this->publicRootSync->activePublicRootPath(),
@@ -69,10 +71,24 @@ class CoreBackupService
         $publicSnapshotPath = $backupPath.DIRECTORY_SEPARATOR.'public';
         $manifest['public_paths'] = $this->publicRootSync->snapshotManagedPaths($publicSnapshotPath);
 
+        if ((string) config('database.default') === 'pgsql') {
+            $databaseSnapshot = $this->postgresSnapshots->dump($backupPath);
+            $dbDumpPath = $databaseSnapshot['path'];
+            $manifest['postgres'] = $databaseSnapshot['metadata'];
+            $this->postgresSnapshots->verifyDump($dbDumpPath, $manifest['postgres'], $backupPath);
+            $manifest['postgres']['verified_at'] = now()->toIso8601String();
+        } else {
+            $dbDumpPath = $this->createDatabaseDump($backupPath);
+        }
+        $manifest['checksums'] = $this->snapshotChecksums($backupPath);
         $manifestPath = $backupPath.DIRECTORY_SEPARATOR.'manifest.json';
-        File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-        $dbDumpPath = $this->createDatabaseDump($backupPath);
+        $manifest['backup'] = [
+            'backup_key' => $backupKey, 'from_version' => $fromVersion, 'to_version' => $toVersion,
+            'backup_path' => $backupPath, 'db_dump_path' => $dbDumpPath, 'manifest_path' => $manifestPath,
+            'actor_id' => $actorId,
+        ];
+        File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        chmod($manifestPath, 0600);
 
         $backup = CoreBackup::query()->create([
             'backup_key' => $backupKey,
@@ -107,6 +123,35 @@ class CoreBackupService
             throw new RuntimeException('Backup manifest format is invalid.');
         }
 
+        $dumpPath = trim((string) ($backup->db_dump_path ?? ''));
+        if ($dumpPath !== '' && ! is_file($dumpPath)) {
+            throw new RuntimeException('Database dump referenced by backup is missing: '.$dumpPath);
+        }
+        foreach ($rawManifest['checksums'] ?? [] as $relative => $checksum) {
+            if (! is_string($relative) || str_contains($relative, '..') || str_starts_with($relative, '/')) {
+                throw new RuntimeException('Invalid backup checksum path.');
+            }
+            $path = $backupPath.'/'.$relative;
+            $actual = is_link($path) ? hash('sha256', 'link:'.readlink($path)) : (is_file($path) ? hash_file('sha256', $path) : false);
+            if ($actual === false || ! hash_equals($checksum, $actual)) {
+                throw new RuntimeException('Backup checksum mismatch: '.$relative);
+            }
+        }
+        foreach ($rawManifest['paths'] as $entry) {
+            if (! empty($entry['exists'])) {
+                $snapshot = $backupPath.'/code/'.($entry['path'] ?? '');
+                if (! file_exists($snapshot) && ! is_link($snapshot)) {
+                    throw new RuntimeException('Snapshot path missing for rollback: '.($entry['path'] ?? ''));
+                }
+            }
+        }
+        if ((string) config('database.default') === 'pgsql') {
+            if ($dumpPath === '') {
+                throw new RuntimeException('PostgreSQL automatic restore requires a database snapshot.');
+            }
+            $this->postgresSnapshots->restore($dumpPath, $rawManifest['postgres'] ?? [], $backupPath);
+        }
+
         foreach ($rawManifest['paths'] as $entry) {
             if (! is_array($entry)) {
                 continue;
@@ -137,7 +182,9 @@ class CoreBackupService
             );
         }
 
-        $this->restoreDatabaseDump(trim((string) ($backup->db_dump_path ?? '')));
+        if ((string) config('database.default') !== 'pgsql') {
+            $this->restoreDatabaseDump($dumpPath);
+        }
     }
 
     private function createDatabaseDump(string $backupPath): ?string
@@ -168,23 +215,6 @@ class CoreBackupService
             )));
 
             return null;
-        }
-
-        if ($connection === 'pgsql') {
-            $cfg = config('database.connections.pgsql', []);
-            $command = [
-                'pg_dump',
-                '-h', (string) ($cfg['host'] ?? '127.0.0.1'),
-                '-p', (string) ($cfg['port'] ?? '5432'),
-                '-U', (string) ($cfg['username'] ?? ''),
-                '-d', (string) ($cfg['database'] ?? ''),
-                '-f', $dumpPath,
-            ];
-            $this->runProcess($command, [
-                'PGPASSWORD' => (string) ($cfg['password'] ?? ''),
-            ], 'Database backup (pg_dump) failed');
-
-            return $dumpPath;
         }
 
         if ($connection === 'mysql') {
@@ -228,23 +258,6 @@ class CoreBackupService
                 return;
             }
             File::copy($dbDumpPath, $dbFile);
-
-            return;
-        }
-
-        if ($connection === 'pgsql') {
-            $cfg = config('database.connections.pgsql', []);
-            $command = [
-                'psql',
-                '-h', (string) ($cfg['host'] ?? '127.0.0.1'),
-                '-p', (string) ($cfg['port'] ?? '5432'),
-                '-U', (string) ($cfg['username'] ?? ''),
-                '-d', (string) ($cfg['database'] ?? ''),
-                '-f', $dbDumpPath,
-            ];
-            $this->runProcess($command, [
-                'PGPASSWORD' => (string) ($cfg['password'] ?? ''),
-            ], 'Database restore (psql) failed');
 
             return;
         }
@@ -330,6 +343,24 @@ class CoreBackupService
             }
             $backup->delete();
         }
+    }
+
+    private function snapshotChecksums(string $directory): array
+    {
+        $checksums = [];
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $file) {
+            $path = $file->getPathname();
+            $relative = substr($path, strlen($directory) + 1);
+            if ($file->isLink()) {
+                $checksums[$relative] = hash('sha256', 'link:'.readlink($path));
+            } elseif ($file->isFile()) {
+                $checksums[$relative] = hash_file('sha256', $path);
+            }
+        }
+        ksort($checksums);
+
+        return $checksums;
     }
 
     private function deletePath(string $path): void

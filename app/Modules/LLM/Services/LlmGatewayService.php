@@ -4,6 +4,7 @@ namespace App\Modules\LLM\Services;
 
 use App\Models\LlmGeneration;
 use App\Modules\Core\Contracts\LlmProviderContract;
+use App\Modules\LLM\Exceptions\LlmOutputException;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -26,7 +27,8 @@ class LlmGatewayService
         if ($provider === null) {
             return [
                 'status' => 'failed',
-                'message' => 'Unknown LLM provider: '.$providerName,
+                'message' => 'Unknown LLM provider.',
+                'error_code' => 'llm_unknown_provider',
             ];
         }
 
@@ -37,6 +39,7 @@ class LlmGatewayService
             return [
                 'status' => 'failed',
                 'message' => 'Prompt is too large.',
+                'error_code' => 'llm_input_too_large',
             ];
         }
 
@@ -53,10 +56,12 @@ class LlmGatewayService
 
         try {
             $output = $provider->generate($sanitizedInput);
+            $text = app(LlmTextNormalizer::class)->text($providerName, $output);
 
             $record->update([
                 'status' => 'completed',
                 'output_payload' => $output,
+                'model' => $output['model'] ?? config('llm.providers.'.$providerName.'.model', ''),
             ]);
 
             return [
@@ -64,18 +69,21 @@ class LlmGatewayService
                 'generation_id' => $record->id,
                 'provider' => $providerName,
                 'output' => $output,
+                'text' => $text,
                 'draft_only' => true,
             ];
         } catch (Throwable $exception) {
             $record->update([
                 'status' => 'failed',
-                'error_text' => $exception->getMessage(),
+                'error_text' => $exception instanceof LlmOutputException ? $exception->errorCode : 'llm_provider_failed',
+                'output_payload' => $output ?? null,
             ]);
 
             return [
                 'status' => 'failed',
                 'generation_id' => $record->id,
-                'message' => $exception->getMessage(),
+                'message' => $exception instanceof LlmOutputException ? $exception->getMessage() : 'The LLM provider is unavailable. Try again later.',
+                'error_code' => $exception instanceof LlmOutputException ? $exception->errorCode : 'llm_provider_failed',
             ];
         }
     }

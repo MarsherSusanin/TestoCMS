@@ -50,6 +50,19 @@ class ModuleCacheServiceTest extends TestCase
         $this->assertSame($cachedModules, $loadedModules);
     }
 
+    public function test_replacing_a_previously_required_cache_exposes_the_new_snapshot(): void
+    {
+        $service = app(ModuleCacheService::class);
+        $service->writeCacheFile([$this->moduleRow('testocms/booking')]);
+        $this->assertSame('testocms/booking', $this->readCachedModules()[0]['module_key']);
+
+        $service->writeCacheFile([$this->moduleRow('testocms/replaced')]);
+        $this->assertSame('testocms/replaced', $this->readCachedModules()[0]['module_key']);
+        $service->clearCacheFile();
+        $service->writeCacheFile([]);
+        $this->assertSame([], $this->readCachedModules());
+    }
+
     public function test_load_enabled_modules_self_heals_empty_cache_file_from_database(): void
     {
         CmsModule::query()->create([

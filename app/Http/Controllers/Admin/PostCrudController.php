@@ -149,7 +149,9 @@ class PostCrudController extends Controller
 
         $post->load(['translations', 'categories']);
 
-        return view('admin.posts.form', [
+        return view(auth()->user()?->can('update', $post) ? 'admin.posts.form' : 'admin.content-readonly', [
+            'entityType' => 'post',
+            'entity' => $post,
             'post' => $post,
             'translationsByLocale' => $this->translationsByLocale($post->translations),
             'locales' => $this->supportedLocales(),

@@ -9,6 +9,10 @@ class PostPolicy
 {
     public function before(User $user, string $ability): ?bool
     {
+        if ($user->status !== 'active') {
+            return false;
+        }
+
         if ($user->hasRole('superadmin')) {
             return true;
         }
@@ -33,12 +37,14 @@ class PostPolicy
 
     public function update(User $user, Post $post): bool
     {
-        return $user->can('posts:write');
+        return $user->can('posts:write')
+            && ($post->status !== 'published' || $user->can('posts:publish'));
     }
 
     public function delete(User $user, Post $post): bool
     {
-        return $user->can('posts:write');
+        return $user->can('posts:write')
+            && ($post->status !== 'published' || $user->can('posts:publish'));
     }
 
     public function publish(User $user, Post $post): bool

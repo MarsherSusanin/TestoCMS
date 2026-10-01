@@ -90,6 +90,9 @@ class ModuleCacheService
         $path = $this->cachePath();
         if (is_file($path)) {
             @unlink($path);
+            if (function_exists('opcache_invalidate')) {
+                opcache_invalidate($path, true);
+            }
         }
     }
 
@@ -111,6 +114,9 @@ class ModuleCacheService
         file_put_contents($tmp, $export, LOCK_EX);
         @chmod($tmp, 0644);
         rename($tmp, $path);
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($path, true);
+        }
     }
 
     /**

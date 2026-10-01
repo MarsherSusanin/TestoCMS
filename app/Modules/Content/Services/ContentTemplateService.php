@@ -4,6 +4,7 @@ namespace App\Modules\Content\Services;
 
 use App\Models\ContentTemplate;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class ContentTemplateService
 {
@@ -31,37 +32,52 @@ class ContentTemplateService
 
     public function create(User $actor, string $entityType, string $name, ?string $description, array $payload): ContentTemplate
     {
-        return ContentTemplate::query()->create([
-            'entity_type' => $entityType,
-            'name' => $name,
-            'description' => $description,
-            'payload' => $this->normalizePayload($entityType, $payload),
-            'is_active' => true,
-            'created_by' => $actor->id,
-            'updated_by' => $actor->id,
-        ]);
+        return DB::transaction(function () use ($actor, $entityType, $name, $description, $payload): ContentTemplate {
+            app(ContentMutationGuard::class)->lockMedia();
+            $normalized = $this->normalizePayload($entityType, $payload);
+            app(AssetUsageService::class)->assertReferencesAvailable($normalized);
+
+            return ContentTemplate::query()->create([
+                'entity_type' => $entityType,
+                'name' => $name,
+                'description' => $description,
+                'payload' => $normalized,
+                'is_active' => true,
+                'created_by' => $actor->id,
+                'updated_by' => $actor->id,
+            ]);
+        });
     }
 
     public function updateMetadata(User $actor, ContentTemplate $template, string $name, ?string $description): ContentTemplate
     {
-        $template->name = $name;
-        $template->description = $description;
-        $template->updated_by = $actor->id;
-        $template->save();
+        return DB::transaction(function () use ($actor, $template, $name, $description): ContentTemplate {
+            app(ContentMutationGuard::class)->lockMedia();
+            $template = ContentTemplate::query()->lockForUpdate()->findOrFail($template->id);
+            $template->name = $name;
+            $template->description = $description;
+            $template->updated_by = $actor->id;
+            $template->save();
 
-        return $template->fresh(['creator', 'updater']) ?? $template;
+            return $template->fresh(['creator', 'updater']) ?? $template;
+        });
     }
 
     public function duplicate(User $actor, ContentTemplate $template): ContentTemplate
     {
-        $copy = $template->replicate(['created_at', 'updated_at']);
-        $copy->name = $template->name.' (copy)';
-        $copy->is_active = true;
-        $copy->created_by = $actor->id;
-        $copy->updated_by = $actor->id;
-        $copy->save();
+        return DB::transaction(function () use ($actor, $template): ContentTemplate {
+            app(ContentMutationGuard::class)->lockMedia();
+            $template = ContentTemplate::query()->lockForUpdate()->findOrFail($template->id);
+            app(AssetUsageService::class)->assertReferencesAvailable($template->payload);
+            $copy = $template->replicate(['created_at', 'updated_at']);
+            $copy->name = $template->name.' (copy)';
+            $copy->is_active = true;
+            $copy->created_by = $actor->id;
+            $copy->updated_by = $actor->id;
+            $copy->save();
 
-        return $copy;
+            return $copy;
+        });
     }
 
     public function normalizePayload(string $entityType, array $payload): array

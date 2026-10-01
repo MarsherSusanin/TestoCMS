@@ -8,12 +8,21 @@ class DeploymentProfileService
 
     public const DOCKER_VPS = 'docker_vps';
 
+    public const LOCAL = 'local';
+
     /**
      * @return array<string, array{label: string, description: string, queue_connection: string, cache_store: string, public_path: string}>
      */
     public function all(): array
     {
         return [
+            self::LOCAL => [
+                'label' => 'Локальная разработка',
+                'description' => 'Artisan serve или локальный Docker с web root html_public.',
+                'queue_connection' => 'sync',
+                'cache_store' => 'file',
+                'public_path' => 'html_public',
+            ],
             self::SHARED_HOSTING => [
                 'label' => 'Shared hosting (рекомендуется)',
                 'description' => 'Классический PHP-хостинг с фиксированным public_html и cron для schedule:run.',
@@ -33,6 +42,14 @@ class DeploymentProfileService
 
     public function default(): string
     {
+        $configured = (string) config('setup.deployment_profile', '');
+        if (array_key_exists($configured, $this->all())) {
+            return $configured;
+        }
+        if (app()->environment('local') || str_contains((string) ($_SERVER['SERVER_SOFTWARE'] ?? ''), 'Development Server')) {
+            return self::LOCAL;
+        }
+
         return self::SHARED_HOSTING;
     }
 

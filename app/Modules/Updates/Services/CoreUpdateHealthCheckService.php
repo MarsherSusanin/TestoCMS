@@ -6,13 +6,15 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Symfony\Component\Process\Process;
 
 class CoreUpdateHealthCheckService
 {
-    public function runHealthCheck(): void
+    public function runHealthCheck(): array
     {
         DB::connection()->getPdo();
-        $this->assertApplicationBoots();
+
+        return $this->assertApplicationBoots();
     }
 
     /**
@@ -27,15 +29,16 @@ class CoreUpdateHealthCheckService
      * a healthy update is not rolled back on infrastructure quirks; the
      * connection error is reported for the operator.
      */
-    private function assertApplicationBoots(): void
+    private function assertApplicationBoots(): array
     {
         $url = $this->resolveHealthUrl();
         if ($url === null) {
-            return;
+            return ['status' => 'health_unverified', 'warning' => 'No HTTP health URL is configured.'];
         }
 
         try {
             $response = Http::timeout((int) config('updates.health_check_timeout', 10))
+                ->withoutRedirecting()
                 ->withHeaders(['X-CMS-Health-Check' => '1'])
                 ->get($url);
         } catch (\Throwable $e) {
@@ -52,16 +55,18 @@ class CoreUpdateHealthCheckService
 
             report($e);
 
-            return;
+            return ['status' => 'health_unverified', 'warning' => 'Health endpoint is unreachable: '.$url];
         }
 
-        if ($response->serverError()) {
+        if (! $response->successful()) {
             throw new RuntimeException(sprintf(
                 'Post-update health check failed: %s returned HTTP %d.',
                 $url,
                 $response->status()
             ));
         }
+
+        return ['status' => 'verified', 'warning' => null];
     }
 
     private function resolveHealthUrl(): ?string
@@ -89,6 +94,33 @@ class CoreUpdateHealthCheckService
 
     public function artisanCall(string $command, array $arguments = [], bool $throwOnFailure = true): bool
     {
+        // New files/vendor must be loaded by a fresh kernel, not this request.
+        if (! app()->runningUnitTests() && ! in_array($command, ['down', 'up'], true)) {
+            $processArguments = [PHP_BINARY, base_path('artisan'), $command, '--no-interaction'];
+            foreach ($arguments as $key => $value) {
+                if ($value === true) {
+                    $processArguments[] = (string) $key;
+                } elseif ($value !== false && $value !== null) {
+                    $processArguments[] = (string) $key.'='.(string) $value;
+                }
+            }
+            try {
+                $process = new Process($processArguments, base_path());
+                $process->setTimeout(300);
+                $process->run();
+                if (! $process->isSuccessful() && $throwOnFailure) {
+                    throw new RuntimeException('Fresh-kernel command failed: '.$command.' '.trim($process->getErrorOutput()."\n".$process->getOutput()));
+                }
+
+                return $process->isSuccessful();
+            } catch (\Throwable $e) {
+                if ($throwOnFailure) {
+                    throw $e;
+                }
+
+                return false;
+            }
+        }
         if ($command !== 'up') {
             try {
                 $all = Artisan::all();
@@ -114,5 +146,28 @@ class CoreUpdateHealthCheckService
         }
 
         return $exitCode === 0;
+    }
+
+    public function refreshPublicRuntime(): void
+    {
+        // This bootstrap also works after rollback to a version without the new commands.
+        $script = <<<'PHP'
+require getcwd().'/vendor/autoload.php';
+$app = require getcwd().'/bootstrap/app.php';
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+if (class_exists(\App\Modules\Setup\Services\PublicMediaService::class)) {
+    $app->make(\App\Modules\Setup\Services\PublicMediaService::class)->prepare();
+} else {
+    \Illuminate\Support\Facades\Artisan::call('storage:link');
+}
+$app->make(\App\Modules\Extensibility\Services\ModulePublicAssetsPublisherService::class)->republishInstalledModules();
+exit(\Illuminate\Support\Facades\Artisan::call('cms:modules:cache'));
+PHP;
+        $process = new Process([PHP_BINARY, '-r', $script], base_path());
+        $process->setTimeout(300);
+        $process->run();
+        if (! $process->isSuccessful()) {
+            throw new RuntimeException('Fresh-kernel public runtime refresh failed: '.$process->getErrorOutput());
+        }
     }
 }

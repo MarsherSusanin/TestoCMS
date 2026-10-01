@@ -110,7 +110,9 @@ class PageCrudController extends Controller
 
         $page->load('translations');
 
-        return view('admin.pages.form', [
+        return view(auth()->user()?->can('update', $page) ? 'admin.pages.form' : 'admin.content-readonly', [
+            'entityType' => 'page',
+            'entity' => $page,
             'page' => $page,
             'translationsByLocale' => $this->translationsByLocale($page->translations),
             'locales' => $this->supportedLocales(),

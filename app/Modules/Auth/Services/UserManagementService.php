@@ -5,12 +5,13 @@ namespace App\Modules\Auth\Services;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 class UserManagementService
 {
+    public function __construct(private readonly UserAccessRevocationService $accessRevocation) {}
+
     public function canManageUsers(User $actor): bool
     {
         return $actor->hasRole('superadmin') || $actor->can('users:manage');
@@ -114,6 +115,11 @@ class UserManagementService
         $this->assertSuperadminGuards($target, $roles, $nextStatus);
 
         DB::transaction(function () use ($target, $data, $roles, $nextStatus): void {
+            $target->refresh();
+            $previousRoles = $target->roles()->pluck('name')->sort()->values()->all();
+            $nextRoles = $roles;
+            sort($nextRoles);
+            $accessChanged = $target->status !== $nextStatus || $previousRoles !== $nextRoles;
             $target->fill([
                 'name' => trim((string) ($data['name'] ?? $target->name)),
                 'login' => trim((string) ($data['login'] ?? $target->login)),
@@ -123,6 +129,9 @@ class UserManagementService
             $target->save();
 
             $target->syncRoles($roles);
+            if ($accessChanged) {
+                $this->accessRevocation->revoke($target);
+            }
         });
 
         return $target->fresh(['roles']) ?? $target;
@@ -142,8 +151,14 @@ class UserManagementService
         $roles = $target->roles()->pluck('name')->map(static fn ($role): string => (string) $role)->all();
         $this->assertSuperadminGuards($target, $roles, $status);
 
-        $target->status = $status;
-        $target->save();
+        DB::transaction(function () use ($target, $status): void {
+            $changed = $target->fresh()->status !== $status;
+            $target->status = $status;
+            $target->save();
+            if ($changed) {
+                $this->accessRevocation->revoke($target);
+            }
+        });
 
         return $target->fresh(['roles']) ?? $target;
     }
@@ -152,10 +167,12 @@ class UserManagementService
     {
         $this->assertCanManageTarget($actor, $target);
 
-        $target->password = $password;
-        $target->save();
+        return DB::transaction(function () use ($target, $password, $actor, $currentSessionId): int {
+            $target->password = $password;
+            $target->save();
 
-        return $this->revokeUserSessions($target, $currentSessionId);
+            return $this->accessRevocation->revoke($target, $actor->id === $target->id ? $currentSessionId : null);
+        });
     }
 
     /**
@@ -181,23 +198,5 @@ class UserManagementService
                 ]);
             }
         }
-    }
-
-    private function revokeUserSessions(User $target, ?string $currentSessionId = null): int
-    {
-        if ((string) config('session.driver') !== 'database') {
-            return 0;
-        }
-
-        if (! Schema::hasTable('sessions')) {
-            return 0;
-        }
-
-        $query = DB::table('sessions')->where('user_id', $target->id);
-        if ($currentSessionId !== null && $currentSessionId !== '') {
-            $query->where('id', '!=', $currentSessionId);
-        }
-
-        return (int) $query->delete();
     }
 }

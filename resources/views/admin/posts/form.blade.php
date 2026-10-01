@@ -1197,7 +1197,7 @@
                                     <div class="field">
                                         <label for="post-status">Статус</label>
                                         <select id="post-status" name="status">
-                                            @foreach(config('cms.statuses', ['draft','published']) as $status)
+                                            @foreach(array_filter(config('cms.statuses', ['draft','published']), fn ($value) => $value === $post->status || !in_array($value, ['published', 'scheduled'], true) || auth()->user()?->can('publish', $post)) as $status)
                                                 <option value="{{ $status }}" @selected(old('status', $post->status) === $status)>{{ $status }}</option>
                                             @endforeach
                                         </select>
@@ -1255,6 +1255,7 @@
                             </section>
                             @if($isEdit)
                                 <section class="composer-sidebar-section" data-composer-sidebar-section="actions" role="tabpanel">
+                                    @can('publish', $post)
                                     <div class="composer-sidebar-box">
                                         <h3>Публикационные действия</h3>
                                         <div class="actions">
@@ -1262,6 +1263,7 @@
                                             <button type="submit" form="post-unpublish-form" class="btn">Вернуть в черновик</button>
                                         </div>
                                     </div>
+                                    @endcan
                                     <div class="composer-sidebar-box">
                                         <h3 style="color:#b42318;">Опасная зона</h3>
                                         <button type="submit" form="post-delete-form" class="btn btn-danger">Удалить пост</button>
@@ -1291,6 +1293,7 @@
                                             <p class="muted">Токенов предпросмотра пока нет.</p>
                                         @endforelse
                                     </div>
+                                    @can('publish', $post)
                                     <div class="composer-sidebar-box">
                                         <h3>Расписание</h3>
                                         <div class="field">
@@ -1306,16 +1309,10 @@
                                         </div>
                                         <button type="submit" form="post-schedule-form" class="btn">Создать расписание</button>
                                     </div>
+                                    @endcan
                                     <div class="composer-sidebar-box">
                                         <h3>Текущие задания</h3>
-                                        @forelse($schedules as $schedule)
-                                            <div style="margin-bottom:10px; border-bottom:1px solid #eaecf0; padding-bottom:10px;">
-                                                <div><strong>{{ $schedule->action }}</strong> · {{ optional($schedule->due_at)->toDayDateTimeString() }}</div>
-                                                <div class="muted" style="font-size:12px;">{{ $schedule->executed_at ? 'Выполнено '.$schedule->executed_at->toDayDateTimeString() : 'Ожидает выполнения' }}</div>
-                                            </div>
-                                        @empty
-                                            <p class="muted">Записей расписания пока нет.</p>
-                                        @endforelse
+                                        @include('admin.partials.publication-schedules', ['entity' => $post, 'entityType' => 'post', 'schedules' => $schedules])
                                     </div>
                                 </section>
                             @endif
@@ -1329,6 +1326,10 @@
             </aside>
         </div>
     </form>
+
+    @if($isEdit)
+        @include('admin.partials.publication-schedule-forms', ['entity' => $post, 'entityType' => 'post', 'schedules' => $schedules])
+    @endif
 
     <div class="template-modal" data-create-template-modal style="position:fixed; inset:0; z-index:95; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(15,23,42,.48);">
         <div class="panel" style="width:min(560px,100%); margin:0;">

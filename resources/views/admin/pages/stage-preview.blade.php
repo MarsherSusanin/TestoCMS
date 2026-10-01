@@ -18,11 +18,8 @@
 @endpush
 
 @section('content')
-    <article class="surface">
-        <div class="surface-body">
-            <div class="content-prose" data-builder-preview-root>
-                {!! (string) ($stageRenderedHtml ?? ($translation->rendered_html ?? '')) !!}
-            </div>
-        </div>
-    </article>
+    @include('cms.partials.page-content', [
+        'renderedHtml' => (string) ($stageRenderedHtml ?? $translation->rendered_html ?? ''),
+        'builderPreview' => true,
+    ])
 @endsection

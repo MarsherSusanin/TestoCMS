@@ -1,0 +1,118 @@
+services:
+  db-env:
+    image: ${VPS_SMOKE_APP_IMAGE:-testocms-app:local}
+    volumes:
+      - ./:/var/www/html:ro
+  init:
+    image: ${VPS_SMOKE_APP_IMAGE:-testocms-app:local}
+    entrypoint: ["/bin/sh", "/var/www/html/docker/entrypoint.sh"]
+    volumes:
+      - ./:/var/www/html:ro
+      - type: volume
+        source: storage_data
+        target: /var/www/html/storage
+        volume:
+          nocopy: true
+      - type: volume
+        source: bootstrap_cache
+        target: /var/www/html/bootstrap/cache
+        volume:
+          nocopy: true
+      - type: volume
+        source: modules_data
+        target: /var/www/html/modules
+        volume:
+          nocopy: true
+      - type: volume
+        source: module_public_assets
+        target: /var/www/html/html_public/modules
+        volume:
+          nocopy: true
+  app:
+    image: ${VPS_SMOKE_APP_IMAGE:-testocms-app:local}
+    entrypoint: ["/bin/sh", "/var/www/html/docker/entrypoint.sh"]
+    command: ["php-fpm", "-F"]
+    volumes:
+      - ./:/var/www/html:ro
+      - type: volume
+        source: storage_data
+        target: /var/www/html/storage
+        volume:
+          nocopy: true
+      - type: volume
+        source: bootstrap_cache
+        target: /var/www/html/bootstrap/cache
+        volume:
+          nocopy: true
+      - type: volume
+        source: modules_data
+        target: /var/www/html/modules
+        volume:
+          nocopy: true
+      - type: volume
+        source: module_public_assets
+        target: /var/www/html/html_public/modules
+        volume:
+          nocopy: true
+  queue:
+    image: ${VPS_SMOKE_APP_IMAGE:-testocms-app:local}
+    entrypoint: ["/bin/sh", "/var/www/html/docker/entrypoint.sh"]
+    volumes:
+      - ./:/var/www/html:ro
+      - type: volume
+        source: storage_data
+        target: /var/www/html/storage
+        volume:
+          nocopy: true
+      - type: volume
+        source: bootstrap_cache
+        target: /var/www/html/bootstrap/cache
+        volume:
+          nocopy: true
+      - type: volume
+        source: modules_data
+        target: /var/www/html/modules
+        volume:
+          nocopy: true
+      - type: volume
+        source: module_public_assets
+        target: /var/www/html/html_public/modules
+        volume:
+          nocopy: true
+  scheduler:
+    image: ${VPS_SMOKE_APP_IMAGE:-testocms-app:local}
+    entrypoint: ["/bin/sh", "/var/www/html/docker/entrypoint.sh"]
+    volumes:
+      - ./:/var/www/html:ro
+      - type: volume
+        source: storage_data
+        target: /var/www/html/storage
+        volume:
+          nocopy: true
+      - type: volume
+        source: bootstrap_cache
+        target: /var/www/html/bootstrap/cache
+        volume:
+          nocopy: true
+      - type: volume
+        source: modules_data
+        target: /var/www/html/modules
+        volume:
+          nocopy: true
+      - type: volume
+        source: module_public_assets
+        target: /var/www/html/html_public/modules
+        volume:
+          nocopy: true
+  web:
+    image: ${VPS_SMOKE_WEB_IMAGE:-nginx:alpine}
+    ports: !override
+      - "127.0.0.1:${VPS_SMOKE_PORT:-18973}:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${VPS_SMOKE_SUBNET:-10.253.237.0/24}

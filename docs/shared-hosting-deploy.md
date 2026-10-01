@@ -7,7 +7,7 @@ Shared hosting — основной production path для TestoCMS v1.
 - PHP ≥ 8.2
 - Расширения: `pdo_mysql`, `mbstring`, `intl`, `gd`, `bcmath`, `zip`, `exif`, `openssl`, `curl`, `fileinfo`
 - MySQL 5.7+ / MariaDB 10.3+ или PostgreSQL 12+
-- Apache с mod_rewrite
+- Apache с mod_rewrite и mod_env (AllowOverride для rewrite/SetEnv)
 - SSH-доступ (рекомендуется)
 
 ## Шаги установки
@@ -71,7 +71,23 @@ php artisan cms:setup
 3. По умолчанию предложит профиль `shared_hosting`
 4. Запросит название сайта, URL, языки
 5. Создаст администратора
-6. Сгенерирует `.env`, запустит миграции, создаст начальные данные
+6. Покажет страницу подтверждения; установка запускается только по защищенному POST
+7. Сохранит настройки в `.env`, сохранив существующие ключи и интеграции, запустит миграции и создаст администратора
+
+До настройки БД мастер использует отдельную файловую сессию и стабильный
+ключ в `storage/app/private/setup.key`: готовая БД и таблица sessions не требуются.
+Директории `storage/` и `bootstrap/cache/` должны быть доступны PHP на запись.
+Ключи SMTP, LLM, updater и неизвестные integration settings в существующем `.env`
+сохраняются; APP_KEY меняется только если ранее отсутствовал.
+
+Если настройки заранее подготовлены и `.env` должен оставаться read-only:
+
+```bash
+php artisan cms:setup --from-env --no-interaction
+```
+
+Задайте APP_KEY, CMS_CONTENT_API_KEY и CMS_ADMIN_* заранее. Повторный запуск
+после успешной установки не изменяет учетную запись администратора.
 
 ### 6. SSL-сертификат
 
@@ -113,7 +129,8 @@ cd ~/testocms
 php artisan cms:setup --redo
 ```
 
-Или удалить файл `storage/installed` и открыть сайт в браузере.
+Повторная настройка через CLI сохраняет installed marker до успешного завершения.
+Не удаляйте его на работающем публичном сайте: это открывает мастер установки.
 
 ## Обновление
 
@@ -134,3 +151,20 @@ php artisan view:cache
 ```
 
 Если используете admin updater, он сам обновит codebase, selectively синхронизирует core-managed файлы из `html_public` в активный `public_html`, пересоздаст `storage` symlink и republish'ит module assets. Host-managed файлы вроде `.well-known` он не трогает.
+
+
+## Медиа на хостинге без symlink
+
+Файлы хранятся в `storage/app/public`; endpoint `/storage/{path}` выдает только
+файлы этого диска, поддерживает GET, HEAD и byte ranges. `symlink()` ускоряет
+выдачу, но не требуется для корректной работы. `.htaccess` направляет `/storage/*`
+через front controller, в том числе если от прежней установки осталась физическая
+копия public/storage: новые загрузки видны сразу, удаленные больше не выдаются.
+Обязательно синхронизируйте обновленный `.htaccess` из `html_public` в public_html.
+Не копируйте uploads вручную для имитации symlink: такие копии устаревают.
+
+Apache 2.4.59+ по умолчанию удаляет `Content-Length` от CGI/FastCGI. Для корректного
+HEAD медиа `.htaccess` задаёт `ap_trust_cgilike_cl=1` только доверенному `index.php`
+через `mod_env`; это разрешение не распространяется на uploads. Хостинг должен
+разрешать `SetEnv` в `.htaccess`. [Официальное описание Apache](https://httpd.apache.org/docs/2.4/env.html#special)
+требует ограничивать этот флаг доверенными скриптами.

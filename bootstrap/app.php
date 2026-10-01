@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\CoordinateCoreUpdates;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsureLocalBaselineMiddleware;
 use App\Http\Middleware\FullPageCacheMiddleware;
 use App\Http\Middleware\RedirectToSetupWizardMiddleware;
@@ -38,6 +40,8 @@ $app = Application::configure(basePath: $basePath)
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prepend(CoordinateCoreUpdates::class);
+        $middleware->preventRequestsDuringMaintenance(except: ['up', 'healthz']);
         $middleware->web(prepend: [
             RedirectToSetupWizardMiddleware::class,
         ]);
@@ -46,10 +50,11 @@ $app = Application::configure(basePath: $basePath)
             EnsureLocalBaselineMiddleware::class,
             SetLocaleFromRoute::class,
             SetAdminInterfaceLocale::class,
+            EnsureActiveUser::class,
             ResolveRedirectRuleMiddleware::class,
             RunPublishSchedulerFallbackMiddleware::class,
-            FullPageCacheMiddleware::class,
             SecurityHeadersMiddleware::class,
+            FullPageCacheMiddleware::class,
         ]);
 
         $middleware->api(append: [

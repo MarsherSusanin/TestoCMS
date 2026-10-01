@@ -7,9 +7,14 @@ use App\Modules\Caching\Services\PageCacheService;
 use App\Modules\Content\Services\SlugResolverService;
 use Database\Seeders\DemoContentSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Dotenv\Dotenv;
+use Illuminate\Container\Container;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Throwable;
 
 class SetupFinalizationService
@@ -39,6 +44,14 @@ class SetupFinalizationService
         $optimize = (bool) ($options['optimize'] ?? true);
         $markInstalled = (bool) ($options['mark_installed'] ?? true);
 
+        if ($runStorageLink && ! $this->runCriticalStep($steps, $errors, 'Web root and module directories', function () use ($writeEnv, $data): void {
+            $path = $writeEnv ? (string) (Dotenv::parse($this->envWriter->buildEnvContent($data))['LARAVEL_PUBLIC_PATH'] ?? 'html_public') : public_path();
+            $root = $this->isAbsolutePath($path) ? $path : base_path($path);
+            app(PublicRootValidationService::class)->validate($root);
+        })) {
+            return $this->result($steps, $errors);
+        }
+
         if ($writeEnv && ! $this->runCriticalStep($steps, $errors, '.env', function () use ($data, &$envContent): void {
             $envContent = $this->envWriter->buildEnvContent($data);
             $this->envWriter->writeEnvFile($envContent);
@@ -49,14 +62,17 @@ class SetupFinalizationService
         }
 
         if ($applyRuntimeDatabase && ! $this->runCriticalStep($steps, $errors, 'Runtime database', function () use ($data): void {
-            Artisan::call('config:clear');
+            $this->artisan('config:clear');
             $this->applyRuntimeDatabaseConfiguration($data);
         })) {
             return $this->result($steps, $errors);
         }
 
         if ($runMigrations && ! $this->runCriticalStep($steps, $errors, 'Migrations', function (): void {
-            Artisan::call('migrate', ['--force' => true]);
+            if (Schema::hasTable('users') && DB::table('users')->exists()) {
+                throw new RuntimeException('Database already contains users. Setup will not reset them. Migrate explicitly and use cms:setup --adopt-existing --force for a verified existing installation.');
+            }
+            $this->artisan('migrate', ['--force' => true]);
         })) {
             return $this->result($steps, $errors);
         }
@@ -86,28 +102,32 @@ class SetupFinalizationService
         }
 
         if ($runStorageLink) {
-            $this->runNonCriticalStep($steps, 'Storage link', function (): void {
-                $this->linkOrCopyPublicStorage();
-            });
+            if (! $this->runCriticalStep($steps, $errors, 'Public media', function (): void {
+                app(PublicMediaService::class)->prepare();
+            })) {
+                return $this->result($steps, $errors);
+            }
         }
 
         if ($optimize) {
             $this->runNonCriticalStep($steps, 'Optimization', function (): void {
-                Artisan::call('config:cache');
-                Artisan::call('route:cache');
-                Artisan::call('view:cache');
+                $this->artisan('config:cache');
+                $this->artisan('route:cache');
+                $this->artisan('view:cache');
             });
         }
 
-        if ($markInstalled && empty($errors)) {
+        if (! $this->runCriticalStep($steps, $errors, 'Content caches', function (): void {
+            $this->pageCacheService->flushAll();
+            $this->slugResolverService->flushAll();
+        })) {
+            return $this->result($steps, $errors);
+        }
+
+        if ($markInstalled) {
             $this->runCriticalStep($steps, $errors, 'Installed marker', function (): void {
                 $this->envWriter->markInstalled();
             });
-        }
-
-        if (empty($errors)) {
-            $this->pageCacheService->flushAll();
-            $this->slugResolverService->flushAll();
         }
 
         return $this->result($steps, $errors);
@@ -178,70 +198,31 @@ class SetupFinalizationService
 
     private function syncProcessEnvironmentFromEnvContent(string $envContent): void
     {
-        $resolved = [];
-
-        foreach (preg_split('/\R/u', $envContent) ?: [] as $line) {
-            $line = trim($line);
-
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
-            }
-
-            $separatorPosition = strpos($line, '=');
-            if ($separatorPosition === false) {
-                continue;
-            }
-
-            $key = trim(substr($line, 0, $separatorPosition));
-            if ($key === '') {
-                continue;
-            }
-
-            $value = $this->resolveEnvValue(substr($line, $separatorPosition + 1), $resolved);
-
-            // putenv is frequently disabled on shared hosting; guard it so the
-            // finalize step does not abort. $_ENV/$_SERVER still carry the value.
+        foreach (Dotenv::parse($envContent) as $key => $value) {
             if (function_exists('putenv')) {
                 putenv($key.'='.$value);
             }
             $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
-            $resolved[$key] = $value;
         }
     }
 
-    /**
-     * Ensure the public/storage path resolves. Prefer a symlink, but fall back
-     * to copying the directory on shared hosts where symlink() is disabled, so
-     * media is not left broken (and the setup step does not silently no-op).
-     */
-    private function linkOrCopyPublicStorage(): void
+    private function artisan(string $command, array $arguments = []): void
     {
-        $link = public_path('storage');
-        $target = storage_path('app/public');
-        File::ensureDirectoryExists($target);
-
-        if (is_link($link) || is_dir($link)) {
-            return;
-        }
-
-        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-        $canSymlink = function_exists('symlink') && ! in_array('symlink', $disabled, true);
-
-        if ($canSymlink) {
-            try {
-                Artisan::call('storage:link');
-            } catch (Throwable) {
-                // fall through to the copy fallback below
+        $application = app();
+        try {
+            if (Artisan::call($command, $arguments) !== 0) {
+                throw new RuntimeException('Installation command failed: '.$command);
             }
-
-            if (is_link($link) || is_dir($link)) {
-                return;
-            }
+        } finally {
+            // config:cache boots another Application. Restore the active CLI/HTTP
+            // application so later steps keep its environment/storage/DB scope.
+            Container::setInstance($application);
+            Facade::setFacadeApplication($application);
+            Facade::clearResolvedInstances();
+            Model::setConnectionResolver($application['db']);
+            Model::setEventDispatcher($application['events']);
         }
-
-        File::ensureDirectoryExists($link);
-        File::copyDirectory($target, $link);
     }
 
     private function applyRuntimePublicPathConfiguration(): void
@@ -250,33 +231,6 @@ class SetupFinalizationService
         $publicPath = $configuredPath !== '' ? $configuredPath : 'html_public';
 
         app()->usePublicPath($this->absolutePath(base_path(), $publicPath));
-    }
-
-    /**
-     * @param  array<string, string>  $resolved
-     */
-    private function resolveEnvValue(string $rawValue, array $resolved): string
-    {
-        $value = trim($rawValue);
-
-        if (
-            strlen($value) >= 2
-            && (($value[0] === '"' && str_ends_with($value, '"')) || ($value[0] === '\'' && str_ends_with($value, '\'')))
-        ) {
-            $quote = $value[0];
-            $value = substr($value, 1, -1);
-
-            if ($quote === '"') {
-                $value = str_replace(['\\"', '\\\\'], ['"', '\\'], $value);
-            }
-        }
-
-        return (string) preg_replace_callback('/\$\{([A-Z0-9_]+)\}/', static function (array $matches) use ($resolved): string {
-            $variable = $matches[1] ?? '';
-            $current = $resolved[$variable] ?? getenv($variable);
-
-            return $current === false ? '' : (string) $current;
-        }, $value);
     }
 
     private function absolutePath(string $basePath, string $path): string

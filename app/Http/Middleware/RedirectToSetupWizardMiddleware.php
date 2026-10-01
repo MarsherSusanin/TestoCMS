@@ -29,7 +29,7 @@ class RedirectToSetupWizardMiddleware
         }
 
         // Allow health check
-        if ($request->is('up')) {
+        if ($request->is('up', 'healthz')) {
             return $next($request);
         }
 

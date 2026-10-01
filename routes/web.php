@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\PageCrudController;
 use App\Http\Controllers\Admin\PageStagePreviewController;
 use App\Http\Controllers\Admin\PostCrudController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\ScheduleCancellationController;
 use App\Http\Controllers\Admin\SeoSettingsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ThemeController;
@@ -21,12 +22,14 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\SetupWizardController;
 use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\HomeRedirectController;
+use App\Http\Controllers\Web\PublicMediaController;
 use App\Http\Controllers\Web\SeoController;
 use App\Http\Controllers\Web\SiteContentController;
 use App\Http\Controllers\Web\SitePreviewController;
 use App\Http\Controllers\Web\SiteSearchController;
 use App\Http\Controllers\Web\ThemeAssetController;
 use App\Modules\Extensibility\Services\EnabledModulePublicRoutesLoader;
+use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,7 +48,21 @@ Route::prefix('setup')->group(function (): void {
     Route::get('/step/4', [SetupWizardController::class, 'step4'])->name('setup.step4');
     Route::post('/step/4', [SetupWizardController::class, 'saveStep4'])->name('setup.step4.save');
     Route::get('/step/5', [SetupWizardController::class, 'step5'])->name('setup.step5');
+    Route::post('/step/5', [SetupWizardController::class, 'finalize'])->name('setup.finalize');
 });
+
+Route::get('/healthz', function () {
+    try {
+        event(new DiagnosingHealth);
+
+        return response('OK', 200, ['Cache-Control' => 'no-store']);
+    } catch (Throwable $e) {
+        report($e);
+
+        return response('Unhealthy', 500, ['Cache-Control' => 'no-store']);
+    }
+})->withoutMiddleware('web');
+Route::match(['get', 'head'], '/storage/{path}', PublicMediaController::class)->where('path', '.*')->name('media.public');
 
 Route::get('/', HomeRedirectController::class)->name('site.home');
 Route::get('/login', fn () => redirect()->route('admin.login'))->name('login');
@@ -80,6 +97,7 @@ Route::prefix('admin')->group(function (): void {
         Route::post('/pages/{page}/unpublish', [PageCrudController::class, 'unpublish'])->name('admin.pages.unpublish');
         Route::post('/pages/bulk', [PageCrudController::class, 'bulk'])->name('admin.pages.bulk');
         Route::post('/pages/{page}/schedule', [PageCrudController::class, 'schedule'])->name('admin.pages.schedule');
+        Route::delete('/pages/{page}/schedules/{schedule}', [ScheduleCancellationController::class, 'page'])->name('admin.pages.schedules.cancel');
         Route::post('/pages/{page}/preview-token', [PageCrudController::class, 'createPreviewToken'])->name('admin.pages.preview-token');
         Route::post('/pages/fullscreen-stage/render', [PageStagePreviewController::class, 'render'])->name('admin.pages.stage.render');
 
@@ -96,6 +114,7 @@ Route::prefix('admin')->group(function (): void {
         Route::post('/posts/{post}/unpublish', [PostCrudController::class, 'unpublish'])->name('admin.posts.unpublish');
         Route::post('/posts/bulk', [PostCrudController::class, 'bulk'])->name('admin.posts.bulk');
         Route::post('/posts/{post}/schedule', [PostCrudController::class, 'schedule'])->name('admin.posts.schedule');
+        Route::delete('/posts/{post}/schedules/{schedule}', [ScheduleCancellationController::class, 'post'])->name('admin.posts.schedules.cancel');
         Route::post('/posts/{post}/preview-token', [PostCrudController::class, 'createPreviewToken'])->name('admin.posts.preview-token');
 
         Route::get('/categories', [CategoryCrudController::class, 'index'])->name('admin.categories.index');
@@ -162,7 +181,9 @@ Route::prefix('admin')->group(function (): void {
     });
 });
 
-app(EnabledModulePublicRoutesLoader::class)->load();
+if (app()->runningUnitTests() || is_file(storage_path('installed'))) {
+    app(EnabledModulePublicRoutesLoader::class)->load();
+}
 
 Route::prefix('{locale}')
     ->whereIn('locale', config('cms.supported_locales', ['en']))

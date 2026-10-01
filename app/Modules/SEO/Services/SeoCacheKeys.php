@@ -2,6 +2,8 @@
 
 namespace App\Modules\SEO\Services;
 
+use App\Modules\Caching\Services\PublicContentVersionService;
+
 /**
  * Cache keys for the cached SEO endpoints (locale sitemaps, sitemap index,
  * llms.txt). Kept in one place so content-mutation cache flushes and the
@@ -9,19 +11,26 @@ namespace App\Modules\SEO\Services;
  */
 class SeoCacheKeys
 {
+    private static function version(): string
+    {
+        $versions = app(PublicContentVersionService::class);
+
+        return PublicContentVersionService::CACHE_SCHEMA.':v'.($versions->available() ? $versions->current() : 0).':';
+    }
+
     public static function sitemap(string $locale): string
     {
-        return 'seo:sitemap:'.strtolower($locale);
+        return 'seo:sitemap:'.self::version().strtolower($locale);
     }
 
     public static function sitemapIndex(): string
     {
-        return 'seo:sitemap-index';
+        return 'seo:sitemap-index:'.self::version();
     }
 
     public static function llms(string $locale): string
     {
-        return 'seo:llms:'.strtolower($locale);
+        return 'seo:llms:'.self::version().strtolower($locale);
     }
 
     /**
@@ -30,7 +39,7 @@ class SeoCacheKeys
      */
     public static function override(string $entityType, int $entityId, string $locale): string
     {
-        return 'seo:override:'.$entityType.':'.$entityId.':'.strtolower($locale);
+        return 'seo:override:'.self::version().$entityType.':'.$entityId.':'.strtolower($locale);
     }
 
     /**

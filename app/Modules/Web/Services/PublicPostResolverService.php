@@ -18,7 +18,7 @@ class PublicPostResolverService
 
     public function render(string $locale, Post $post, PostTranslation $translation, bool $isPreview = false): Response
     {
-        if (! $isPreview && $post->status !== 'published') {
+        if (! $isPreview && ! app(PublicVisibilityService::class)->isLive($post)) {
             abort(404);
         }
 

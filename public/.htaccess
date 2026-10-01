@@ -7,6 +7,14 @@
     # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 </IfModule>
 
+<IfModule mod_env.c>
+    <Files "index.php">
+        # Apache 2.4.59+ strips CGI Content-Length unless the script is trusted.
+        # Only the CMS front controller supplies file lengths for HEAD/Range.
+        SetEnv ap_trust_cgilike_cl 1
+    </Files>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
@@ -21,6 +29,10 @@
     # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # The public disk is authoritative, including on hosts without symlink().
+    # Route legacy physical storage copies through PHP so deleted files stay deleted.
+    RewriteRule ^storage(?:/|$) index.php [L]
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d

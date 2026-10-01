@@ -17,6 +17,9 @@ class PublicResponseSupportService
         foreach ($translations as $translation) {
             $locale = (string) ($translation->locale ?? 'en');
             $slug = (string) ($translation->slug ?? '');
+            if ($slug === '' || ! in_array($locale, config('cms.supported_locales', ['en']), true)) {
+                continue;
+            }
             $hreflangs[$locale] = url($pathBuilder($locale, $slug));
         }
 
@@ -35,6 +38,9 @@ class PublicResponseSupportService
     {
         if ($isPreview) {
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+            $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
 
             return;
         }

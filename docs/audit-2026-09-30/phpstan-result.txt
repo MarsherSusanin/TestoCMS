@@ -1,0 +1,4 @@
+Command: php -d memory_limit=1G vendor/bin/phpstan analyse --no-progress --debug
+Configuration: phpstan.neon, existing phpstan-baseline.neon
+Environment: isolated copy, PHP 8.5.3
+Result: PASS, No errors

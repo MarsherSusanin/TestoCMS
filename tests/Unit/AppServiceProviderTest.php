@@ -16,6 +16,7 @@ class AppServiceProviderTest extends TestCase
     {
         $originalFacadeApplication = Facade::getFacadeApplication();
         $app = new Application(base_path());
+        $app->instance('env', 'testing');
         Facade::clearResolvedInstances();
         Facade::setFacadeApplication($app);
         $app->instance('log', new NullLogger);
@@ -29,7 +30,8 @@ class AppServiceProviderTest extends TestCase
             $runtime->shouldReceive('registerEnabledProvidersFromCache')
                 ->once()
                 ->with($app)
-                ->andReturnUsing(function () use (&$bootstrapped): void {
+                ->andReturnUsing(function () use (&$bootstrapped, $app): void {
+                    $this->assertTrue($app->isBooted());
                     $bootstrapped = true;
                 });
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Content\Services\SearchTextProjectionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,7 @@ class PostTranslation extends Model
         'post_id',
         'locale',
         'title',
+        'search_text',
         'slug',
         'content_format',
         'content_html',
@@ -27,6 +29,13 @@ class PostTranslation extends Model
         'robots_directives',
         'structured_data',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(static function (self $translation): void {
+            $translation->setAttribute('search_text', app(SearchTextProjectionService::class)->forPost($translation->attributesToArray()));
+        });
+    }
 
     protected function casts(): array
     {

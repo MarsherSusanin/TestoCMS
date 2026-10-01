@@ -64,6 +64,7 @@ class PageController extends Controller
         abort_unless($actor, 403);
         $page = $this->pages->updateFromValidated($page, $validated, $actor, [
             'require_default_locale' => false,
+            'translation_mode' => $request->isMethod('PATCH') ? 'merge' : 'replace',
             'audit_action' => 'page.update',
         ]);
 
@@ -129,14 +130,17 @@ class PageController extends Controller
             'status' => 'nullable|string|in:draft,review,scheduled,published,archived',
             'page_type' => 'nullable|string|max:32',
             'custom_code' => 'nullable|array',
-            'translations' => 'required|array|min:1',
-            'translations.*.locale' => ['required', 'string', 'max:8', Rule::in(array_map(static fn ($l) => strtolower(trim((string) $l)), (array) config('cms.supported_locales', ['en'])))],
-            'translations.*.title' => 'required|string|max:255',
-            'translations.*.slug' => 'required|string|max:255',
+            'translations' => ($request->isMethod('PATCH') ? 'sometimes' : 'required').'|array|min:1',
+            'remove_translations' => ['sometimes', 'array'],
+            'remove_translations.*' => ['string', 'distinct', Rule::in((array) config('cms.supported_locales', ['en']))],
+            'translations.*.locale' => ['required', 'distinct', 'string', 'max:8', Rule::in(array_map(static fn ($l) => strtolower(trim((string) $l)), (array) config('cms.supported_locales', ['en'])))],
+            'translations.*.title' => ($request->isMethod('PATCH') ? 'sometimes|required' : 'required').'|string|max:255',
+            'translations.*.slug' => ($request->isMethod('PATCH') ? 'sometimes|required' : 'required').'|string|max:255',
             'translations.*.content_blocks' => 'nullable|array',
             'translations.*.meta_title' => 'nullable|string|max:255',
             'translations.*.meta_description' => 'nullable|string|max:1000',
             'translations.*.canonical_url' => 'nullable|string|max:2048',
+            'translations.*.custom_head_html' => 'nullable|string',
             'translations.*.robots_directives' => 'nullable|array',
             'translations.*.structured_data' => 'nullable|array',
         ]);

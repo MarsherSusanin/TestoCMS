@@ -90,7 +90,7 @@ class ContentTemplateController extends Controller
             actor: $user,
             entityType: $entityType,
             name: trim((string) $validated['name']),
-            description: $validated['description'] !== null ? trim((string) $validated['description']) : null,
+            description: $this->normalizeDescription($validated['description'] ?? null),
             payload: $payload,
         );
 
@@ -119,7 +119,7 @@ class ContentTemplateController extends Controller
             actor: $user,
             template: $template,
             name: trim((string) $validated['name']),
-            description: $validated['description'] !== null ? trim((string) $validated['description']) : null,
+            description: $this->normalizeDescription($validated['description'] ?? null),
         );
 
         $this->auditLogger->log('content_templates.update.web', $updated, [
@@ -165,6 +165,13 @@ class ContentTemplateController extends Controller
         ], $request);
 
         return back()->with('status', 'Шаблон удалён.');
+    }
+
+    private function normalizeDescription(?string $description): ?string
+    {
+        $description = trim((string) $description);
+
+        return $description === '' ? null : $description;
     }
 
     private function canReadEntityType(object $user, string $entityType): bool

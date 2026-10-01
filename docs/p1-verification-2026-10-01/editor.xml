@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="/private/tmp/testocms-p1-updater/phpunit.xml" tests="2" assertions="52" errors="0" failures="0" skipped="0" time="4.915334">
+    <testsuite name="Feature" tests="2" assertions="52" errors="0" failures="0" skipped="0" time="4.915334">
+      <testsuite name="Tests\Feature\PublicationSafetyTest" file="/private/tmp/testocms-p1-updater/tests/Feature/PublicationSafetyTest.php" tests="2" assertions="52" errors="0" failures="0" skipped="0" time="4.915334">
+        <testcase name="test_page_editor_save_is_isolated_from_schedule_cancellation_form" file="/private/tmp/testocms-p1-updater/tests/Feature/PublicationSafetyTest.php" line="68" class="Tests\Feature\PublicationSafetyTest" classname="Tests.Feature.PublicationSafetyTest" assertions="26" time="4.425739"/>
+        <testcase name="test_post_editor_save_is_isolated_from_schedule_cancellation_form" file="/private/tmp/testocms-p1-updater/tests/Feature/PublicationSafetyTest.php" line="73" class="Tests\Feature\PublicationSafetyTest" classname="Tests.Feature.PublicationSafetyTest" assertions="26" time="0.489595"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

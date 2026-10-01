@@ -32,7 +32,13 @@
                     </div>
                 @endforeach
             </div>
-            <div class="hint">По умолчанию рекомендуется shared hosting. Docker/VPS пригоден для отдельного сервера с queue worker.</div>
+            <div class="hint">Профиль выбран по текущей конфигурации. Docker/VPS использует отдельный queue worker.</div>
+        </div>
+
+        <div class="form-group">
+            <label for="public_path">Web root (необязательно)</label>
+            <input name="public_path" id="public_path" value="{{ old('public_path', config('setup.public_path')) }}" placeholder="Путь текущей конфигурации или профиля">
+            <div class="hint">Существующий путь сохраняется. Изменяйте его только после подготовки index.php и настройки веб-сервера.</div>
         </div>
 
         <div class="form-group">

@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
 use App\Modules\Core\DTO\CategoryDto;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,19 +21,17 @@ class CategoryController extends Controller
 
         $paginator = Category::query()
             ->where('is_active', true)
+            ->whereHas('translations', fn ($q) => $q->where('locale', $locale))
             ->with(['translations' => fn ($q) => $q->where('locale', $locale)])
             ->orderBy('id')
             ->paginate($perPage)
             ->withQueryString();
 
         $items = collect($paginator->items())->map(function (Category $category): array {
-            $translation = $category->translations->first() ?? $category->translations()->where('locale', config('cms.default_locale'))->first();
+            $translation = $category->translations->first();
 
             return CategoryDto::fromModels($category, $translation)->toArray();
         })->values()->all();
-
-        $lastModified = $paginator->getCollection()->max('updated_at');
-        $lastModifiedCarbon = $lastModified instanceof Carbon ? $lastModified : null;
 
         return $this->cacheableJson($request, [
             'data' => $items,
@@ -44,7 +41,7 @@ class CategoryController extends Controller
                 'total' => $paginator->total(),
                 'locale' => $locale,
             ],
-        ], $lastModifiedCarbon);
+        ], null);
     }
 
     public function show(Request $request, string $slug): JsonResponse
@@ -62,6 +59,6 @@ class CategoryController extends Controller
 
         return $this->cacheableJson($request, [
             'data' => CategoryDto::fromModels($category, $translation)->toArray(),
-        ], $category->updated_at);
+        ], null);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Models\User;
 use App\Modules\Auth\Services\UserManagementService;
 use App\Modules\Ops\Services\AuditLogger;
@@ -129,6 +130,10 @@ class UserController extends Controller
             (string) $validated['password'],
             $request->session()->getId()
         );
+
+        if ($actor?->id === $user->id) {
+            $request->session()->put(EnsureActiveUser::SESSION_VERSION, (int) $user->fresh()->auth_version);
+        }
 
         $this->auditLogger->log('users.password.change.web', $user, [
             'sessions_revoked' => $revokedSessions,

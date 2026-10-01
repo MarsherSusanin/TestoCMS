@@ -1,0 +1,11 @@
+{
+    "zip_install": true,
+    "zip_update": true,
+    "zip_uninstall": true,
+    "bundled_install": true,
+    "bundled_asset": true,
+    "public_script_excluded": true,
+    "fpm_uid": 82,
+    "module_owner": "www-data",
+    "public_asset_owner": "www-data"
+}

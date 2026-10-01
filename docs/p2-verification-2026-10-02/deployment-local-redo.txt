@@ -1,0 +1,7 @@
+
+   INFO  TestoCMS — Мастер настройки.  
+
+
+Target: existing installation; admin admin@example.test. No migrations or content seeding.
+Recovery operation: 4590d8a9-4849-4f25-b066-814d40c2d8d8
+Settings and administrator updated. Installation identity preserved.

@@ -8,8 +8,10 @@ use App\Modules\Updates\Services\CorePackageApplier;
 use App\Modules\Updates\Services\FilesystemUpdateDriver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 use ZipArchive;
@@ -34,6 +36,7 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
             $this->originalPublicPath.'/storage' => storage_path('app/public'),
         ]);
 
+        Artisan::call('up');
         parent::tearDown();
     }
 
@@ -55,6 +58,28 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
         $this->assertTrue(is_link($publicRoot.'/storage'));
         $this->assertSame('module asset', trim((string) file_get_contents($publicRoot.'/modules/acme--demo/widget.js')));
         $this->assertSame('success', $result['status']);
+    }
+
+    public function test_apply_recreates_bootstrap_cache_when_the_zip_omits_the_runtime_directory(): void
+    {
+        [$baseRoot, , $updateStorageRoot] = $this->makeWorkspaceRoots();
+        $this->seedBaseInstall($baseRoot, 'OLD');
+        File::ensureDirectoryExists($baseRoot.'/bootstrap/cache');
+        file_put_contents($baseRoot.'/bootstrap/cache/stale.php', '<?php return [];');
+        $zipPath = $this->makeUpdaterZip('1.2.0', 'NEW');
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($zipPath));
+        $this->assertFalse($zip->locateName('bootstrap/cache/'));
+        $zip->close();
+        config(['updates.base_path' => $baseRoot, 'updates.storage_root' => $updateStorageRoot]);
+
+        app(CorePackageApplier::class)->applyArchiveToFilesystem($zipPath);
+
+        $this->assertDirectoryExists($baseRoot.'/bootstrap/cache');
+        $this->assertTrue(is_writable($baseRoot.'/bootstrap/cache'));
+        $this->assertFileDoesNotExist($baseRoot.'/bootstrap/cache/stale.php');
+        $this->assertFileExists($baseRoot.'/bootstrap/app.php');
+        $this->assertSame('NEW', file_get_contents($baseRoot.'/app/version.txt'));
     }
 
     public function test_filesystem_updater_rollback_restores_managed_public_root_and_storage_link(): void
@@ -88,7 +113,13 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
         $this->assertSame('rolled_back', $backup->status);
     }
 
-    public function test_failed_health_check_triggers_automatic_rollback(): void
+    public static function rejectedHealthStatuses(): array
+    {
+        return [[301], [403], [404], [500], [503]];
+    }
+
+    #[DataProvider('rejectedHealthStatuses')]
+    public function test_failed_health_check_triggers_automatic_rollback(int $status): void
     {
         [$baseRoot, $publicRoot, $updateStorageRoot] = $this->makeWorkspaceRoots();
         $this->seedBaseInstall($baseRoot, 'OLD');
@@ -100,10 +131,10 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
         // The broken new code 500s; after the rollback restores the old code
         // the endpoint recovers — mirror that with a stateful fake.
         $healthCalls = 0;
-        Http::fake(function () use (&$healthCalls) {
+        Http::fake(function () use (&$healthCalls, $status) {
             $healthCalls++;
 
-            return $healthCalls === 1 ? Http::response('boom', 500) : Http::response('ok', 200);
+            return $healthCalls === 1 ? Http::response('boom', $status) : Http::response('ok', 200);
         });
 
         try {
@@ -168,8 +199,15 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
 
         $result = $this->applyUpdate($baseRoot, $publicRoot, $updateStorageRoot, $zipPath);
 
-        $this->assertSame('success', $result['status']);
+        $this->assertSame('health_unverified', $result['status']);
+        $this->assertNotEmpty($result['health_warning']);
+        $this->assertTrue(app()->isDownForMaintenance());
         $this->assertSame('NEW', trim((string) file_get_contents($baseRoot.'/app/version.txt')));
+        $backup = CoreBackup::query()->latest('id')->firstOrFail();
+        $this->assertSame('health_unverified', $backup->restore_status);
+        $journal = json_decode((string) file_get_contents($backup->backup_path.'/operation.json'), true);
+        $this->assertSame('health_unverified', $journal['phase']);
+        $this->assertSame($result['health_warning'], $journal['health']['warning']);
     }
 
     public function test_whole_window_outage_still_marks_the_rollback_as_rolled_back(): void
@@ -299,6 +337,10 @@ class FilesystemUpdaterSharedHostingTest extends TestCase
         // Preflight requires a signing key to be configured for signed sources.
         config()->set('updates.public_key', base64_encode(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())));
 
+        if (trim((string) config('updates.health_check_url')) === '') {
+            config(['updates.health_check_url' => 'https://health.test/up']);
+            Http::fake(['https://health.test/up' => Http::response('ok', 200)]);
+        }
         $inspection = app(CorePackageApplier::class)->inspectArchive($zipPath);
 
         return app(FilesystemUpdateDriver::class)->apply([

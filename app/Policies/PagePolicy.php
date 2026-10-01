@@ -9,6 +9,10 @@ class PagePolicy
 {
     public function before(User $user, string $ability): ?bool
     {
+        if ($user->status !== 'active') {
+            return false;
+        }
+
         if ($user->hasRole('superadmin')) {
             return true;
         }
@@ -33,12 +37,14 @@ class PagePolicy
 
     public function update(User $user, Page $page): bool
     {
-        return $user->can('pages:write');
+        return $user->can('pages:write')
+            && ($page->status !== 'published' || $user->can('pages:publish'));
     }
 
     public function delete(User $user, Page $page): bool
     {
-        return $user->can('pages:write');
+        return $user->can('pages:write')
+            && ($page->status !== 'published' || $user->can('pages:publish'));
     }
 
     public function publish(User $user, Page $page): bool

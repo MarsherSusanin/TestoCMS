@@ -1,0 +1,93 @@
+[
+  {
+    "section": "Панель",
+    "url": "http://127.0.0.1:8765/admin",
+    "title": "Панель · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Страницы",
+    "url": "http://127.0.0.1:8765/admin/pages",
+    "title": "Страницы · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Посты",
+    "url": "http://127.0.0.1:8765/admin/posts",
+    "title": "Посты · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Шаблоны",
+    "url": "http://127.0.0.1:8765/admin/templates",
+    "title": "Шаблоны · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Категории",
+    "url": "http://127.0.0.1:8765/admin/categories",
+    "title": "Категории · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Пользователи",
+    "url": "http://127.0.0.1:8765/admin/users",
+    "title": "Пользователи · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Файлы",
+    "url": "http://127.0.0.1:8765/admin/assets",
+    "title": "Файлы · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Тема",
+    "url": "http://127.0.0.1:8765/admin/theme",
+    "title": "Конструктор темы · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Обновления",
+    "url": "http://127.0.0.1:8765/admin/updates",
+    "title": "Обновления · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "API",
+    "url": "http://127.0.0.1:8765/admin/api-keys",
+    "title": "API доступ · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Модули",
+    "url": "http://127.0.0.1:8765/admin/modules",
+    "title": "Модули · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Настройки",
+    "url": "http://127.0.0.1:8765/admin/settings",
+    "title": "Настройки · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  },
+  {
+    "section": "Аудит",
+    "url": "http://127.0.0.1:8765/admin/audit",
+    "title": "Аудит · TestoCMS",
+    "meaningful": true,
+    "errors": []
+  }
+]

@@ -5,7 +5,7 @@ namespace App\Modules\Setup\Services;
 class SystemCheckService
 {
     /**
-     * @return array<string, array{passed: bool, label: string, detail: string}>
+     * @return array<string, array{passed: bool, label: string, detail: string, optional?: bool}>
      */
     public function runAll(): array
     {
@@ -156,6 +156,7 @@ class SystemCheckService
         $envPath = base_path('.env');
         $dir = dirname($envPath);
 
-        return is_writable($dir) || (file_exists($envPath) && is_writable($envPath));
+        // The writer replaces .env atomically, requiring a writable parent directory.
+        return is_dir($dir) && is_writable($dir);
     }
 }

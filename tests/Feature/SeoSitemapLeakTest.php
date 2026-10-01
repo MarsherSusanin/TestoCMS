@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Page;
 use App\Models\PageTranslation;
+use App\Modules\SEO\Services\SeoCacheKeys;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -70,7 +71,7 @@ class SeoSitemapLeakTest extends TestCase
         $this->get('/sitemaps/en.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
         $this->get('/llms.txt')->assertOk();
 
-        $this->assertTrue(Cache::has('seo:sitemap:en'));
-        $this->assertTrue(Cache::has('seo:llms:en'));
+        $this->assertTrue(Cache::has(SeoCacheKeys::sitemap('en')));
+        $this->assertTrue(Cache::has(SeoCacheKeys::llms('en')));
     }
 }

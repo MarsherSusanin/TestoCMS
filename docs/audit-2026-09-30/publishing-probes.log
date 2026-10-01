@@ -1,0 +1,10 @@
+PHPUnit 11.5.55 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.5.3
+Configuration: /private/tmp/testocms-publishing-audit/phpunit.xml
+
+................                                                  16 / 16 (100%)
+
+Time: 00:00.783, Memory: 54.50 MB
+
+OK (16 tests, 75 assertions)

@@ -33,7 +33,8 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Public uploads are served by the dedicated, bounded media endpoint.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

@@ -1,0 +1,18 @@
+{
+    "server": "Apache/2.4.68 (Unix)",
+    "php": "PHP/8.4.26",
+    "media_get": 200,
+    "authoritative_body": true,
+    "overwrite_get": 200,
+    "overwrite_head_length": "19",
+    "overwrite_etag_changed": true,
+    "conditional_old_etag": 200,
+    "overwrite_new_body": true,
+    "media_head": 200,
+    "media_range": 206,
+    "physical_php_denied": 404,
+    "hidden_denied": 404,
+    "deleted_with_stale_physical_copy": 404,
+    "media_csp": "default-src 'none'; sandbox",
+    "symlink_absent": true
+}

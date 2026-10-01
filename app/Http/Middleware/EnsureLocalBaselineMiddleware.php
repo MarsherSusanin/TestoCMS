@@ -38,6 +38,8 @@ class EnsureLocalBaselineMiddleware
             || $request->is('api*')
             || $request->is('setup*')
             || $request->is('up')
+            || $request->is('healthz')
+            || $request->is('storage/*')
         ) {
             return false;
         }

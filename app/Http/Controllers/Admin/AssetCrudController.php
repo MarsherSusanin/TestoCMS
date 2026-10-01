@@ -4,15 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
+use App\Modules\Content\Exceptions\AssetInUseException;
+use App\Modules\Content\Exceptions\AssetStorageException;
+use App\Modules\Content\Services\AssetDeletionService;
+use App\Modules\Content\Services\AssetUsageService;
+use App\Modules\Content\Services\ContentMutationGuard;
 use App\Modules\Ops\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class AssetCrudController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(private readonly AuditLogger $auditLogger, private readonly AssetDeletionService $deletion, private readonly ContentMutationGuard $guard, private readonly AssetUsageService $usage) {}
 
     public function index(): View
     {
@@ -71,22 +77,28 @@ class AssetCrudController extends Controller
             return back()->withErrors(['file' => 'Upload a file or specify storage_path.'])->withInput();
         }
 
-        $asset = Asset::query()->create([
-            'type' => $validated['type'] ?? $this->resolveAssetType((string) $mimeType),
-            'disk' => $disk,
-            'storage_path' => $path,
-            'public_url' => $publicUrl,
-            'mime_type' => $mimeType,
-            'size' => $size,
-            'width' => $width,
-            'height' => $height,
-            'checksum' => null,
-            'alt' => $validated['alt'] ?? null,
-            'title' => $validated['title'] ?? null,
-            'caption' => $validated['caption'] ?? null,
-            'credits' => $validated['credits'] ?? null,
-            'metadata' => null,
-        ]);
+        $asset = DB::transaction(function () use ($validated, $disk, $path, $publicUrl, $mimeType, $size, $width, $height): Asset {
+            $this->guard->lockMedia();
+            $this->usage->assertReferencesAvailable(Storage::disk($disk)->url($path));
+
+            return Asset::query()->create([
+                'type' => $validated['type'] ?? $this->resolveAssetType((string) $mimeType),
+                'disk' => $disk,
+                'storage_path' => $path,
+                'public_url' => $publicUrl,
+                'mime_type' => $mimeType,
+                'size' => $size,
+                'width' => $width,
+                'height' => $height,
+                'checksum' => null,
+                'alt' => $validated['alt'] ?? null,
+                'title' => $validated['title'] ?? null,
+                'caption' => $validated['caption'] ?? null,
+                'credits' => $validated['credits'] ?? null,
+                'metadata' => null,
+            ]);
+
+        });
 
         $this->auditLogger->log('asset.create.web', $asset, [], $request);
 
@@ -113,8 +125,13 @@ class AssetCrudController extends Controller
             'credits' => 'nullable|string|max:255',
         ]);
 
-        $asset->fill($validated);
-        $asset->save();
+        $asset = DB::transaction(function () use ($asset, $validated): Asset {
+            $this->guard->lockMedia();
+            $locked = Asset::query()->lockForUpdate()->findOrFail($asset->id);
+            $locked->fill($validated)->save();
+
+            return $locked;
+        });
 
         $this->auditLogger->log('asset.update.web', $asset, [], $request);
 
@@ -124,16 +141,15 @@ class AssetCrudController extends Controller
     public function destroy(Request $request, Asset $asset): RedirectResponse
     {
         $this->authorize('delete', $asset);
-
         try {
-            if ($asset->storage_path !== null && Storage::disk($asset->disk)->exists($asset->storage_path)) {
-                Storage::disk($asset->disk)->delete($asset->storage_path);
-            }
-        } catch (\Throwable) {
-            // Ignore storage cleanup failures to avoid blocking DB cleanup.
-        }
+            $this->deletion->delete($asset);
+        } catch (AssetInUseException $exception) {
+            $references = array_map(static fn (array $usage): string => $usage['entity_type'].' #'.$usage['id'].' ('.$usage['field'].') '.$usage['admin_url'], $exception->usages);
 
-        $asset->delete();
+            return back()->withErrors(['asset' => $exception->getMessage().' '.implode('; ', $references)]);
+        } catch (AssetStorageException $exception) {
+            return back()->withErrors(['asset' => $exception->getMessage()]);
+        }
         $this->auditLogger->log('asset.delete.web', $asset, [], $request);
 
         return redirect()->route('admin.assets.index')->with('status', 'Asset deleted.');

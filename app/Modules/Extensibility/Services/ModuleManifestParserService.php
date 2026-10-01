@@ -3,6 +3,7 @@
 namespace App\Modules\Extensibility\Services;
 
 use App\Modules\Extensibility\DTO\ModuleManifestDto;
+use Composer\Semver\Semver;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -142,34 +143,18 @@ class ModuleManifestParserService
             return;
         }
 
-        $chunks = preg_split('/\s*,\s*/', $constraint) ?: [];
-        foreach ($chunks as $chunk) {
-            $chunk = trim($chunk);
-            if ($chunk === '') {
-                continue;
-            }
-
-            if (preg_match('/^\^(\d+)\.(\d+)\.(\d+)$/', $chunk, $m) === 1) {
-                $major = (int) $m[1];
-                $base = sprintf('%d.%d.%d', $m[1], $m[2], $m[3]);
-                if ((int) explode('.', $actualVersion)[0] !== $major || version_compare($actualVersion, $base, '<')) {
-                    throw new RuntimeException(sprintf('%s version %s does not satisfy %s', $label, $actualVersion, $constraint));
-                }
-
-                continue;
-            }
-
-            if (preg_match('/^(>=|<=|>|<|=)?\s*([0-9]+(?:\.[0-9]+){0,2})$/', $chunk, $m) === 1) {
-                $op = $m[1] !== '' ? $m[1] : '>=';
-                $target = $m[2];
-                if (! version_compare($actualVersion, $target, $op)) {
-                    throw new RuntimeException(sprintf('%s version %s does not satisfy %s', $label, $actualVersion, $constraint));
-                }
-
-                continue;
-            }
-
-            throw new RuntimeException(sprintf('Unsupported %s version constraint: %s', $label, $constraint));
+        // Preserve the historical bare-version lower bound while using Composer
+        // for caret, tilde, ranges, alternatives and malformed expressions.
+        if (preg_match('/^\d+(?:\.\d+){0,2}$/', $constraint) === 1) {
+            $constraint = '>='.$constraint;
+        }
+        try {
+            $compatible = Semver::satisfies($actualVersion, $constraint);
+        } catch (\UnexpectedValueException $e) {
+            throw new RuntimeException(sprintf('Invalid %s version constraint: %s', $label, $constraint), 0, $e);
+        }
+        if (! $compatible) {
+            throw new RuntimeException(sprintf('%s version %s does not satisfy %s', $label, $actualVersion, $constraint));
         }
     }
 

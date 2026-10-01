@@ -75,6 +75,9 @@ class CorePackageApplier
                 $this->deletePath($target);
                 $this->copyPath($source, $target);
             }
+            // ZIPs may omit empty runtime directories. A fresh kernel needs this
+            // directory before it can rebuild package discovery after bootstrap replacement.
+            File::ensureDirectoryExists($basePath.DIRECTORY_SEPARATOR.'bootstrap/cache');
         } finally {
             File::deleteDirectory($jobDir);
         }

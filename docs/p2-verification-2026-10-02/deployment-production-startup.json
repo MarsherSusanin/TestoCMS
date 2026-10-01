@@ -1,0 +1,167 @@
+[
+  {
+    "service": "db-env",
+    "image_id": "sha256:f5c2395544283cb50f052e8a3872f16cf5ff0a263b75e5e3de89aed16e4e7afd",
+    "status": "exited",
+    "exit_code": 0,
+    "restart_count": 0,
+    "started_at": "2026-10-01T17:53:04.975171966Z",
+    "finished_at": "2026-10-01T17:53:05.52843305Z",
+    "mounts": [
+      {
+        "type": "bind",
+        "destination": "/var/www/html/.env",
+        "writable": false
+      },
+      {
+        "type": "volume",
+        "destination": "/run/cms-db",
+        "writable": true
+      }
+    ]
+  },
+  {
+    "service": "init",
+    "image_id": "sha256:f5c2395544283cb50f052e8a3872f16cf5ff0a263b75e5e3de89aed16e4e7afd",
+    "status": "exited",
+    "exit_code": 0,
+    "restart_count": 0,
+    "started_at": "2026-10-01T17:53:16.548625097Z",
+    "finished_at": "2026-10-01T17:53:18.121062833Z",
+    "mounts": [
+      {
+        "type": "bind",
+        "destination": "/var/www/html/.env",
+        "writable": false
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/storage",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/bootstrap/cache",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/modules",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/html_public/modules",
+        "writable": true
+      }
+    ]
+  },
+  {
+    "service": "app",
+    "image_id": "sha256:f5c2395544283cb50f052e8a3872f16cf5ff0a263b75e5e3de89aed16e4e7afd",
+    "status": "running",
+    "exit_code": 0,
+    "restart_count": 0,
+    "started_at": "2026-10-01T17:53:18.360051208Z",
+    "finished_at": "0001-01-01T00:00:00Z",
+    "mounts": [
+      {
+        "type": "bind",
+        "destination": "/var/www/html/.env",
+        "writable": false
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/storage",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/bootstrap/cache",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/modules",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/html_public/modules",
+        "writable": true
+      }
+    ]
+  },
+  {
+    "service": "queue",
+    "image_id": "sha256:f5c2395544283cb50f052e8a3872f16cf5ff0a263b75e5e3de89aed16e4e7afd",
+    "status": "running",
+    "exit_code": 0,
+    "restart_count": 0,
+    "started_at": "2026-10-01T17:53:19.537999417Z",
+    "finished_at": "0001-01-01T00:00:00Z",
+    "mounts": [
+      {
+        "type": "volume",
+        "destination": "/var/www/html/storage",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/bootstrap/cache",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/modules",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/html_public/modules",
+        "writable": true
+      },
+      {
+        "type": "bind",
+        "destination": "/var/www/html/.env",
+        "writable": false
+      }
+    ]
+  },
+  {
+    "service": "scheduler",
+    "image_id": "sha256:f5c2395544283cb50f052e8a3872f16cf5ff0a263b75e5e3de89aed16e4e7afd",
+    "status": "running",
+    "exit_code": 0,
+    "restart_count": 0,
+    "started_at": "2026-10-01T17:53:19.512374542Z",
+    "finished_at": "0001-01-01T00:00:00Z",
+    "mounts": [
+      {
+        "type": "volume",
+        "destination": "/var/www/html/storage",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/bootstrap/cache",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/modules",
+        "writable": true
+      },
+      {
+        "type": "volume",
+        "destination": "/var/www/html/html_public/modules",
+        "writable": true
+      },
+      {
+        "type": "bind",
+        "destination": "/var/www/html/.env",
+        "writable": false
+      }
+    ]
+  }
+]

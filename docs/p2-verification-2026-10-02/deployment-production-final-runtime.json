@@ -1,0 +1,26 @@
+{
+    "db_password_sha256": "e271716db49a3fe86f560dbe8d052499a9c43307e2f63e75af3117274716db93",
+    "source_sha256": {
+        "app\/Http\/Controllers\/Admin\/ContentTemplateController.php": "fb13642370c1d5bf4005b54653bc457250039c1802ff7b68241e8b335ceec5c8",
+        "app\/Modules\/LLM\/Services\/LlmTextNormalizer.php": "e889b0d30968e6db67632acdab37c06c6d2660c161f5fe86b3fffabdfa5e5905",
+        "app\/Modules\/Content\/Services\/CategoryContentService.php": "c4ab64f4039c98bd2a1daaabec0001cbbb3a3a9f0d31b705ba2fe07decdf7778",
+        "app\/Modules\/Content\/Services\/AssetDeletionService.php": "aaee04eb09cd3dcba0255e2d60ea5cd9b6aced1b932febad5c29bb32ba445ae9",
+        "app\/Modules\/Setup\/Services\/SetupRedoService.php": "78c5ae2bdb2d04b68dbfe866a5c66552615e0842818d9fb7e171a238b83e1c77",
+        "app\/Modules\/Extensibility\/Services\/ModuleInstallerService.php": "e0dfcf6997b8fe5d2f303757a2df54710d858f9ddb77623fe983e1279ea827df",
+        "html_public\/build\/manifest.json": "6abdfc7c044507a2151b258d22099845dcc3178a7130f71937ad05db8021c941"
+    },
+    "php_version": "8.4.26",
+    "no_dev_dependencies": true,
+    "pdo_drivers": [
+        "sqlite",
+        "mysql",
+        "pgsql"
+    ],
+    "redis_extension": true,
+    "pg_dump": "pg_dump (PostgreSQL) 16.15",
+    "source_writable_as_fpm": {
+        "app": false,
+        "vendor": false,
+        "bootstrap\/app.php": false
+    }
+}

@@ -2,7 +2,10 @@
 
 namespace App\Modules\Setup\Services;
 
+use Dotenv\Dotenv;
+use Dotenv\Exception\InvalidFileException;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class EnvWriterService
 {
@@ -15,26 +18,29 @@ class EnvWriterService
      *
      * @param  array<string, mixed>  $data
      */
-    public function buildEnvContent(array $data): string
+    public function buildEnvContent(array $data, ?string $existingContent = null): string
     {
+        $existingContent ??= is_file(app()->environmentFilePath()) ? (string) file_get_contents(app()->environmentFilePath()) : '';
+        $existing = Dotenv::parse($existingContent);
         $appKey = 'base64:'.base64_encode(random_bytes(32));
         $deploymentProfile = $this->deploymentProfiles->normalize($data['deployment_profile'] ?? null);
         $profileConfig = $this->deploymentProfiles->resolve($deploymentProfile);
 
-        $dbConnection = $data['db_connection'] ?? 'mysql';
-        $dbPort = $data['db_port'] ?? ($dbConnection === 'pgsql' ? '5432' : '3306');
+        $dbConnection = $data['db_connection'] ?? $existing['DB_CONNECTION'] ?? config('database.default', 'mysql');
+        $connection = (array) config('database.connections.'.$dbConnection, []);
+        $dbPort = $data['db_port'] ?? $existing['DB_PORT'] ?? $connection['port'] ?? ($dbConnection === 'pgsql' ? '5432' : '3306');
 
         $supportedLocales = implode(',', (array) ($data['supported_locales'] ?? ['ru', 'en']));
         $defaultLocale = $data['default_locale'] ?? 'ru';
 
         $lines = [
             'APP_NAME' => $data['app_name'] ?? 'TestoCMS',
-            'APP_ENV' => 'production',
-            'APP_KEY' => $appKey,
-            'APP_DEBUG' => 'false',
+            'APP_ENV' => $deploymentProfile === DeploymentProfileService::LOCAL ? 'local' : 'production',
+            'APP_KEY' => trim((string) ($existing['APP_KEY'] ?? '')) !== '' ? $existing['APP_KEY'] : (config('app.key') ?: $appKey),
+            'APP_DEBUG' => $deploymentProfile === DeploymentProfileService::LOCAL ? 'true' : 'false',
             'APP_TIMEZONE' => $data['timezone'] ?? 'UTC',
             'APP_URL' => rtrim($data['app_url'] ?? 'https://localhost', '/'),
-            'LARAVEL_PUBLIC_PATH' => $profileConfig['public_path'],
+            'LARAVEL_PUBLIC_PATH' => $data['public_path'] ?? ($existing['LARAVEL_PUBLIC_PATH'] ?? $profileConfig['public_path']),
             '',
             'APP_LOCALE' => $defaultLocale,
             'APP_FALLBACK_LOCALE' => 'en',
@@ -50,7 +56,7 @@ class EnvWriterService
             'CMS_SLUG_CACHE_TTL' => '300',
             'CMS_REVISION_LIMIT' => '10',
             'CMS_SAFE_EMBED_DOMAINS' => 'youtube.com,youtu.be,vimeo.com,maps.google.com',
-            'CMS_CONTENT_API_KEY' => Str::random(48),
+            'CMS_CONTENT_API_KEY' => trim((string) ($existing['CMS_CONTENT_API_KEY'] ?? '')) !== '' ? $existing['CMS_CONTENT_API_KEY'] : Str::random(48),
             'CMS_CONTENT_API_RATE_LIMIT' => '120',
             'CMS_SEED_DEMO_CONTENT' => 'false',
             'CMS_DEPLOYMENT_PROFILE' => $deploymentProfile,
@@ -65,11 +71,11 @@ class EnvWriterService
             'LOG_LEVEL' => 'warning',
             '',
             'DB_CONNECTION' => $dbConnection,
-            'DB_HOST' => $data['db_host'] ?? 'localhost',
+            'DB_HOST' => $data['db_host'] ?? $connection['host'] ?? 'localhost',
             'DB_PORT' => $dbPort,
-            'DB_DATABASE' => $data['db_database'] ?? '',
-            'DB_USERNAME' => $data['db_username'] ?? '',
-            'DB_PASSWORD' => $data['db_password'] ?? '',
+            'DB_DATABASE' => $data['db_database'] ?? $connection['database'] ?? '',
+            'DB_USERNAME' => $data['db_username'] ?? $connection['username'] ?? '',
+            'DB_PASSWORD' => $data['db_password'] ?? $connection['password'] ?? '',
             '',
             'SESSION_DRIVER' => 'database',
             'SESSION_LIFETIME' => '120',
@@ -127,7 +133,80 @@ class EnvWriterService
             'VITE_APP_NAME' => '${APP_NAME}',
         ];
 
-        return $this->renderLines($lines);
+        $explicit = [
+            'app_name' => 'APP_NAME', 'app_url' => 'APP_URL', 'timezone' => 'APP_TIMEZONE',
+            'db_connection' => 'DB_CONNECTION', 'db_host' => 'DB_HOST', 'db_port' => 'DB_PORT',
+            'db_database' => 'DB_DATABASE', 'db_username' => 'DB_USERNAME', 'db_password' => 'DB_PASSWORD',
+            'supported_locales' => 'CMS_SUPPORTED_LOCALES', 'default_locale' => 'CMS_DEFAULT_LOCALE',
+            'admin_name' => 'CMS_ADMIN_NAME', 'admin_login' => 'CMS_ADMIN_LOGIN',
+            'admin_email' => 'CMS_ADMIN_EMAIL', 'admin_password' => 'CMS_ADMIN_PASSWORD',
+            'deployment_profile' => 'CMS_DEPLOYMENT_PROFILE',
+            'public_path' => 'LARAVEL_PUBLIC_PATH',
+        ];
+        $replace = ['APP_KEY', 'CMS_CONTENT_API_KEY'];
+        foreach ($explicit as $input => $key) {
+            if (array_key_exists($input, $data)) {
+                $replace[] = $key;
+            }
+        }
+        if (array_key_exists('default_locale', $data)) {
+            $replace[] = 'APP_LOCALE';
+        }
+        if (array_key_exists('deployment_profile', $data)
+            && ($existing['CMS_DEPLOYMENT_PROFILE'] ?? null) !== $deploymentProfile) {
+            array_push($replace, 'QUEUE_CONNECTION', 'CACHE_STORE');
+        }
+        foreach ($lines as $key => $value) {
+            if (is_string($key) && array_key_exists($key, $existing) && ! in_array($key, $replace, true)) {
+                unset($lines[$key]);
+            }
+        }
+        // Preserve unknown integrations, comments and quoting byte-for-byte.
+        $remaining = $lines;
+        $output = '';
+        $rawLines = preg_split('/(?<=\n)/', $existingContent, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        for ($index = 0; $index < count($rawLines); $index++) {
+            $line = $rawLines[$index];
+            if (preg_match('/^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=/', $line, $match)
+            ) {
+                // Quoted dotenv values may span multiple physical lines. Consume
+                // the whole assignment before replacing it or retaining its raw text.
+                while (true) {
+                    try {
+                        if (array_key_exists($match[1], Dotenv::parse($line))) {
+                            break;
+                        }
+                        // phpdotenv leaves an unterminated multiline buffer out
+                        // of the parsed result until the closing quote arrives.
+                        if (! isset($rawLines[$index + 1])) {
+                            throw new RuntimeException('Incomplete environment assignment.');
+                        }
+                        $line .= $rawLines[++$index];
+                    } catch (InvalidFileException $exception) {
+                        if (! isset($rawLines[$index + 1])) {
+                            throw $exception;
+                        }
+                        $line .= $rawLines[++$index];
+                    }
+                }
+            }
+            if (isset($match[1]) && array_key_exists($match[1], $lines)) {
+                $key = $match[1];
+                if (! array_key_exists($key, $remaining)) {
+                    continue;
+                }
+                $output .= $key.'='.$this->quoteEnvValue((string) $remaining[$key], $this->isTemplateKey($key))."\n";
+                unset($remaining[$key]);
+            } else {
+                $output .= $line;
+            }
+            $match = [];
+        }
+        if ($output !== '' && ! str_ends_with($output, "\n")) {
+            $output .= "\n";
+        }
+
+        return $output.$this->renderLines($remaining);
     }
 
     /**
@@ -135,7 +214,20 @@ class EnvWriterService
      */
     public function writeEnvFile(string $content): void
     {
-        file_put_contents(base_path('.env'), $content);
+        $path = app()->environmentFilePath();
+        $temporary = tempnam(dirname($path), '.cms-env-');
+        if ($temporary === false) {
+            throw new RuntimeException('Cannot create temporary environment file.');
+        }
+        try {
+            if (file_put_contents($temporary, $content, LOCK_EX) === false || ! chmod($temporary, 0600) || ! rename($temporary, $path)) {
+                throw new RuntimeException('Cannot replace the environment file.');
+            }
+        } finally {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+        }
     }
 
     /**
@@ -144,10 +236,23 @@ class EnvWriterService
     public function markInstalled(): void
     {
         $path = storage_path('installed');
-        file_put_contents($path, json_encode([
+        $content = json_encode(array_merge([
             'installed_at' => now()->toIso8601String(),
             'php_version' => PHP_VERSION,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        ], app(InstallationIdentityService::class)->bind()), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $temporary = tempnam(dirname($path), '.cms-installed-');
+        if ($temporary === false) {
+            throw new RuntimeException('Cannot create the installation marker.');
+        }
+        try {
+            if (file_put_contents($temporary, $content, LOCK_EX) === false || ! rename($temporary, $path)) {
+                throw new RuntimeException('Cannot write the installation marker.');
+            }
+        } finally {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+        }
     }
 
     /**
@@ -220,18 +325,23 @@ class EnvWriterService
             if (is_int($key) && $value === '') {
                 $output .= "\n";
             } else {
-                $output .= $key.'='.$this->quoteEnvValue($value)."\n";
+                $output .= $key.'='.$this->quoteEnvValue($value, $this->isTemplateKey((string) $key))."\n";
             }
         }
 
         return $output;
     }
 
-    private function quoteEnvValue(string $value): string
+    private function isTemplateKey(string $key): bool
+    {
+        return in_array($key, ['MAIL_FROM_NAME', 'SEO_SITE_NAME', 'SEO_ORGANIZATION_NAME', 'VITE_APP_NAME'], true);
+    }
+
+    private function quoteEnvValue(string $value, bool $interpolate = false): string
     {
         return '"'.str_replace(
-            ['\\', '"', "\n", "\r"],
-            ['\\\\', '\\"', '\\n', '\\r'],
+            ['\\', '"', "\n", "\r", '$'],
+            ['\\\\', '\\"', '\\n', '\\r', $interpolate ? '$' : '\\$'],
             $value,
         ).'"';
     }

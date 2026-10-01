@@ -7,6 +7,7 @@ use App\Models\ModuleInstallLog;
 use App\Modules\Caching\Services\PageCacheService;
 use App\Modules\Extensibility\DTO\ModuleManifestDto;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -209,6 +210,11 @@ class ModuleInstallerService
         $jobDir = $tmpRoot.DIRECTORY_SEPARATOR.'job_'.Str::random(18);
         File::ensureDirectoryExists($jobDir);
 
+        $stagePath = null;
+        $backupPath = null;
+        $swapped = false;
+        $originalAttributes = $module->getRawOriginal();
+
         try {
             $archivePath = $jobDir.DIRECTORY_SEPARATOR.'module.zip';
             $zipFile->move($jobDir, 'module.zip');
@@ -233,52 +239,64 @@ class ModuleInstallerService
                 throw new RuntimeException('Installed module directory not found: '.$targetPath);
             }
 
-            $backupPath = $jobDir.DIRECTORY_SEPARATOR.'backup_current';
+            // Named module/storage volumes are different filesystems. Stage and
+            // retain the old version beside the target so every rename is local.
+            $suffix = Str::random(18);
+            $stagePath = dirname($targetPath).DIRECTORY_SEPARATOR.'.'.basename($targetPath).'.stage-'.$suffix;
+            $backupPath = dirname($targetPath).DIRECTORY_SEPARATOR.'.'.basename($targetPath).'.backup-'.$suffix;
+            $this->copyDirectorySafe($moduleRoot, $stagePath);
             if (! @rename($targetPath, $backupPath)) {
                 throw new RuntimeException('Cannot move current module directory to backup.');
             }
-
-            try {
-                $this->copyDirectorySafe($moduleRoot, $targetPath);
-            } catch (\Throwable $copyError) {
-                File::deleteDirectory($targetPath);
-                @rename($backupPath, $targetPath);
-                throw $copyError;
+            $swapped = true;
+            if (! @rename($stagePath, $targetPath)) {
+                throw new RuntimeException('Cannot activate staged module directory.');
             }
+            DB::transaction(function () use ($module, $manifest, $targetPath, $archivePath, $userId): void {
+                $this->publicAssetsPublisher->publishFromInstallPath($targetPath, $manifest->id);
 
-            File::deleteDirectory($backupPath);
-            $this->publicAssetsPublisher->publishFromInstallPath($targetPath, $manifest->id);
-
-            $module->fill([
-                'name' => $manifest->name,
-                'version' => $manifest->version,
-                'description' => $manifest->description,
-                'author' => $manifest->author,
-                'provider' => $manifest->provider,
-                'checksum' => is_file($archivePath) ? hash_file('sha256', $archivePath) : $module->checksum,
-                'status' => $module->enabled ? 'enabled' : 'installed',
-                'updated_at_module' => now(),
-                'metadata' => array_merge($manifest->toMetadataArray(), [
-                    'install_source' => array_merge((array) ($module->metadata['install_source'] ?? []), [
-                        'last_update_type' => 'zip',
+                $module->fill([
+                    'name' => $manifest->name,
+                    'version' => $manifest->version,
+                    'description' => $manifest->description,
+                    'author' => $manifest->author,
+                    'provider' => $manifest->provider,
+                    'checksum' => is_file($archivePath) ? hash_file('sha256', $archivePath) : $module->checksum,
+                    'status' => $module->enabled ? 'enabled' : 'installed',
+                    'updated_at_module' => now(),
+                    'metadata' => array_merge($manifest->toMetadataArray(), [
+                        'install_source' => array_merge((array) ($module->metadata['install_source'] ?? []), [
+                            'last_update_type' => 'zip',
+                        ]),
                     ]),
-                ]),
-                'last_error' => null,
-            ]);
-            $module->save();
+                    'last_error' => null,
+                ]);
+                $module->save();
 
-            $this->logAction($manifest->id, 'update_zip', 'success', [
-                'old_version' => $module->getOriginal('version'),
-                'new_version' => $manifest->version,
-            ], $userId);
+                $this->logAction($manifest->id, 'update_zip', 'success', [
+                    'old_version' => $module->getOriginal('version'),
+                    'new_version' => $manifest->version,
+                ], $userId);
 
-            $this->moduleCache->rebuildFromDatabase();
-            if ((bool) $module->enabled) {
-                $this->pageCacheService->flushAll();
-            }
+                $this->moduleCache->rebuildFromDatabase();
+                if ((bool) $module->enabled) {
+                    $this->pageCacheService->flushAll();
+                }
+            });
+            $swapped = false;
+            $this->deleteUpdatePath($backupPath);
 
             return $module->fresh() ?? $module;
         } catch (\Throwable $e) {
+            if ($swapped && $backupPath !== null && (is_dir($backupPath) || is_link($backupPath))) {
+                $this->deleteUpdatePath((string) $module->install_path);
+                if (! @rename($backupPath, (string) $module->install_path)) {
+                    throw new RuntimeException('Module update failed; original version is retained at '.$backupPath.'. Restore it before retrying.', 0, $e);
+                }
+                $module->setRawAttributes($originalAttributes, true);
+                $this->publicAssetsPublisher->publishFromInstallPath((string) $module->install_path, (string) $module->module_key);
+                $this->moduleCache->rebuildFromDatabase();
+            }
             $module->forceFill([
                 'last_error' => $e->getMessage(),
                 'status' => 'error',
@@ -287,7 +305,19 @@ class ModuleInstallerService
             $this->logAction((string) $module->module_key, 'update_zip', 'failed', ['error' => $e->getMessage()], $userId);
             throw $e;
         } finally {
+            if ($stagePath !== null) {
+                $this->deleteUpdatePath($stagePath);
+            }
             File::deleteDirectory($jobDir);
+        }
+    }
+
+    private function deleteUpdatePath(string $path): void
+    {
+        if (is_link($path)) {
+            @unlink($path);
+        } elseif (is_dir($path)) {
+            File::deleteDirectory($path);
         }
     }
 

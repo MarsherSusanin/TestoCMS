@@ -88,7 +88,7 @@ class SetupWizardTest extends TestCase
         $this->assertSame(0, User::query()->count());
     }
 
-    public function test_step5_uses_shared_finalizer_with_explicit_wizard_payload(): void
+    public function test_post_step5_uses_shared_finalizer_with_explicit_wizard_payload(): void
     {
         $this->app->instance(SystemCheckService::class, new class extends SystemCheckService
         {
@@ -154,7 +154,7 @@ class SetupWizardTest extends TestCase
                 'admin_email' => 'radaevir@gmail.com',
                 'admin_password' => 'Secret123!',
             ],
-        ])->get(route('setup.step5'))
+        ])->post(route('setup.finalize'))
             ->assertOk()
             ->assertSee('Установка завершена', false)
             ->assertSessionMissing('setup.db')
@@ -164,6 +164,8 @@ class SetupWizardTest extends TestCase
 
     public function test_step3_defaults_to_shared_hosting_profile(): void
     {
+        config()->set('setup.deployment_profile', '');
+
         $response = $this->withSession([
             'setup.db' => [
                 'db_connection' => 'pgsql',
@@ -185,5 +187,20 @@ class SetupWizardTest extends TestCase
             '/id="deployment_profile_shared_hosting"[^>]*value="shared_hosting"[^>]*checked/s',
             $response->getContent()
         ));
+    }
+
+    public function test_get_step5_only_reviews_without_installing(): void
+    {
+        $finalizer = Mockery::mock(SetupFinalizationService::class);
+        $finalizer->shouldNotReceive('finalize');
+        $this->app->instance(SetupFinalizationService::class, $finalizer);
+        $this->withSession([
+            'setup.db' => ['db_connection' => 'pgsql'],
+            'setup.site' => ['app_name' => 'Review Site', 'app_url' => 'https://example.test'],
+            'setup.admin' => ['admin_email' => 'review@example.test', 'admin_password' => 'never-render-password'],
+        ])->get(route('setup.step5'))
+            ->assertOk()->assertSee('Подтверждение установки')->assertDontSee('never-render-password')
+            ->assertSessionHas('setup.admin');
+        $this->assertFileDoesNotExist($this->installedMarkerPath);
     }
 }
