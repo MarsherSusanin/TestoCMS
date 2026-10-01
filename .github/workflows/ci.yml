@@ -129,6 +129,7 @@ jobs:
       - name: Verify content, permissions, translations and schedules
         env:
           DB_CONNECTION: mysql
+          DB_PORT: 3306
           DB_DATABASE: testocms_p2_ci
           DB_USERNAME: root
           DB_PASSWORD: disposable-ci-password
