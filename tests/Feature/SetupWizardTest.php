@@ -164,6 +164,8 @@ class SetupWizardTest extends TestCase
 
     public function test_step3_defaults_to_shared_hosting_profile(): void
     {
+        config()->set('setup.deployment_profile', '');
+
         $response = $this->withSession([
             'setup.db' => [
                 'db_connection' => 'pgsql',

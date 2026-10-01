@@ -10,6 +10,8 @@ class EnvWriterServiceTest extends TestCase
 {
     public function test_generated_env_defaults_to_shared_hosting_safe_production_baseline(): void
     {
+        config()->set('setup.deployment_profile', '');
+
         $content = app(EnvWriterService::class)->buildEnvContent([
             'db_connection' => 'pgsql',
             'db_host' => 'db',
