@@ -1,0 +1,19 @@
+{
+    "result": {
+        "mode": "filesystem-updater",
+        "status": "success",
+        "target_version": "1.2.0",
+        "backup_key": "bkp_20260930170208_k4yxv6",
+        "preflight": {
+            "ok": true,
+            "issues": [],
+            "warnings": [],
+            "mode": "filesystem-updater"
+        },
+        "from_version": "1.2.0-rc.1",
+        "health_warning": null
+    },
+    "migration_count_before": 14,
+    "migration_count_after": 16,
+    "maintenance": false
+}

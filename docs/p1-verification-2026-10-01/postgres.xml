@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="Tests\Integration\PostgresSnapshotIntegrationTest" file="/private/tmp/testocms-p1-updater/tests/Integration/PostgresSnapshotIntegrationTest.php" tests="5" assertions="44" errors="0" failures="0" skipped="0" time="381.941670">
+    <testcase name="test_full_snapshot_and_interrupted_database_rename_are_restored" file="/private/tmp/testocms-p1-updater/tests/Integration/PostgresSnapshotIntegrationTest.php" line="47" class="Tests\Integration\PostgresSnapshotIntegrationTest" classname="Tests.Integration.PostgresSnapshotIntegrationTest" assertions="10" time="93.692106"/>
+    <testcase name="test_corrupt_legacy_sql_and_non_dedicated_database_cannot_go_live" file="/private/tmp/testocms-p1-updater/tests/Integration/PostgresSnapshotIntegrationTest.php" line="89" class="Tests\Integration\PostgresSnapshotIntegrationTest" classname="Tests.Integration.PostgresSnapshotIntegrationTest" assertions="5" time="81.279318"/>
+    <testsuite name="Tests\Integration\PostgresSnapshotIntegrationTest::test_insufficient_role_privileges_are_rejected_before_database_backup" tests="2" assertions="18" errors="0" failures="0" skipped="0" time="112.959382">
+      <testcase name="test_insufficient_role_privileges_are_rejected_before_database_backup with data set &quot;CREATEDB without ownership&quot;" file="/private/tmp/testocms-p1-updater/tests/Integration/PostgresSnapshotIntegrationTest.php" line="119" class="Tests\Integration\PostgresSnapshotIntegrationTest" classname="Tests.Integration.PostgresSnapshotIntegrationTest" assertions="9" time="74.373648"/>
+      <testcase name="test_insufficient_role_privileges_are_rejected_before_database_backup with data set &quot;ownership without CREATEDB&quot;" file="/private/tmp/testocms-p1-updater/tests/Integration/PostgresSnapshotIntegrationTest.php" line="119" class="Tests\Integration\PostgresSnapshotIntegrationTest" classname="Tests.Integration.PostgresSnapshotIntegrationTest" assertions="9" time="38.585734"/>
+    </testsuite>
+    <testcase name="test_restore_terminates_an_active_live_connection_and_switches_to_the_snapshot_database" file="/private/tmp/testocms-p1-updater/tests/Integration/PostgresSnapshotIntegrationTest.php" line="167" class="Tests\Integration\PostgresSnapshotIntegrationTest" classname="Tests.Integration.PostgresSnapshotIntegrationTest" assertions="11" time="94.010865"/>
+  </testsuite>
+</testsuites>

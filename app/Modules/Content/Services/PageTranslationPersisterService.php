@@ -7,6 +7,8 @@ use App\Models\PageTranslation;
 
 class PageTranslationPersisterService
 {
+    public function __construct(private readonly SearchTextProjectionService $searchProjection) {}
+
     /**
      * @param  array<string, array<string, mixed>>  $translations
      */
@@ -19,6 +21,7 @@ class PageTranslationPersisterService
                     'locale' => $locale,
                 ],
                 [
+                    'search_text' => $this->searchProjection->forPage($item),
                     'title' => $item['title'],
                     'slug' => $item['slug'],
                     'content_blocks' => $item['content_blocks'],

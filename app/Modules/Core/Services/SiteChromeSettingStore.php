@@ -3,7 +3,11 @@
 namespace App\Modules\Core\Services;
 
 use App\Models\ThemeSetting;
+use App\Modules\Caching\Services\PublicContentVersionService;
+use App\Modules\Content\Services\AssetUsageService;
+use App\Modules\Content\Services\ContentMutationGuard;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class SiteChromeSettingStore
@@ -33,13 +37,17 @@ class SiteChromeSettingStore
      */
     public function savePayload(array $payload, ?int $actorId = null): ThemeSetting
     {
-        return ThemeSetting::query()->updateOrCreate(
-            ['key' => 'site_chrome'],
-            [
-                'settings' => $payload,
-                'updated_by' => $actorId,
-            ]
-        );
+        return DB::transaction(function () use ($payload, $actorId): ThemeSetting {
+            app(ContentMutationGuard::class)->lockMedia();
+            app(AssetUsageService::class)->assertReferencesAvailable($payload);
+            $record = ThemeSetting::query()->updateOrCreate(
+                ['key' => 'site_chrome'],
+                ['settings' => $payload, 'updated_by' => $actorId],
+            );
+            app(PublicContentVersionService::class)->bump();
+
+            return $record;
+        });
     }
 
     private function themeTableExists(): bool

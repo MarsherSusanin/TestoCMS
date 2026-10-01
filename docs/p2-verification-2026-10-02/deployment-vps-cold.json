@@ -1,0 +1,13 @@
+{
+    "instance_id": "2f843275-f1ed-4cda-8c3c-cf3acc68face",
+    "identity_bound": true,
+    "admin_count": 1,
+    "admin_hash_fingerprint": "9d5986f282e7754b0da067fbd4c463edb5d1411e08ef32c8a73d994b03a3b901",
+    "provided_password_valid": true,
+    "env_sha256": "a4faa4369595e40fb24f60a8d5f18e8ac93849bc6dec4d0df36e60a6c4f6004a",
+    "app_environment": "production",
+    "deployment_profile": "docker_vps",
+    "public_root": "\/var\/www\/html\/html_public",
+    "private_local_keys": false,
+    "http_health": 200
+}

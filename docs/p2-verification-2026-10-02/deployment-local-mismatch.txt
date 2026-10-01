@@ -1,0 +1,5 @@
+
+   INFO  TestoCMS — Мастер настройки.  
+
+
+Installation identity mismatch (database, web root or APP_KEY). Restore the matching configuration; migration/reset is not supported by setup.

@@ -85,20 +85,15 @@ class ResolvedChromeViewModelFactory
             $supportedLocales
         ) ?: ($isRu ? 'Поиск по сайту' : 'Search the site');
 
-        $pathSegments = $this->request->segments();
-        $tailSegments = $pathSegments;
-        if (! empty($tailSegments) && in_array($tailSegments[0], $supportedLocales, true)) {
-            array_shift($tailSegments);
-        }
-        $tailPath = implode('/', $tailSegments);
-        $queryString = $this->request->getQueryString();
-
+        // Resolvers provide the available translations of the actual entity;
+        // copying the path would manufacture dead links for untranslated slugs.
         $localeSwitcherLinks = [];
-        if ($this->request->routeIs('site.show')) {
+        if (($viewData['isPreview'] ?? false) !== true) {
+            $available = is_array($viewData['hreflangs'] ?? null) ? $viewData['hreflangs'] : [];
             foreach ($supportedLocales as $localeCode) {
-                $href = url('/'.trim((string) $localeCode.($tailPath !== '' ? '/'.$tailPath : ''), '/'));
-                if ($queryString) {
-                    $href .= '?'.$queryString;
+                $href = $available[$localeCode] ?? null;
+                if (! is_string($href) || $href === '') {
+                    continue;
                 }
                 $localeSwitcherLinks[] = [
                     'code' => $localeCode,

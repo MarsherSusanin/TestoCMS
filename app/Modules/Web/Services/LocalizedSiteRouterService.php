@@ -30,13 +30,13 @@ class LocalizedSiteRouterService
         $blogPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
 
         if ($slug === $blogPrefix) {
-            return $this->blogResolver->render($locale);
+            return $this->blogResolver->render($locale, max(1, (int) $request->query('page', 1)));
         }
 
         if (preg_match('#^'.preg_quote($blogPrefix, '#').'/page/(\\d+)$#', $slug, $matches) === 1) {
             $page = max(1, (int) ($matches[1] ?? 1));
 
-            return $this->blogResolver->render($locale, $page);
+            return redirect('/'.trim($locale.'/'.$blogPrefix, '/').($page > 1 ? '?page='.$page : ''), 301);
         }
 
         $resolved = $this->slugResolverService->resolve($locale, $slug);

@@ -1,0 +1,15 @@
+{
+  "final_source_hashes_match_workspace": true,
+  "compiled_manifest_matches_isolated_frontend_build": true,
+  "special_password_matches_original": true,
+  "readonly_env_unchanged": true,
+  "cold_init_single_valid_admin": true,
+  "no_baked_env_or_installed_marker": true,
+  "module_http_lifecycle_passed": true,
+  "nginx_build_artifact_matches_image": true,
+  "frontend_assets_http200": true,
+  "repeat_state_identical": true,
+  "all_php_containers_use_final_image": true,
+  "no_php_source_or_vendor_bind_overrides": true,
+  "init_gates_app_and_workers": true
+}

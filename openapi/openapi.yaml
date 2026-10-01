@@ -2,22 +2,28 @@ openapi: 3.1.0
 info:
   title: TestoCMS API
   version: 1.0.0
-  description: API-first CMS with Content API and Admin API
+  description: Content API and Admin API. Admin endpoints require an active authenticated user and the corresponding
+    role permission. Personal Access Tokens also need the abilities documented on each operation; superadmin does
+    not bypass PAT abilities. Stateful Sanctum browser authentication still checks user permissions. Persisted browser
+    sessions are checked against users.auth_version; credential, role and account-status changes revoke PAT and
+    remember credentials. Legacy browser sessions without a recorded version require authentication again. See docs/admin-content-api.md
+    for the migration and translation contract. x-required-token-abilities and x-conditional-token-abilities describe
+    Sanctum PAT abilities, not OAuth scopes.
 servers:
-  - url: https://example.com
+- url: https://example.com
 paths:
   /api/content/v1/posts:
     get:
       summary: List published posts
       parameters:
-        - in: query
-          name: locale
-          schema:
-            type: string
-        - in: query
-          name: page
-          schema:
-            type: integer
+      - in: query
+        name: locale
+        schema:
+          type: string
+      - in: query
+        name: page
+        schema:
+          type: integer
       responses:
         '200':
           description: Published posts
@@ -25,11 +31,11 @@ paths:
     get:
       summary: Get a published post by slug
       parameters:
-        - in: path
-          name: slug
-          required: true
-          schema:
-            type: string
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Published post
@@ -55,69 +61,1658 @@ paths:
           description: Assets
   /api/admin/v1/posts:
     get:
+      security: &id001
+      - bearerAuth: []
+      x-required-token-abilities: &id008
+      - posts:read
       summary: List posts (admin)
-      security:
-        - bearerAuth: []
+      description: User needs posts:read. Includes pending scheduled_actions for each material.
       responses:
         '200':
-          description: Posts
+          description: Materials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     post:
+      security: *id001
+      x-required-token-abilities: &id009
+      - posts:write
+      x-conditional-token-abilities: &id010
+      - ability: posts:publish
+        when: Creating published; modifying/deleting an already published material; setting published; changing
+          status to draft/review/archived when this cancels pending schedules.
       summary: Create post (admin)
-      security:
-        - bearerAuth: []
+      description: User needs posts:write; published also requires posts:publish in both role and PAT. Direct scheduled
+        creation is rejected422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostWriteInput'
       responses:
         '201':
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /api/admin/v1/posts/{post}/publish:
+    parameters:
+    - $ref: '#/components/parameters/PostId'
     post:
+      security: *id001
+      x-required-token-abilities: &id011
+      - posts:publish
       summary: Publish post
-      security:
-        - bearerAuth: []
+      description: Requires user publish permission and PAT posts:publish; posts:write is not required for this
+        dedicated action. Manual publish cancels pending publish and expired unpublish tasks while preserving future
+        unpublish; manual unpublish cancels both actions.
       responses:
         '200':
-          description: Published
+          description: Transitioned material
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/v1/pages:
     get:
+      security: &id002
+      - bearerAuth: []
+      x-required-token-abilities: &id004
+      - pages:read
       summary: List pages (admin)
-      security:
-        - bearerAuth: []
+      description: User needs pages:read. Includes pending scheduled_actions for each material.
       responses:
         '200':
-          description: Pages
+          description: Materials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     post:
+      security: *id002
+      x-required-token-abilities: &id005
+      - pages:write
+      x-conditional-token-abilities: &id006
+      - ability: pages:publish
+        when: Creating published; modifying/deleting an already published material; setting published; changing
+          status to draft/review/archived when this cancels pending schedules.
       summary: Create page (admin)
-      security:
-        - bearerAuth: []
+      description: User needs pages:write; published also requires pages:publish in both role and PAT. Direct scheduled
+        creation is rejected422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageWriteInput'
       responses:
         '201':
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
   /api/admin/v1/categories:
     get:
       summary: List categories (admin)
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       responses:
         '200':
           description: Categories
+      x-required-token-abilities:
+      - categories:read
+    post:
+      summary: Create category
+      description: ''
+      security: &id003
+      - bearerAuth: []
+      x-required-token-abilities:
+      - categories:write
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Successful operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryWrite'
   /api/admin/v1/assets:
     post:
       summary: Upload asset
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       responses:
         '201':
           description: Created
+      x-required-token-abilities:
+      - assets:write
   /api/admin/v1/llm/generate-post:
     post:
-      summary: Generate post draft with LLM
-      security:
-        - bearerAuth: []
+      summary: Generate post with LLM
+      description: No automatic publishing. Successful content generation with save_as_draft=false returns draft=null.
+        Generated draft creation uses normal guarded content services and escapes text as HTML.
+      security: *id003
+      x-required-token-abilities:
+      - llm:generate
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Input validation or sanitized generation failure. No draft is created.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/LlmFailure'
+                - type: object
+                  properties:
+                    message:
+                      type: string
+                    errors:
+                      type: object
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      generation:
+                        $ref: '#/components/schemas/LlmGenerationResult'
+                      draft_only:
+                        const: true
+                      draft:
+                        type:
+                        - object
+                        - 'null'
+                        additionalProperties: true
+                        description: Normal admin content model, always status=draft; null for generation-only.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmContentInput'
+      x-conditional-token-abilities:
+      - condition: save_as_draft omitted, null or true
+        abilities:
+        - posts:write
+  /api/admin/v1/pages/{page}:
+    parameters:
+    - $ref: '#/components/parameters/PageId'
+    get:
+      security: *id002
+      x-required-token-abilities: *id004
+      summary: Get page (admin)
+      responses:
+        '200':
+          description: Material including translations and pending scheduled_actions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      security: *id002
+      x-required-token-abilities: *id005
+      x-conditional-token-abilities: *id006
+      summary: Replace page translations
+      description: Replaces the complete translation set; omitted locales are deleted and omitted translation fields
+        are normalized. Send every translation and field to retain. Omitted top-level fields remain unchanged. Editing
+        published content or cancelling pending schedules through a status change also requires pages:publish.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageWriteInput'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    patch:
+      security: *id002
+      x-required-token-abilities: *id005
+      x-conditional-token-abilities: *id006
+      summary: Partially update page
+      description: Merges supplied fields by locale, preserving omitted locales/content/SEO/head. New locales require
+        title and slug. Explicit remove_translations cannot overlap updates or remove the last locale. Editing published
+        content or cancelling pending schedules through a status change also requires pages:publish. Advanced-role
+        rules still apply to supplied custom head/code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PagePatchInput'
+            example:
+              translations:
+              - locale: ru
+                meta_title: Updated metadata
+              remove_translations:
+              - en
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      security: *id002
+      x-required-token-abilities: *id005
+      x-conditional-token-abilities: *id006
+      summary: Delete page
+      description: Published materials require pages:publish in addition to write permission/ability. Deletion cancels
+        their pending schedules.
+      responses:
+        '204':
+          description: Deleted; no response body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/pages/{page}/publish:
+    parameters:
+    - $ref: '#/components/parameters/PageId'
+    post:
+      security: *id002
+      x-required-token-abilities: &id007
+      - pages:publish
+      summary: Publish page
+      description: Requires user publish permission and PAT pages:publish; pages:write is not required for this
+        dedicated action. Manual publish cancels pending publish and expired unpublish tasks while preserving future
+        unpublish; manual unpublish cancels both actions.
+      responses:
+        '200':
+          description: Transitioned material
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/pages/{page}/unpublish:
+    parameters:
+    - $ref: '#/components/parameters/PageId'
+    post:
+      security: *id002
+      x-required-token-abilities: *id007
+      summary: Unpublish page
+      description: Requires user publish permission and PAT pages:publish; pages:write is not required for this
+        dedicated action. Manual publish cancels pending publish and expired unpublish tasks while preserving future
+        unpublish; manual unpublish cancels both actions.
+      responses:
+        '200':
+          description: Transitioned material
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/pages/{page}/schedule:
+    parameters:
+    - $ref: '#/components/parameters/PageId'
+    post:
+      security: *id002
+      x-required-token-abilities: *id007
+      summary: Schedule page publication action
+      description: Requires user publish permission and PAT pages:publish; write ability is not required. Returns
+        the new task; inspect material scheduled_actions for pending tasks. At most one pending task per action.
+        Scheduling preserves material status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
       responses:
         '201':
-          description: Draft generated
+          description: Scheduled; previous pending task of this action cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/admin/v1/pages/{page}/schedules/{schedule}:
+    parameters:
+    - $ref: '#/components/parameters/PageId'
+    - $ref: '#/components/parameters/ScheduleId'
+    delete:
+      security: *id002
+      x-required-token-abilities: *id007
+      summary: Cancel page publication schedule
+      description: Requires user publish permission and PAT pages:publish; write ability is not required. Verifies
+        schedule ownership under lock. History is retained with cancelled_at/cancelled_by/reason. Cancelling publish
+        for a hidden material also cancels dependent unpublish; legacy scheduled status returns to draft. Already
+        cancelled/executed tasks are returned unchanged.
+      responses:
+        '200':
+          description: Schedule record after cancellation; repeated cancellation is idempotent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/posts/{post}:
+    parameters:
+    - $ref: '#/components/parameters/PostId'
+    get:
+      security: *id001
+      x-required-token-abilities: *id008
+      summary: Get post (admin)
+      responses:
+        '200':
+          description: Material including translations and pending scheduled_actions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      security: *id001
+      x-required-token-abilities: *id009
+      x-conditional-token-abilities: *id010
+      summary: Replace post translations
+      description: Replaces the complete translation set; omitted locales are deleted and omitted translation fields
+        are normalized. Send every translation and field to retain. Omitted top-level fields remain unchanged. Editing
+        published content or cancelling pending schedules through a status change also requires posts:publish.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostWriteInput'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    patch:
+      security: *id001
+      x-required-token-abilities: *id009
+      x-conditional-token-abilities: *id010
+      summary: Partially update post
+      description: Merges supplied fields by locale, preserving omitted locales/content/SEO/head. New locales require
+        title and slug. Explicit remove_translations cannot overlap updates or remove the last locale. Editing published
+        content or cancelling pending schedules through a status change also requires posts:publish. Advanced-role
+        rules still apply to supplied custom head/code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPatchInput'
+            example:
+              translations:
+              - locale: ru
+                meta_title: Updated metadata
+              remove_translations:
+              - en
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      security: *id001
+      x-required-token-abilities: *id009
+      x-conditional-token-abilities: *id010
+      summary: Delete post
+      description: Published materials require posts:publish in addition to write permission/ability. Deletion cancels
+        their pending schedules.
+      responses:
+        '204':
+          description: Deleted; no response body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/posts/{post}/unpublish:
+    parameters:
+    - $ref: '#/components/parameters/PostId'
+    post:
+      security: *id001
+      x-required-token-abilities: *id011
+      summary: Unpublish post
+      description: Requires user publish permission and PAT posts:publish; posts:write is not required for this
+        dedicated action. Manual publish cancels pending publish and expired unpublish tasks while preserving future
+        unpublish; manual unpublish cancels both actions.
+      responses:
+        '200':
+          description: Transitioned material
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/posts/{post}/schedule:
+    parameters:
+    - $ref: '#/components/parameters/PostId'
+    post:
+      security: *id001
+      x-required-token-abilities: *id011
+      summary: Schedule post publication action
+      description: Requires user publish permission and PAT posts:publish; write ability is not required. Returns
+        the new task; inspect material scheduled_actions for pending tasks. At most one pending task per action.
+        Scheduling preserves material status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Scheduled; previous pending task of this action cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/admin/v1/posts/{post}/schedules/{schedule}:
+    parameters:
+    - $ref: '#/components/parameters/PostId'
+    - $ref: '#/components/parameters/ScheduleId'
+    delete:
+      security: *id001
+      x-required-token-abilities: *id011
+      summary: Cancel post publication schedule
+      description: Requires user publish permission and PAT posts:publish; write ability is not required. Verifies
+        schedule ownership under lock. History is retained with cancelled_at/cancelled_by/reason. Cancelling publish
+        for a hidden material also cancels dependent unpublish; legacy scheduled status returns to draft. Already
+        cancelled/executed tasks are returned unchanged.
+      responses:
+        '200':
+          description: Schedule record after cancellation; repeated cancellation is idempotent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/v1/categories/{category}:
+    parameters:
+    - name: category
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      summary: Get category
+      description: ''
+      security: *id003
+      x-required-token-abilities:
+      - categories:read
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Successful operation
+    put:
+      summary: Replace category translations
+      description: ''
+      security: *id003
+      x-required-token-abilities:
+      - categories:write
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Successful operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryWrite'
+    patch:
+      summary: Merge category fields and translations
+      description: ''
+      security: *id003
+      x-required-token-abilities:
+      - categories:write
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Successful operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryPatch'
+    delete:
+      summary: Delete category
+      description: Category translations and post links are removed. Posts remain; children become root categories.
+      security: *id003
+      x-required-token-abilities:
+      - categories:write
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '204':
+          description: Successful operation
+  /api/admin/v1/assets/{asset}:
+    parameters:
+    - name: asset
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      summary: Get asset metadata
+      description: ''
+      security: *id003
+      x-required-token-abilities:
+      - assets:read
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Successful operation
+    delete:
+      summary: Delete unreferenced media and its last-owned file
+      description: Rejects all current content/template/theme/FK references; historical revisions do not block deletion.
+        No force option. Shared disk/path files remain until the final owner. Precommit storage cleanup failure
+        retains the DB record and requires retry/recovery. Private postcommit quarantine purge failures retain a
+        recovery journal and do not turn successful public removal into a false failure.
+      security: *id003
+      x-required-token-abilities:
+      - assets:write
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '204':
+          description: Successful operation
+        '409':
+          description: Referenced media cannot be deleted. Remove the listed references first.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDeleteConflict'
+        '503':
+          description: Storage cleanup or recovery failed before commit; DB record retained. Message contains recovery
+            operation and CLI guidance.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    const: asset_storage_cleanup_failed
+                  message:
+                    type: string
+  /api/admin/v1/llm/generate-page:
+    post:
+      summary: Generate page with LLM
+      description: No automatic publishing. Successful content generation with save_as_draft=false returns draft=null.
+        Generated draft creation uses normal guarded content services and escapes text as HTML.
+      security: *id003
+      x-required-token-abilities:
+      - llm:generate
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Input validation or sanitized generation failure. No draft is created.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/LlmFailure'
+                - type: object
+                  properties:
+                    message:
+                      type: string
+                    errors:
+                      type: object
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      generation:
+                        $ref: '#/components/schemas/LlmGenerationResult'
+                      draft_only:
+                        const: true
+                      draft:
+                        type:
+                        - object
+                        - 'null'
+                        additionalProperties: true
+                        description: Normal admin content model, always status=draft; null for generation-only.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmContentInput'
+      x-conditional-token-abilities:
+      - condition: save_as_draft omitted, null or true
+        abilities:
+        - pages:write
+  /api/admin/v1/llm/generate-seo:
+    post:
+      summary: Generate seo with LLM
+      description: No automatic publishing. Successful content generation with save_as_draft=false returns draft=null.
+        Generated draft creation uses normal guarded content services and escapes text as HTML.
+      security: *id003
+      x-required-token-abilities:
+      - llm:generate
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Input validation or sanitized generation failure. No draft is created.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/LlmFailure'
+                - type: object
+                  properties:
+                    message:
+                      type: string
+                    errors:
+                      type: object
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      generation:
+                        $ref: '#/components/schemas/LlmGenerationResult'
+                      draft_only:
+                        const: true
+                      suggestions:
+                        type: object
+                        properties:
+                          meta_title:
+                            type: string
+                            maxLength: 60
+                          meta_description:
+                            type: string
+                            maxLength: 160
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmSeoInput'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: PAT
+      description: Sanctum Personal Access Token. The operation-specific Sanctum abilities and user role permissions
+        must both allow the action.
+  parameters:
+    PageId:
+      name: page
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PostId:
+      name: post
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ScheduleId:
+      name: schedule
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Schedule ID belonging to the material in this URL; a different material or entity type returns404.
+  schemas:
+    ContentStatus:
+      type:
+      - string
+      - 'null'
+      enum:
+      - draft
+      - review
+      - scheduled
+      - published
+      - archived
+      - null
+      description: Omission/null creates draft on POST or retains the existing status on update. Creating scheduled
+        directly is rejected; create a draft then call schedule. Updating to scheduled requires an existing pending
+        publish task. Changing to published needs publish permission/ability. Changing status to draft/review/archived
+        cancels pending schedules and requires publish permission/ability when a pending task exists.
+    PageTranslationPatch:
+      type: object
+      required:
+      - locale
+      properties:
+        locale: &id012
+          type: string
+          minLength: 1
+          maxLength: 8
+          description: A configured CMS supported locale; unique within the submitted translation set.
+          examples:
+          - ru
+          - en
+        title: &id013
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug: &id014
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Unique per locale and entity type; reserved or invalid slugs are rejected.
+        meta_title: &id015
+          type:
+          - string
+          - 'null'
+          maxLength: 255
+        meta_description: &id016
+          type:
+          - string
+          - 'null'
+          maxLength: 1000
+        canonical_url: &id017
+          type:
+          - string
+          - 'null'
+          maxLength: 2048
+        custom_head_html: &id018
+          type:
+          - string
+          - 'null'
+          description: 'Changing or introducing raw head HTML requires a configured advanced role (defaults: superadmin/admin).
+            PATCH preserves omitted stored head HTML; non-advanced users cannot replace or clear it.'
+        robots_directives: &id019
+          type:
+          - array
+          - 'null'
+          items: {}
+          description: Robots directives, e.g. ["noindex", "nofollow"].
+        structured_data: &id020
+          type:
+          - object
+          - array
+          - 'null'
+          additionalProperties: true
+          items: {}
+          description: Structured data retained by PATCH unless explicitly supplied.
+        content_blocks:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+            additionalProperties: true
+          description: Full block array replacement when supplied; omitted PATCH content is preserved. Custom/restricted
+            code blocks require an advanced role.
+      description: 'Existing locale: supplied fields are merged; omitted fields remain intact. New locale: title
+        and slug are additionally required.'
+    PostTranslationPatch:
+      type: object
+      required:
+      - locale
+      properties:
+        locale: *id012
+        title: *id013
+        slug: *id014
+        meta_title: *id015
+        meta_description: *id016
+        canonical_url: *id017
+        custom_head_html: *id018
+        robots_directives: *id019
+        structured_data: *id020
+        content_format:
+          type:
+          - string
+          - 'null'
+          enum:
+          - html
+          - markdown
+          - null
+          description: Switching to Markdown requires content_markdown in that request; existing Markdown metadata-only
+            PATCH may omit its body.
+        content_html:
+          type:
+          - string
+          - 'null'
+        content_markdown:
+          type:
+          - string
+          - 'null'
+        excerpt:
+          type:
+          - string
+          - 'null'
+      description: 'Existing locale: supplied fields are merged; omitted fields remain intact. New locale: title
+        and slug are additionally required.'
+    PageTranslationInput:
+      allOf:
+      - $ref: '#/components/schemas/PageTranslationPatch'
+      - type: object
+        required:
+        - locale
+        - title
+        - slug
+      description: Complete translation for POST/PUT. Omitted content/SEO/head fields are normalized rather than
+        merged.
+    PostTranslationInput:
+      allOf:
+      - $ref: '#/components/schemas/PostTranslationPatch'
+      - type: object
+        required:
+        - locale
+        - title
+        - slug
+      description: Complete translation for POST/PUT. Include all fields to retain; Markdown requires content_markdown.
+    CustomPageCode:
+      type:
+      - object
+      - 'null'
+      additionalProperties: true
+      description: Custom page code is restricted to configured advanced roles and sanitized by the server.
+      properties:
+        head_html:
+          type:
+          - string
+          - 'null'
+        head_css:
+          type:
+          - string
+          - 'null'
+        body_html:
+          type:
+          - string
+          - 'null'
+        body_js:
+          type:
+          - string
+          - 'null'
+    ScheduledAction:
+      type: object
+      required:
+      - id
+      - action
+      - due_at
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+          enum:
+          - publish
+          - unpublish
+        due_at:
+          type: string
+          format: date-time
+      description: A currently pending task, ordered by due_at then id; cancelled/executed history is excluded.
+    PublishSchedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        entity_type:
+          type: string
+          enum:
+          - page
+          - post
+        entity_id:
+          type: integer
+        action:
+          type: string
+          enum:
+          - publish
+          - unpublish
+        due_at:
+          type: string
+          format: date-time
+        executed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancelled_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_by:
+          type:
+          - integer
+          - 'null'
+        cancelled_by:
+          type:
+          - integer
+          - 'null'
+        cancellation_reason:
+          type:
+          - string
+          - 'null'
+      additionalProperties: true
+    ScheduleInput:
+      type: object
+      required:
+      - action
+      - due_at
+      properties:
+        action:
+          type: string
+          enum:
+          - publish
+          - unpublish
+        due_at:
+          type: string
+          description: Must be in the future. Prefer ISO8601 with an explicit offset; local dates use APP_TIMEZONE.
+            Server normalizes offsets to its configured timezone.
+          examples:
+          - '2030-01-15T12:00:00+03:00'
+      description: Publish must precede unpublish. A hidden material needs an earlier publish task before unpublish
+        can be scheduled. Rescheduling the same action cancels its old pending task and preserves history. Assignment
+        does not change material status.
+    PageWriteInput:
+      type: object
+      required:
+      - translations
+      properties:
+        status: &id021
+          $ref: '#/components/schemas/ContentStatus'
+        page_type: &id022
+          type:
+          - string
+          - 'null'
+          maxLength: 32
+        custom_code: &id023
+          $ref: '#/components/schemas/CustomPageCode'
+        translations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PageTranslationInput'
+    PagePatchInput:
+      type: object
+      properties:
+        status: *id021
+        page_type: *id022
+        custom_code: *id023
+        translations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PageTranslationPatch'
+        remove_translations:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Explicitly remove configured supported locales. Cannot update and remove the same locale,
+            or remove the last remaining translation. Removing the default locale is allowed if another valid translation
+            remains.
+      description: Partial material/translation update. translations may be omitted for status-only or remove_translations-only
+        changes. Supplied translations must be nonempty. Invalid requests roll back atomically.
+    AdminPage:
+      type: object
+      required:
+      - id
+      - status
+      - scheduled_actions
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          type: string
+          enum:
+          - draft
+          - review
+          - scheduled
+          - published
+          - archived
+        author_id:
+          type:
+          - integer
+          - 'null'
+        published_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        archived_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        translations:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/PageTranslationInput'
+            - type: object
+              additionalProperties: true
+        scheduled_actions:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/ScheduledAction'
+          description: Pending publish/unpublish tasks, independent of status. Empty when none exist.
+        page_type:
+          type: string
+        custom_code:
+          $ref: '#/components/schemas/CustomPageCode'
+      additionalProperties: true
+    PageEnvelope:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/AdminPage'
+    PageListEnvelope:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminPage'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+    PostWriteInput:
+      type: object
+      required:
+      - translations
+      properties:
+        status: &id024
+          $ref: '#/components/schemas/ContentStatus'
+        featured_asset_id: &id025
+          type:
+          - integer
+          - 'null'
+          description: Existing asset ID.
+        category_ids: &id026
+          type:
+          - array
+          - 'null'
+          items:
+            type: integer
+          description: Existing category IDs; supplying replaces membership, omission preserves it.
+        translations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PostTranslationInput'
+    PostPatchInput:
+      type: object
+      properties:
+        status: *id024
+        featured_asset_id: *id025
+        category_ids: *id026
+        translations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PostTranslationPatch'
+        remove_translations:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Explicitly remove configured supported locales. Cannot update and remove the same locale,
+            or remove the last remaining translation. Removing the default locale is allowed if another valid translation
+            remains.
+      description: Partial material/translation update. translations may be omitted for status-only or remove_translations-only
+        changes. Supplied translations must be nonempty. Invalid requests roll back atomically.
+    AdminPost:
+      type: object
+      required:
+      - id
+      - status
+      - scheduled_actions
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          type: string
+          enum:
+          - draft
+          - review
+          - scheduled
+          - published
+          - archived
+        author_id:
+          type:
+          - integer
+          - 'null'
+        published_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        archived_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        translations:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/PostTranslationInput'
+            - type: object
+              additionalProperties: true
+        scheduled_actions:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/ScheduledAction'
+          description: Pending publish/unpublish tasks, independent of status. Empty when none exist.
+        featured_asset_id:
+          type:
+          - integer
+          - 'null'
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+    PostEnvelope:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/AdminPost'
+    PostListEnvelope:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminPost'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+    ScheduleEnvelope:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/PublishSchedule'
+    CategoryTranslationInput:
+      type: object
+      required:
+      - locale
+      - title
+      - slug
+      properties: &id027
+        locale:
+          type: string
+          description: Configured supported locale; normalized lowercase and unique in the submitted list.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Unique per locale; one path segment, excluding reserved system route slugs.
+        description:
+          type:
+          - string
+          - 'null'
+        meta_title:
+          type:
+          - string
+          - 'null'
+        meta_description:
+          type:
+          - string
+          - 'null'
+        canonical_url:
+          type:
+          - string
+          - 'null'
+        robots_directives:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
+        structured_data:
+          type:
+          - object
+          - array
+          - 'null'
+          additionalProperties: true
+    CategoryTranslationPatch:
+      type: object
+      required:
+      - locale
+      properties: *id027
+      description: Existing locale merges submitted fields. New locale requires title and slug. Nullable metadata
+        supports explicit null clearing.
+    CategoryWrite:
+      type: object
+      required:
+      - translations
+      properties:
+        parent_id: &id028
+          type:
+          - integer
+          - 'null'
+        cover_asset_id: &id029
+          type:
+          - integer
+          - 'null'
+        is_active: &id030
+          type: boolean
+        translations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CategoryTranslationInput'
+      description: Full replacement. Omitted locales are removed. At least one translation must remain. Parent must
+        exist and form no hierarchy cycle.
+    CategoryPatch:
+      type: object
+      properties:
+        parent_id: *id028
+        cover_asset_id: *id029
+        is_active: *id030
+        translations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CategoryTranslationPatch'
+        remove_translations:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+      description: Omitted fields/locales are preserved. Null clears parent/cover/nullable metadata; false deactivates.
+        Cannot update and remove the same locale or remove the last translation.
+    AssetUsage:
+      type: object
+      required:
+      - entity_type
+      - id
+      - field
+      - admin_url
+      properties:
+        entity_type:
+          type: string
+        id:
+          type: integer
+        locale:
+          type:
+          - string
+          - 'null'
+        field:
+          type: string
+        admin_url:
+          type: string
+    AssetDeleteConflict:
+      type: object
+      required:
+      - error
+      - usages
+      properties:
+        error:
+          const: asset_in_use
+        message:
+          type: string
+        usages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetUsage'
+    LlmContentInput:
+      type: object
+      required:
+      - prompt
+      properties:
+        prompt: &id031
+          type: string
+          minLength: 10
+          description: Maximum length is configured by llm.max_input_chars; secret patterns are masked before provider
+            calls.
+        locale:
+          type:
+          - string
+          - 'null'
+        provider: &id032
+          type:
+          - string
+          - 'null'
+          enum:
+          - openai
+          - anthropic
+          - null
+        save_as_draft:
+          type:
+          - boolean
+          - 'null'
+          default: true
+      description: Locale defaults to cms.default_locale and supplied locale must be configured as supported. Provider,
+        locale, input limits and writing authorization are checked before any paid request.
+    LlmGenerationResult:
+      type: object
+      required:
+      - status
+      - generation_id
+      - provider
+      - output
+      - text
+      - draft_only
+      properties:
+        status:
+          const: ok
+        generation_id:
+          type: integer
+        provider:
+          type: string
+        output:
+          type: object
+          additionalProperties: true
+          description: Raw provider envelope, preserved for compatibility.
+        text:
+          type: string
+          description: Only complete, non-empty normalized provider text. Tool/reasoning blocks and raw JSON fallback
+            are excluded; configured output limit is enforced.
+        draft_only:
+          const: true
+    LlmFailure:
+      type: object
+      properties:
+        error:
+          type: string
+        error_code:
+          type: string
+        generation_id:
+          type:
+          - integer
+          - 'null'
+      description: Provider details and exception messages are sanitized. Empty, refused, incomplete, truncated,
+        malformed or oversized output creates no content draft.
+    LlmSeoInput:
+      type: object
+      required:
+      - prompt
+      properties:
+        prompt: *id031
+        provider: *id032
+  responses:
+    Unauthorized:
+      description: Missing, expired or revoked authentication; expired browser session version.
+    Forbidden:
+      description: Blocked account, missing user permission, missing PAT ability, or prohibited custom code/head
+        mutation.
+    NotFound:
+      description: Material/schedule not found, or schedule does not belong to this material and entity type.
+    ValidationError:
+      description: Invalid translation/status/date/window. The mutation is rolled back.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+    TooManyRequests:
+      description: Request rate limit exceeded.

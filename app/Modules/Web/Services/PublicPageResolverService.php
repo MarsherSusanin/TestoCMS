@@ -4,6 +4,7 @@ namespace App\Modules\Web\Services;
 
 use App\Models\Page;
 use App\Models\PageTranslation;
+use App\Modules\Content\Services\DynamicPageRendererService;
 use App\Modules\Core\Contracts\SeoResolverContract;
 use App\Modules\SEO\Services\StructuredDataFactory;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,11 +19,11 @@ class PublicPageResolverService
 
     public function render(string $locale, Page $page, PageTranslation $translation, bool $isPreview = false): Response
     {
-        if (! $isPreview && $page->status !== 'published') {
+        if (! $isPreview && ! app(PublicVisibilityService::class)->isLive($page)) {
             abort(404);
         }
 
-        $path = trim($locale.'/'.$translation->slug, '/');
+        $path = $translation->slug === 'home' ? $locale : trim($locale.'/'.$translation->slug, '/');
         $canonical = '/'.$path;
 
         $seo = $this->seoResolver->resolve('page', $page->id, $locale, [
@@ -64,9 +65,10 @@ class PublicPageResolverService
             'customHeadHtml' => $translation->custom_head_html ?? null,
             'hreflangs' => $this->responseSupport->buildHreflangs(
                 $page->translations,
-                fn (string $lang, string $slug): string => '/'.$lang.'/'.$slug
+                fn (string $lang, string $slug): string => '/'.$lang.($slug === 'home' ? '' : '/'.$slug)
             ),
             'isPreview' => $isPreview,
+            'publicRenderedHtml' => app(DynamicPageRendererService::class)->render($translation),
         ]);
 
         $this->responseSupport->applyRobotsHeader($response, $seo['robots_directives'] ?? null, $isPreview);

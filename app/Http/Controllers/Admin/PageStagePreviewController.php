@@ -148,6 +148,12 @@ class PageStagePreviewController extends Controller
             'stageRenderedHtml' => $renderedHtml,
         ]);
 
-        return response($view->render(), 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+        return response($view->render(), 200, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ]);
     }
 }

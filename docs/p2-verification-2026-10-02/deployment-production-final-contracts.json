@@ -1,0 +1,11 @@
+{
+  "final_image_id": "sha256:4d5c2e9c3766a76f183d7605202fb8379b2bb07ddc2efecd904716950be9a720",
+  "final_manifest_list": "sha256:4d5c2e9c3766a76f183d7605202fb8379b2bb07ddc2efecd904716950be9a720",
+  "asset_deletion_source_sha256": "aaee04eb09cd3dcba0255e2d60ea5cd9b6aced1b932febad5c29bb32ba445ae9",
+  "asset_deletion_source_matches_workspace": true,
+  "all_php_services_use_final_image": true,
+  "no_php_source_or_vendor_bind_overrides": true,
+  "cold_identity_password_env_preserved": true,
+  "latest_media_http_cycle_passed": true,
+  "workers_restart_count_zero": true
+}

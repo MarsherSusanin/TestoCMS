@@ -17,6 +17,9 @@ use App\Modules\Extensibility\Services\ModuleManagerService;
 use App\Modules\Extensibility\Services\ModuleManifestParserService;
 use App\Modules\Extensibility\Services\ModuleRuntimeService;
 use App\Modules\Extensibility\Services\ModuleSecuritySyncService;
+use App\Modules\Setup\Services\SetupBootstrapService;
+use App\Modules\Updates\Services\CoordinatedQueueWorker;
+use App\Modules\Updates\Services\UpdateOperationGate;
 use App\Policies\AssetPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\PagePolicy;
@@ -32,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (! $this->app->runningUnitTests()) {
+            $this->app->make(SetupBootstrapService::class)->configure();
+        }
+        $this->app->singleton(UpdateOperationGate::class);
+        $this->app->extend('queue.worker', fn ($worker) => CoordinatedQueueWorker::wrap($worker, $this->app->make(UpdateOperationGate::class)));
         $this->app->singleton(AdminNavigationRegistry::class, AdminNavigationRegistry::class);
         $this->app->singleton(ModuleWidgetRegistry::class, ModuleWidgetRegistry::class);
         $this->app->singleton(PublicChromeRegistry::class, PublicChromeRegistry::class);
@@ -44,7 +52,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleRuntimeService::class, ModuleRuntimeService::class);
         $this->app->singleton(ModuleManagerService::class, ModuleManagerService::class);
 
-        $this->app->booting(function (): void {
+        // Eloquent's connection resolver is installed by DatabaseServiceProvider::boot().
+        $this->app->booted(function (): void {
+            if (! $this->app->runningUnitTests() && ! is_file(storage_path('installed'))) {
+                return;
+            }
             try {
                 $this->app->make(ModuleRuntimeService::class)->registerEnabledProvidersFromCache($this->app);
             } catch (\Throwable $e) {

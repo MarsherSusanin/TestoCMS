@@ -41,7 +41,7 @@ class ContentMutationFinalizerService
         }
 
         if (($context['flush_cache'] ?? true) === true) {
-            $this->pageCacheService->flushAll();
+            $this->pageCacheService->flushAll(false);
         }
 
         return $entity;

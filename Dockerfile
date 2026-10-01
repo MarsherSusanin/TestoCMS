@@ -18,8 +18,8 @@ RUN apk add --no-cache \
         freetype-dev \
         oniguruma-dev \
         libxml2-dev \
-        postgresql-dev \
-        postgresql-client \
+        postgresql16-dev \
+        postgresql16-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         bcmath \
@@ -30,10 +30,17 @@ RUN apk add --no-cache \
         opcache \
         pcntl \
         pdo \
+        pdo_mysql \
         pdo_pgsql \
         pgsql \
         zip \
     && rm -rf /tmp/* /var/cache/apk/*
+
+RUN apk add --no-cache --virtual .redis-build-deps $PHPIZE_DEPS \
+    && pecl install redis-6.3.0 \
+    && docker-php-ext-enable redis \
+    && apk del .redis-build-deps \
+    && rm -rf /tmp/pear /var/cache/apk/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
@@ -43,8 +50,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY . /var/www/html
 
-RUN composer install ${COMPOSER_INSTALL_FLAGS} \
-    && mkdir -p storage/app/purifier storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+RUN mkdir -p storage/app/private storage/app/public storage/app/purifier \
+        storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && composer install ${COMPOSER_INSTALL_FLAGS} \
     && chown -R www-data:www-data storage bootstrap/cache
 
 ENTRYPOINT ["entrypoint.sh"]

@@ -926,6 +926,9 @@ class BookingModuleTest extends TestCase
             'generated_at' => now()->toIso8601String(),
             'modules' => $modules,
         ], true).';'.PHP_EOL);
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($path, true);
+        }
     }
 
     /**

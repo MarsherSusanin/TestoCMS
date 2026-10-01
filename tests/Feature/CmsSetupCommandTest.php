@@ -120,7 +120,7 @@ class CmsSetupCommandTest extends TestCase
             ->expectsQuestion('Имя базы данных', 'testocms')
             ->expectsQuestion('Пользователь БД', 'testocms')
             ->expectsQuestion('Пароль БД', 'testocms')
-            ->expectsChoice('Профиль размещения', 'shared_hosting', ['shared_hosting', 'docker_vps'])
+            ->expectsChoice('Профиль размещения', 'shared_hosting', ['local', 'shared_hosting', 'docker_vps'])
             ->expectsQuestion('Название сайта', 'Wizard Site')
             ->expectsQuestion('URL сайта', 'http://localhost:8080')
             ->expectsConfirmation('Включить русский язык?', true)

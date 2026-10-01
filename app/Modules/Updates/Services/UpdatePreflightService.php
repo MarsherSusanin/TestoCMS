@@ -3,6 +3,8 @@
 namespace App\Modules\Updates\Services;
 
 use App\Models\CmsModule;
+use App\Modules\Ops\Services\ScheduleIntegrityService;
+use Composer\Semver\Semver;
 
 class UpdatePreflightService
 {
@@ -69,8 +71,8 @@ class UpdatePreflightService
 
         $currentVersion = $this->settings->installedVersion();
         $cmsFrom = trim((string) ($manifest['requires']['cms_from'] ?? $release['compat']['cms_from'] ?? $manifest['min_migration_version'] ?? ''));
-        if ($cmsFrom !== '' && version_compare($currentVersion, $cmsFrom, '<')) {
-            $issues[] = sprintf('Installed CMS version %s is below required %s', $currentVersion, $cmsFrom);
+        if ($cmsFrom !== '' && ! $this->versionSatisfiesConstraint($currentVersion, $cmsFrom)) {
+            $issues[] = sprintf('Installed CMS version %s does not satisfy %s', $currentVersion, $cmsFrom);
         }
 
         // Downgrade / replay protection: never apply a package older than the
@@ -100,6 +102,19 @@ class UpdatePreflightService
             }
         }
 
+        if ((string) config('database.default') === 'pgsql') {
+            try {
+                app(PostgresSnapshotService::class)->assertCanRestore();
+            } catch (\Throwable $e) {
+                $issues[] = $e->getMessage();
+            }
+        }
+        if (class_exists(ScheduleIntegrityService::class)) {
+            $scheduleCheck = app(ScheduleIntegrityService::class)->check();
+            $issues = array_merge($issues, $scheduleCheck['errors']);
+            $warnings = array_merge($warnings, $scheduleCheck['warnings']);
+        }
+
         return [
             'ok' => $issues === [],
             'issues' => $issues,
@@ -115,36 +130,14 @@ class UpdatePreflightService
             return true;
         }
 
-        $chunks = preg_split('/\s*,\s*/', $constraint) ?: [];
-        foreach ($chunks as $chunk) {
-            $chunk = trim($chunk);
-            if ($chunk === '') {
-                continue;
-            }
-
-            if (preg_match('/^\^(\d+)\.(\d+)\.(\d+)$/', $chunk, $m) === 1) {
-                $major = (int) $m[1];
-                $base = sprintf('%d.%d.%d', $m[1], $m[2], $m[3]);
-                if ((int) explode('.', $actualVersion)[0] !== $major || version_compare($actualVersion, $base, '<')) {
-                    return false;
-                }
-
-                continue;
-            }
-
-            if (preg_match('/^(>=|<=|>|<|=)?\s*([0-9]+(?:\.[0-9]+){0,2})$/', $chunk, $m) === 1) {
-                $op = $m[1] !== '' ? $m[1] : '>=';
-                $target = $m[2];
-                if (! version_compare($actualVersion, $target, $op)) {
-                    return false;
-                }
-
-                continue;
-            }
-
+        // Historical manifests used a bare version to express a lower bound.
+        if (preg_match('/^\d+(?:\.\d+){0,2}$/', $constraint) === 1) {
+            $constraint = '>='.$constraint;
+        }
+        try {
+            return Semver::satisfies($actualVersion, $constraint);
+        } catch (\UnexpectedValueException) {
             return false;
         }
-
-        return true;
     }
 }

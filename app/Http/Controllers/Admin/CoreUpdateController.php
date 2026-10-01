@@ -145,6 +145,9 @@ class CoreUpdateController extends Controller
             $message = (string) (($result['mode'] ?? '') === 'deploy-hook'
                 ? 'Запрос на обновление отправлен в deploy hook.'
                 : 'Обновление успешно применено.');
+            if (($result['status'] ?? '') === 'health_unverified') {
+                $message = 'Файлы обновлены, но работоспособность не подтверждена. Сайт оставлен в maintenance: '.($result['health_warning'] ?? 'Проверьте health endpoint.');
+            }
 
             return redirect()->route('admin.updates.index')->with('status', $message);
         } catch (\Throwable $e) {
@@ -167,7 +170,11 @@ class CoreUpdateController extends Controller
                 'restored_version' => (string) ($result['restored_version'] ?? ''),
             ], $request);
 
-            return redirect()->route('admin.updates.index')->with('status', 'Откат выполнен для backup '.$backup->backup_key.'.');
+            $message = ($result['status'] ?? '') === 'health_unverified'
+                ? 'Snapshot восстановлен, но health check не подтверждён; maintenance сохранён. '.($result['health_warning'] ?? '')
+                : 'Откат выполнен для backup '.$backup->backup_key.'.';
+
+            return redirect()->route('admin.updates.index')->with('status', $message);
         } catch (\Throwable $e) {
             throw ValidationException::withMessages([
                 'rollback' => ['Ошибка отката: '.$e->getMessage()],

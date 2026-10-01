@@ -4,6 +4,7 @@ namespace App\Modules\Core\DTO;
 
 use App\Models\Page;
 use App\Models\PageTranslation;
+use App\Modules\Content\Services\DynamicPageRendererService;
 
 class PageDto
 {
@@ -24,7 +25,7 @@ class PageDto
         public ?string $publishedAt,
     ) {}
 
-    public static function fromModels(Page $page, ?PageTranslation $translation): self
+    public static function fromModels(Page $page, ?PageTranslation $translation, bool $renderDynamic = false): self
     {
         $locale = $translation?->locale ?? config('cms.default_locale');
 
@@ -36,7 +37,9 @@ class PageDto
             status: $page->status,
             pageType: $page->page_type,
             blocks: $translation?->content_blocks ?? [],
-            renderedHtml: $translation?->rendered_html,
+            renderedHtml: $renderDynamic && $translation !== null
+                ? app(DynamicPageRendererService::class)->render($translation)
+                : $translation?->rendered_html,
             metaTitle: $translation?->meta_title,
             metaDescription: $translation?->meta_description,
             canonicalUrl: $translation?->canonical_url,

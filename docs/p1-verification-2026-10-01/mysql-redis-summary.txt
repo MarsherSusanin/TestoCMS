@@ -1,0 +1,17 @@
+MySQL8 + Redis7 auth/content/publication matrix — PASS
+
+Actual servers: MySQL Community Server 8.0.46 (mysql:8.0); Redis 7.4.9 (redis:7-alpine).
+Runtime: host PHP8.5.3 + pdo_mysql + Predis3.6.1 installed ONLY in /private/tmp/testocms-mysql8-redis7-admin.
+Final result: 57 tests / 369 assertions PASS; runtime3m35.638s.
+Final raw PHPUnit log: /private/tmp/testocms-mysql8-redis7-admin-final.log
+First full run migrated all current migrations on real MySQL8; 56/57 passed, one temporary fixture re-login hit shared Redis throttle5/min. Fixed test isolation by clearing own dedicated Redis cache DB1 at fixture start. Production rate limiter/auth middleware remained enabled. Repeated matrix reused the unchanged migrated MySQL schema with real transactions (temporary bootstrap), and all57 passed.
+
+Included: AdminPublicationPermissionsTest, AdminTranslationPatchTest, UserAccessRevocationTest, PublicationSafetyTest, ContentWorkflowActionsTest, MySqlRedisMatrixFixtureTest.
+Forced PHPUnit env: DB_CONNECTION=mysql, CACHE_STORE=redis, SESSION_DRIVER=redis, Redis Predis localhost-only; driver assertions verify MySQL8 and Redis7.
+Meaningful Redis fixtures: RedisStore and CacheBasedSessionHandler instance checks; session physically saved/read/reloaded from Redis; password change updates MySQL auth_version and revokes PAT; old Redis session remains physically persisted, then middleware rejects401 and deletes it; fresh login succeeds. Redis HTML cache reads/writes, MySQL generation commit/rollback, rolled-back generation never reused, stale renderer cannot overwrite valid cache.
+Publication coverage: author/PAT publish enforcement incl direct cancellation and scheduled web edit retention; full/partial translations; future publication visibility/cache; manual transitions; publish/unpublish windows/reschedule/cancel; scheduler due tasks; unique pending schedule DB constraint; headers/ETag/dynamic listing/cache generation.
+
+Limitations: One stock UserAccessRevocationTest explicitly overrides session.driver=array; dedicated Redis fixture establishes actual Redis revocation instead. Explicit SQLite-only PublicationScheduleMigrationTest and PublicationSchedulerConcurrencyTest were NOT included or represented as MySQL tests. This run does not validate multi-process MySQL scheduler concurrency or MySQL backup/restore.
+
+Disposable containers: testocms-admin-audit-mysql8-20261001 + testocms-admin-audit-redis7-20261001; only127.0.0.1:33381 and127.0.0.1:36371 published. Cleanup completed: docker rm -f -v removed both exact containers and their anonymous volumes; subsequent filtered docker ps -a returned no entries.
+Production source/config/env/database untouched; temporary config and fixtures retained for reproducibility.

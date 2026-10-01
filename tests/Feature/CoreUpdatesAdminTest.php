@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\CoreBackup;
 use App\Models\ThemeSetting;
 use App\Models\User;
+use App\Modules\Updates\Services\CoreUpdateService;
 use App\Modules\Updates\Services\CoreUpdateSettingsService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -18,6 +20,19 @@ use ZipArchive;
 class CoreUpdatesAdminTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['updates.health_check_url' => 'https://health.test/up']);
+        Http::fake(['https://health.test/up' => Http::response('ok', 200)]);
+    }
+
+    protected function tearDown(): void
+    {
+        Artisan::call('up');
+        parent::tearDown();
+    }
 
     public function test_updates_page_requires_authentication(): void
     {
@@ -33,6 +48,27 @@ class CoreUpdatesAdminTest extends TestCase
         $this->actingAs($editor)
             ->get('/admin/updates')
             ->assertForbidden();
+    }
+
+    public function test_unverified_update_is_explicitly_reported_in_the_admin_response(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $admin = $this->makeUser('unverified@testocms.local', 'superadmin');
+        $this->mock(CoreUpdateService::class, function ($mock): void {
+            $mock->shouldReceive('applyUpdate')->once()->andReturn([
+                'mode' => 'filesystem-updater', 'status' => 'health_unverified',
+                'target_version' => '1.2.0', 'backup_key' => 'health-probe',
+                'health_warning' => 'Endpoint unavailable; manual verification required.',
+            ]);
+        });
+
+        $response = $this->actingAs($admin)->post('/admin/updates/apply')->assertRedirect('/admin/updates');
+        $response->assertSessionHas('status', function (string $message): bool {
+            return str_contains($message, 'maintenance')
+                && str_contains($message, 'Endpoint unavailable')
+                && ! str_contains($message, 'успешно');
+        });
+        $this->assertDatabaseHas('audit_logs', ['action' => 'core_updates.apply.web']);
     }
 
     public function test_superadmin_can_check_updates_from_remote_manifest(): void

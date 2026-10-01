@@ -5,13 +5,17 @@ namespace App\Modules\Content\Services;
 use App\Models\ContentTemplate;
 use App\Models\Post;
 use App\Models\User;
+use App\Modules\Caching\Services\PublicContentVersionService;
 use App\Modules\Content\Contracts\PostContentServiceContract;
 use App\Modules\Content\Support\LocalizedContentHelpers;
+use App\Modules\Content\Support\TranslationInputMappingHelpers;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PostContentService implements PostContentServiceContract
 {
     use LocalizedContentHelpers;
+    use TranslationInputMappingHelpers;
 
     public function __construct(
         private readonly PostContentRendererService $contentRenderer,
@@ -20,10 +24,18 @@ class PostContentService implements PostContentServiceContract
         private readonly SlugUniquenessService $slugUniqueness,
         private readonly PostTranslationPersisterService $translationPersister,
         private readonly ContentMutationFinalizerService $mutationFinalizer,
+        private readonly ContentPublicationGuard $publicationGuard,
+        private readonly TranslationUpdateService $translationUpdates,
+        private readonly PublicationTransitionService $publicationTransitions,
+        private readonly PublicContentVersionService $publicVersion,
     ) {}
 
     public function createFromValidated(array $validated, User $actor, array $context = []): Post
     {
+        $this->publicationGuard->assertCanMutate($actor, 'post', null, (string) ($validated['status'] ?? 'draft'));
+        if (($validated['status'] ?? '') === 'scheduled') {
+            throw ValidationException::withMessages(['status' => ['Create a draft and use the schedule action.']]);
+        }
         $translations = $this->normalizeTranslations($validated['translations'] ?? [], [
             'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
             'owner_id' => null,
@@ -32,6 +44,8 @@ class PostContentService implements PostContentServiceContract
         ]);
 
         $post = DB::transaction(function () use ($validated, $translations, $actor): Post {
+            app(ContentMutationGuard::class)->lockMedia();
+            app(AssetUsageService::class)->assertReferencesAvailable($validated + ['translations' => $translations]);
             $post = Post::query()->create([
                 'author_id' => $actor->id,
                 'featured_asset_id' => $validated['featured_asset_id'] ?? null,
@@ -40,6 +54,7 @@ class PostContentService implements PostContentServiceContract
             ]);
 
             $this->translationPersister->upsert($post, $translations);
+            $this->publicVersion->bump();
             $post->categories()->sync($validated['category_ids'] ?? []);
 
             return $post;
@@ -53,17 +68,29 @@ class PostContentService implements PostContentServiceContract
 
     public function updateFromValidated(Post $post, array $validated, User $actor, array $context = []): Post
     {
-        $translations = $this->normalizeTranslations($validated['translations'] ?? [], [
-            'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
-            'owner_id' => (int) $post->id,
-            'assert_unique' => true,
-            'allow_custom_code' => $context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor),
-        ]);
-
-        DB::transaction(function () use ($post, $validated, $translations): void {
+        $post = DB::transaction(function () use ($post, $validated, $actor, $context): Post {
+            app(ContentMutationGuard::class)->lockMedia();
+            app(AssetUsageService::class)->assertReferencesAvailable($validated);
+            $post = Post::query()->lockForUpdate()->findOrFail($post->id);
+            $oldStatus = (string) $post->status;
+            $nextStatus = (string) ($validated['status'] ?? $oldStatus);
+            $this->publicationGuard->assertCanMutate($actor, 'post', $post, $nextStatus);
+            if ($nextStatus === 'scheduled') {
+                $this->publicationTransitions->assertScheduledState($post);
+            }
+            $merge = ($context['translation_mode'] ?? 'replace') === 'merge';
+            $translationInput = $this->translationUpdates->prepare($post, $validated, $actor, $merge);
+            $translations = $this->normalizeTranslations($translationInput, [
+                'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($translationInput),
+                'owner_id' => (int) $post->id,
+                'assert_unique' => true,
+                // The merger checks submitted privileged fields; stored fields
+                // are preserved without granting permission to author new code.
+                'allow_custom_code' => $merge || ($context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor)),
+            ]);
             $post->fill([
                 'featured_asset_id' => array_key_exists('featured_asset_id', $validated)
-                    ? ($validated['featured_asset_id'] ?? null)
+                    ? $validated['featured_asset_id']
                     : $post->featured_asset_id,
                 'status' => $validated['status'] ?? $post->status,
             ]);
@@ -71,13 +98,17 @@ class PostContentService implements PostContentServiceContract
             if ($post->status === 'published' && $post->published_at === null) {
                 $post->published_at = now();
             }
-
             $post->save();
             $this->translationPersister->upsert($post, $translations);
-
             if (array_key_exists('category_ids', $validated)) {
                 $post->categories()->sync($validated['category_ids'] ?? []);
             }
+            if (array_key_exists('status', $validated) && $oldStatus !== $nextStatus) {
+                $this->publicationTransitions->reconcileStatusChange($post, $oldStatus, $actor->id);
+            }
+            $this->publicVersion->bump();
+
+            return $post;
         });
 
         return $this->mutationFinalizer->finalize($post, 'post', ['translations', 'categories'], $actor, $context + [

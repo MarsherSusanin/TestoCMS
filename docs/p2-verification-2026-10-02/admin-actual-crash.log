@@ -1,0 +1,10 @@
+Actual isolated crash/recovery proof — 2026-10-02
+PHP 8.4.19, SQLite, own disposable fixture /private/tmp/testocms_p2_adm/database/adm-crash.sqlite
+Docker --init; Asset::deleted listener sends posix_kill(getmypid(), SIGKILL) before transaction commit.
+Actual crash container exit with init: 137
+Before recovery: asset rows=1, public source absent, prepared journal present, private quarantine bytes present.
+Fresh-process CLI: php artisan cms:assets:recover
+Restored: 1; purged: 0; failed: 0
+Fresh-process byte verifier: exit 0; retained row and exact original bytes verified.
+Independent host verification: row=1, exact original bytes matched, no prepared journal for this path.
+All containers --rm; only own disposable fixture modified.

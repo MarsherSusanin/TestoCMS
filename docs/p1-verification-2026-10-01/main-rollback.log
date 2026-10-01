@@ -1,0 +1,13 @@
+{
+    "result": {
+        "status": "success",
+        "backup_key": "bkp_20260930170208_k4yxv6",
+        "restored_version": "1.2.0-rc.1",
+        "auto": false,
+        "health_warning": null
+    },
+    "migrations_after": 14,
+    "maintenance": false,
+    "new_auth_column_exists": false,
+    "new_public_version_table_exists": false
+}

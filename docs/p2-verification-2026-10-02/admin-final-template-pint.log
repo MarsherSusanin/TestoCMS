@@ -1,0 +1,16 @@
+PHPUnit 11.5.55 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.4.19
+Configuration: /var/www/html/phpunit.xml
+
+...                                                                 3 / 3 (100%)
+
+Time: 00:02.146, Memory: 18.00 MB
+
+OK (3 tests, 24 assertions)
+
+  .......................
+
+  ──────────────────────────────────────────────────────────────────── Laravel  
+    PASS   .......................................................... 23 files  
+

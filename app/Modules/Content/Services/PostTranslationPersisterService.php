@@ -7,6 +7,8 @@ use App\Models\PostTranslation;
 
 class PostTranslationPersisterService
 {
+    public function __construct(private readonly SearchTextProjectionService $searchProjection) {}
+
     /**
      * @param  array<string, array<string, mixed>>  $translations
      */
@@ -19,6 +21,7 @@ class PostTranslationPersisterService
                     'locale' => $locale,
                 ],
                 [
+                    'search_text' => $this->searchProjection->forPost($item),
                     'title' => $item['title'],
                     'slug' => $item['slug'],
                     'content_format' => $item['content_format'],

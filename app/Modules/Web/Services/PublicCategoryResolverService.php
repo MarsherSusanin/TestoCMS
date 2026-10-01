@@ -22,21 +22,28 @@ class PublicCategoryResolverService
         $posts = Post::query()
             ->published()
             ->whereHas('categories', fn ($q) => $q->where('categories.id', $category->id))
+            ->whereHas('translations', fn ($q) => $q->where('locale', $locale))
             ->with(['translations' => fn ($q) => $q->where('locale', $locale)])
-            ->orderByDesc('published_at')
+            ->orderByDesc('published_at')->orderByDesc('id')
             ->paginate((int) config('cms.default_per_page', 20))
             ->withQueryString();
 
         $path = trim($locale.'/'.config('cms.category_url_prefix').'/'.$translation->slug, '/');
-        $canonical = '/'.$path;
+        $canonical = $translation->canonical_url ?: '/'.$path;
 
         $seo = $this->seoResolver->resolve('category', $category->id, $locale, [
             'meta_title' => $translation->meta_title ?? $translation->title,
             'meta_description' => $translation->meta_description ?? $translation->description,
-            'canonical_url' => $translation->canonical_url ?: $canonical,
+            'canonical_url' => $canonical,
             'robots_directives' => $translation->robots_directives,
             'structured_data' => $translation->structured_data,
         ]);
+
+        // Preserve configured SEO overrides, adding the document's page number.
+        if ($posts->currentPage() > 1) {
+            $canonical = (string) ($seo['canonical_url'] ?? $canonical);
+            $seo['canonical_url'] = $canonical.(str_contains($canonical, '?') ? '&' : '?').'page='.$posts->currentPage();
+        }
 
         $response = response()->view('cms.category', [
             'category' => $category,

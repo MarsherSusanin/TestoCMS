@@ -37,6 +37,11 @@ class AnthropicProvider implements LlmProviderContract
             throw new RuntimeException('Anthropic provider request failed: '.$response->status());
         }
 
-        return $response->json();
+        $output = $response->json();
+        if (! is_array($output)) {
+            throw new RuntimeException('Invalid provider response.');
+        }
+
+        return $output;
     }
 }

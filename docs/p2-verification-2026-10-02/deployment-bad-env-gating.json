@@ -1,0 +1,37 @@
+[
+  {
+    "Service": "app",
+    "State": "created",
+    "ExitCode": 0
+  },
+  {
+    "Service": "db",
+    "State": "created",
+    "ExitCode": 0
+  },
+  {
+    "Service": "db-env",
+    "State": "exited",
+    "ExitCode": 1
+  },
+  {
+    "Service": "init",
+    "State": "created",
+    "ExitCode": 0
+  },
+  {
+    "Service": "queue",
+    "State": "created",
+    "ExitCode": 0
+  },
+  {
+    "Service": "scheduler",
+    "State": "created",
+    "ExitCode": 0
+  },
+  {
+    "Service": "web",
+    "State": "created",
+    "ExitCode": 0
+  }
+]

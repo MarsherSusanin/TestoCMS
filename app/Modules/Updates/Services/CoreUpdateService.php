@@ -240,14 +240,17 @@ class CoreUpdateService
 
             $this->logAction(
                 action: 'apply',
-                status: 'success',
+                status: (string) $result['status'],
                 fromVersion: (string) ($result['from_version'] ?? $this->settings->installedVersion()),
                 toVersion: $targetVersion,
-                message: 'Core update applied.',
+                message: ($result['status'] ?? '') === 'health_unverified'
+                    ? 'Core files updated; health unverified. Maintenance remains enabled. '.($result['health_warning'] ?? '')
+                    : 'Core update applied.',
                 context: [
                     'mode' => 'filesystem-updater',
                     'backup_key' => (string) ($result['backup_key'] ?? ''),
                     'preflight' => $result['preflight'] ?? [],
+                    'health_warning' => $result['health_warning'] ?? null,
                 ],
                 actorId: $actorId,
             );
@@ -279,7 +282,7 @@ class CoreUpdateService
 
         $this->logAction(
             action: 'rollback',
-            status: 'success',
+            status: (string) $result['status'],
             fromVersion: (string) $backup->to_version,
             toVersion: (string) $backup->from_version,
             message: 'Rollback completed.',

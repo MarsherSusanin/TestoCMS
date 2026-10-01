@@ -13,6 +13,9 @@ class ResolveRedirectRuleMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->is('setup*', 'up', 'healthz', 'storage/*') || (! app()->runningUnitTests() && ! is_file(storage_path('installed')))) {
+            return $next($request);
+        }
         if (! Schema::hasTable('redirect_rules')) {
             return $next($request);
         }

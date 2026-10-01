@@ -1,0 +1,32 @@
+SET
+SET
+SET
+SET
+SET
+ set_config 
+------------
+ 
+(1 row)
+
+SET
+SET
+SET
+SET
+SET
+SET
+psql:/tmp/cms_backup.sql:32: ERROR:  relation "cms_audit_probe" already exists
+ALTER TABLE
+psql:/tmp/cms_backup.sql:43: ERROR:  duplicate key value violates unique constraint "cms_audit_probe_pkey"
+DETAIL:  Key (id)=(1) already exists.
+CONTEXT:  COPY cms_audit_probe, line 1
+psql:/tmp/cms_backup.sql:51: ERROR:  multiple primary keys for table "cms_audit_probe" are not allowed
+ id | title | new_release_field 
+----+-------+-------------------
+  1 | after | 
+(1 row)
+
+  leftover_table   
+-------------------
+ new_release_table
+(1 row)
+

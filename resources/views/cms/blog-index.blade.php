@@ -5,7 +5,7 @@
         ? [
             'eyebrow' => 'Блог',
             'title' => 'Публикации',
-            'desc' => 'Свежие материалы, новости и заметки, подготовленные для демо-сайта TestoCMS.',
+            'desc' => 'Опубликованные материалы, новости и заметки.',
             'published' => 'Опубликовано',
             'read_more' => 'Читать',
             'empty' => 'Пока нет опубликованных постов.',
@@ -16,7 +16,7 @@
         : [
             'eyebrow' => 'Blog',
             'title' => 'Posts',
-            'desc' => 'Published articles and updates for the TestoCMS demo website.',
+            'desc' => 'Published articles, news and updates.',
             'published' => 'Published',
             'read_more' => 'Read',
             'empty' => 'No published posts yet.',

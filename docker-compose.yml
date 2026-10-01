@@ -1,43 +1,85 @@
-# Local development stack only. Do not use this compose file as public production topology.
+# Local development only. Environment and runtime data are isolated from host .env/storage.
 name: testocms-local
 
-services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    env_file:
-      - .env.docker
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+x-php: &php
+  image: testocms-app:local
+  pull_policy: never
+  environment: &runtime
+    WAIT_FOR_DB: "1"
+    AUTO_SETUP: "0"
+    AUTO_STORAGE_LINK: "0"
+    ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "1"
+    ALLOW_RUNTIME_COMPOSER_INSTALL: "1"
+    COMPOSER_INSTALL_FLAGS: "--no-interaction --prefer-dist --no-progress --optimize-autoloader"
+  volumes:
+    - ./:/var/www/html
+    - ./.env.docker:/var/www/html/.env:ro
+    - storage_data:/var/www/html/storage
+    - bootstrap_cache:/var/www/html/bootstrap/cache
+    - modules_data:/var/www/html/modules
+    - module_public_assets:/var/www/html/html_public/modules
+    - composer_cache:/tmp/composer-cache
 
-  app:
+services:
+  db-env:
+    image: testocms-app:local
+    pull_policy: never
     build:
       context: .
       dockerfile: Dockerfile
       args:
         COMPOSER_INSTALL_FLAGS: "--no-interaction --prefer-dist --no-progress --optimize-autoloader"
-    image: testocms-app:local
-    pull_policy: never
+    restart: "no"
+    entrypoint: ["php", "/var/www/html/docker/database-env.php"]
+    volumes:
+      - ./:/var/www/html:ro
+      - ./.env.docker:/var/www/html/.env:ro
+      - database_credentials:/run/cms-db
+
+  db:
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      WAIT_FOR_DB: "1"
-      AUTO_MIGRATE: "1"
-      AUTO_SEED: "1"
-      AUTO_STORAGE_LINK: "1"
-      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "1"
-      ALLOW_RUNTIME_COMPOSER_INSTALL: "1"
-      COMPOSER_INSTALL_FLAGS: "--no-interaction --prefer-dist --no-progress --optimize-autoloader"
+      POSTGRES_DB_FILE: /run/cms-db/database
+      POSTGRES_USER_FILE: /run/cms-db/user
+      POSTGRES_PASSWORD_FILE: /run/cms-db/password
+    depends_on:
+      db-env:
+        condition: service_completed_successfully
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - database_credentials:/run/cms-db:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$(cat /run/cms-db/user)\" -d \"$$(cat /run/cms-db/database)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  init:
+    <<: *php
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COMPOSER_INSTALL_FLAGS: "--no-interaction --prefer-dist --no-progress --optimize-autoloader"
+    restart: "no"
+    environment:
+      <<: *runtime
+      AUTO_SETUP: "1"
+    command: ["php", "-r", "exit(0);"]
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./:/var/www/html
-      - composer_cache:/tmp/composer-cache
+
+  app:
+    <<: *php
+    restart: unless-stopped
+    environment:
+      <<: *runtime
+      AUTO_STORAGE_LINK: "1"
+    depends_on:
+      init:
+        condition: service_completed_successfully
 
   web:
     image: nginx:1.27-alpine
@@ -48,50 +90,31 @@ services:
       - "8080:80"
     volumes:
       - ./:/var/www/html:ro
+      - storage_data:/var/www/html/storage:ro
+      - module_public_assets:/var/www/html/html_public/modules:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
 
   queue:
-    image: testocms-app:local
-    pull_policy: never
+    <<: *php
     restart: unless-stopped
-    environment:
-      WAIT_FOR_DB: "1"
-      AUTO_MIGRATE: "0"
-      AUTO_SEED: "0"
-      AUTO_STORAGE_LINK: "0"
-      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "1"
-      ALLOW_RUNTIME_COMPOSER_INSTALL: "1"
-      COMPOSER_INSTALL_FLAGS: "--no-interaction --prefer-dist --no-progress --optimize-autoloader"
     command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=120", "--sleep=2"]
     depends_on:
-      db:
-        condition: service_healthy
-      app:
-        condition: service_started
-    volumes:
-      - ./:/var/www/html
+      init:
+        condition: service_completed_successfully
 
   scheduler:
-    image: testocms-app:local
-    pull_policy: never
+    <<: *php
     restart: unless-stopped
-    environment:
-      WAIT_FOR_DB: "1"
-      AUTO_MIGRATE: "0"
-      AUTO_SEED: "0"
-      AUTO_STORAGE_LINK: "0"
-      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "1"
-      ALLOW_RUNTIME_COMPOSER_INSTALL: "1"
-      COMPOSER_INSTALL_FLAGS: "--no-interaction --prefer-dist --no-progress --optimize-autoloader"
     command: ["php", "artisan", "schedule:work"]
     depends_on:
-      db:
-        condition: service_healthy
-      app:
-        condition: service_started
-    volumes:
-      - ./:/var/www/html
+      init:
+        condition: service_completed_successfully
 
 volumes:
+  database_credentials:
   postgres_data:
+  storage_data:
+  bootstrap_cache:
+  modules_data:
+  module_public_assets:
   composer_cache:

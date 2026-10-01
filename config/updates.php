@@ -78,6 +78,10 @@ return [
     // requests, and a healthy update must not be rolled back over that.
     'health_check_strict' => (bool) env('CMS_UPDATE_HEALTH_STRICT', false),
 
+    'writer_drain_timeout' => (int) env('CMS_UPDATE_WRITER_DRAIN_TIMEOUT', 30),
+    'pgsql_dedicated_database' => (bool) env('CMS_UPDATE_PGSQL_DEDICATED_DATABASE', false),
+    'pgsql_maintenance_database' => env('CMS_UPDATE_PGSQL_MAINTENANCE_DATABASE', 'postgres'),
+
     // Hard limits for update-package extraction (zip-bomb protection).
     'max_uncompressed_mb' => (int) env('CMS_UPDATE_MAX_UNCOMPRESSED_MB', 1024),
 

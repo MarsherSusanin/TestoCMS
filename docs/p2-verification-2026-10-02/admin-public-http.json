@@ -1,0 +1,50 @@
+[
+  {
+    "step": "session_login",
+    "status": 200,
+    "final_path": "/admin"
+  },
+  {
+    "step": "multipart_upload",
+    "asset_id": 1,
+    "status": 200,
+    "media_status": 200,
+    "exact_bytes": true
+  },
+  {
+    "step": "category_ru_en_persisted",
+    "ru_title": "Категория браузерной проверки",
+    "en_title": "Browser category",
+    "ru_description": "Русское описание сохранено",
+    "en_description": "English description retained"
+  },
+  {
+    "step": "category_cover_assigned",
+    "asset_id": 1,
+    "status": 200
+  },
+  {
+    "step": "web_delete_in_use_blocked",
+    "status": 200,
+    "row_preserved": true,
+    "media_preserved": true,
+    "usage_explained": true
+  },
+  {
+    "step": "clear_cover_remove_en",
+    "status": 200,
+    "ru_preserved": true,
+    "en_removed": true
+  },
+  {
+    "step": "free_asset_deleted",
+    "row_removed": true,
+    "media_status": 404
+  },
+  {
+    "step": "template_omitted_description",
+    "status": 200,
+    "description_null": true,
+    "listed": true
+  }
+]

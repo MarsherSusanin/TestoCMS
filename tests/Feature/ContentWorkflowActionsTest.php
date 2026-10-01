@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\PostTranslation;
 use App\Models\PublishSchedule;
 use App\Models\User;
+use App\Modules\Caching\Services\PublicContentVersionService;
 use App\Modules\Content\Services\SlugResolverService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,7 +28,7 @@ class ContentWorkflowActionsTest extends TestCase
 
         $this->seedPageCache();
         app(SlugResolverService::class)->resolve('ru', 'workflow-page');
-        $this->assertNotNull(Cache::get('cms:slug:ru:workflow-page'));
+        $this->assertNotNull(Cache::get('cms:slug:'.PublicContentVersionService::CACHE_SCHEMA.':v'.app(PublicContentVersionService::class)->current().':ru:workflow-page'));
 
         $this->actingAs($superadmin)
             ->post('/admin/pages/'.$page->id.'/publish')
@@ -37,7 +38,7 @@ class ContentWorkflowActionsTest extends TestCase
         $this->assertNotNull($page->fresh()->published_at);
         $this->assertDatabaseHas('audit_logs', ['action' => 'page.publish.web', 'entity_id' => $page->id]);
         $this->assertNull(Cache::get('cms:page-cache:test'));
-        $this->assertNull(Cache::get('cms:slug:ru:workflow-page'));
+        $this->assertNull(Cache::get('cms:slug:'.PublicContentVersionService::CACHE_SCHEMA.':v'.app(PublicContentVersionService::class)->current().':ru:workflow-page'));
 
         $token = $superadmin->createToken('page-workflow-api', ['*'])->plainTextToken;
         $this->seedPageCache();
@@ -61,7 +62,7 @@ class ContentWorkflowActionsTest extends TestCase
 
         $schedule = PublishSchedule::query()->where('entity_type', 'page')->where('entity_id', $page->id)->latest('id')->first();
         $this->assertNotNull($schedule);
-        $this->assertSame('scheduled', $page->fresh()->status);
+        $this->assertSame('draft', $page->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'page.schedule', 'entity_id' => $page->id]);
 
         $preview = $this->actingAs($superadmin)
@@ -89,7 +90,7 @@ class ContentWorkflowActionsTest extends TestCase
 
         $this->seedPageCache();
         app(SlugResolverService::class)->resolve('ru', 'blog/workflow-post');
-        $this->assertNotNull(Cache::get('cms:slug:ru:blog/workflow-post'));
+        $this->assertNotNull(Cache::get('cms:slug:'.PublicContentVersionService::CACHE_SCHEMA.':v'.app(PublicContentVersionService::class)->current().':ru:blog/workflow-post'));
 
         $this->actingAs($superadmin)
             ->post('/admin/posts/'.$post->id.'/publish')
@@ -99,7 +100,7 @@ class ContentWorkflowActionsTest extends TestCase
         $this->assertNotNull($post->fresh()->published_at);
         $this->assertDatabaseHas('audit_logs', ['action' => 'post.publish.web', 'entity_id' => $post->id]);
         $this->assertNull(Cache::get('cms:page-cache:test'));
-        $this->assertNull(Cache::get('cms:slug:ru:blog/workflow-post'));
+        $this->assertNull(Cache::get('cms:slug:'.PublicContentVersionService::CACHE_SCHEMA.':v'.app(PublicContentVersionService::class)->current().':ru:blog/workflow-post'));
 
         $token = $superadmin->createToken('post-workflow-api', ['*'])->plainTextToken;
         $this->seedPageCache();
@@ -123,7 +124,7 @@ class ContentWorkflowActionsTest extends TestCase
 
         $schedule = PublishSchedule::query()->where('entity_type', 'post')->where('entity_id', $post->id)->latest('id')->first();
         $this->assertNotNull($schedule);
-        $this->assertSame('scheduled', $post->fresh()->status);
+        $this->assertSame('draft', $post->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'post.schedule', 'entity_id' => $post->id]);
 
         $preview = $this->actingAs($superadmin)

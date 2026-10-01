@@ -5,131 +5,97 @@ namespace App\Modules\Content\Services;
 use App\Models\CategoryTranslation;
 use App\Models\PageTranslation;
 use App\Models\PostTranslation;
+use App\Modules\Caching\Services\PublicContentVersionService;
 use Illuminate\Support\Facades\Cache;
 
 class SlugResolverService
 {
-    private const KEY_LIST = 'cms:slug:keys';
+    public function __construct(private readonly PublicContentVersionService $versions) {}
 
-    /**
-     * @return array{type: string, translation: object, model: object}|null
-     */
+    /** @return array{type:string, translation:object, model:object}|null */
     public function resolve(string $locale, string $path): ?array
     {
         $path = trim($path, '/');
-        $cacheKey = sprintf('cms:slug:%s:%s', $locale, $path === '' ? 'home' : $path);
-
-        $resolved = Cache::remember($cacheKey, config('cms.slug_cache_ttl', 300), function () use ($locale, $path) {
-            $blogPrefix = trim((string) config('cms.post_url_prefix', 'blog'), '/');
-            $categoryPrefix = trim((string) config('cms.category_url_prefix', 'category'), '/');
-
-            if ($blogPrefix !== '' && str_starts_with($path, $blogPrefix.'/')) {
-                $slug = substr($path, strlen($blogPrefix) + 1);
-                $translation = PostTranslation::query()
-                    ->where('locale', $locale)
-                    ->where('slug', $slug)
-                    ->with('post')
-                    ->first();
-
-                if ($translation !== null && $translation->post !== null) {
-                    return [
-                        'type' => 'post',
-                        'translation' => $translation,
-                        'model' => $translation->post,
-                    ];
-                }
+        $version = $this->versions->available() ? $this->versions->current() : 'uninstalled';
+        $key = $this->key($locale, $path, $version);
+        $identity = Cache::get($key);
+        if (is_array($identity) && isset($identity['type'], $identity['id'])) {
+            $resolved = $this->hydrate($identity['type'], (int) $identity['id'], $locale, $path);
+            if ($resolved !== null) {
+                return $resolved;
             }
+            Cache::forget($key);
+        }
 
-            if ($categoryPrefix !== '' && str_starts_with($path, $categoryPrefix.'/')) {
-                $slug = substr($path, strlen($categoryPrefix) + 1);
-                $translation = CategoryTranslation::query()
-                    ->where('locale', $locale)
-                    ->where('slug', $slug)
-                    ->with('category')
-                    ->first();
+        foreach ($this->candidates($path) as [$type, $class, $relation, $slug]) {
+            $translation = $class::query()->where('locale', $locale)->where('slug', $slug)->with($relation)->first();
+            if ($translation !== null && $translation->{$relation} !== null) {
+                // Only identity goes into cache; visibility and content are fetched anew.
+                Cache::put($key, ['type' => $type, 'id' => $translation->id], config('cms.slug_cache_ttl', 300));
 
-                if ($translation !== null && $translation->category !== null) {
-                    return [
-                        'type' => 'category',
-                        'translation' => $translation,
-                        'model' => $translation->category,
-                    ];
-                }
+                return ['type' => $type, 'translation' => $translation, 'model' => $translation->{$relation}];
             }
+        }
 
-            $slug = $path === '' ? 'home' : $path;
-            $pageTranslation = PageTranslation::query()
-                ->where('locale', $locale)
-                ->where('slug', $slug)
-                ->with('page')
-                ->first();
+        return null;
+    }
 
-            if ($pageTranslation !== null && $pageTranslation->page !== null) {
-                return [
-                    'type' => 'page',
-                    'translation' => $pageTranslation,
-                    'model' => $pageTranslation->page,
-                ];
+    private function hydrate(string $type, int $id, string $locale, string $path): ?array
+    {
+        foreach ($this->candidates($path) as [$candidate, $class, $relation, $slug]) {
+            if ($candidate !== $type) {
+                continue;
             }
+            $translation = $class::query()->whereKey($id)->where('locale', $locale)->where('slug', $slug)->with($relation)->first();
+            if ($translation !== null && $translation->{$relation} !== null) {
+                return ['type' => $type, 'translation' => $translation, 'model' => $translation->{$relation}];
+            }
+        }
 
-            return null;
-        });
+        return null;
+    }
 
-        $this->rememberKey($cacheKey);
+    private function candidates(string $path): array
+    {
+        $candidates = [];
+        foreach ([['post', PostTranslation::class, 'post', 'post_url_prefix', 'blog'], ['category', CategoryTranslation::class, 'category', 'category_url_prefix', 'category']] as [$type, $class, $relation, $setting, $default]) {
+            $prefix = trim((string) config('cms.'.$setting, $default), '/');
+            if ($prefix !== '' && str_starts_with($path, $prefix.'/')) {
+                $candidates[] = [$type, $class, $relation, substr($path, strlen($prefix) + 1)];
+            }
+        }
+        $candidates[] = ['page', PageTranslation::class, 'page', $path === '' ? 'home' : $path];
 
-        return $resolved;
+        return $candidates;
+    }
+
+    private function key(string $locale, string $path, string $version): string
+    {
+        return 'cms:slug:'.PublicContentVersionService::CACHE_SCHEMA.':v'.$version.':'.$locale.':'.($path === '' ? 'home' : $path);
     }
 
     public function flush(string $locale, string $path): void
     {
         $path = trim($path, '/');
-        $cacheKey = sprintf('cms:slug:%s:%s', $locale, $path === '' ? 'home' : $path);
-        Cache::forget($cacheKey);
-        $this->forgetTrackedKey($cacheKey);
+        if ($this->versions->available()) {
+            Cache::forget($this->key($locale, $path, $this->versions->current()));
+        }
+        Cache::forget('cms:slug:'.$locale.':'.($path === '' ? 'home' : $path));
     }
 
     public function flushAllLocales(string $path): void
     {
-        foreach (config('cms.supported_locales', ['en']) as $locale) {
+        foreach ((array) config('cms.supported_locales', ['en']) as $locale) {
             $this->flush((string) $locale, $path);
         }
     }
 
     public function flushAll(): void
     {
-        $keys = Cache::get(self::KEY_LIST, []);
-
-        foreach ($keys as $key) {
+        $this->versions->bump();
+        foreach ((array) Cache::get('cms:slug:keys', []) as $key) {
             Cache::forget((string) $key);
         }
-
-        Cache::forget(self::KEY_LIST);
-    }
-
-    private function rememberKey(string $cacheKey): void
-    {
-        $keys = Cache::get(self::KEY_LIST, []);
-        if (in_array($cacheKey, $keys, true)) {
-            return;
-        }
-
-        $keys[] = $cacheKey;
-        Cache::forever(self::KEY_LIST, $keys);
-    }
-
-    private function forgetTrackedKey(string $cacheKey): void
-    {
-        $keys = array_values(array_filter(
-            Cache::get(self::KEY_LIST, []),
-            static fn (mixed $value): bool => (string) $value !== $cacheKey
-        ));
-
-        if ($keys === []) {
-            Cache::forget(self::KEY_LIST);
-
-            return;
-        }
-
-        Cache::forever(self::KEY_LIST, $keys);
+        Cache::forget('cms:slug:keys');
     }
 }

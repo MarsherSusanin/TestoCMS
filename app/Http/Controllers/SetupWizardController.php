@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Modules\Setup\Services\DeploymentProfileService;
 use App\Modules\Setup\Services\EnvWriterService;
+use App\Modules\Setup\Services\InstallationIdentityService;
 use App\Modules\Setup\Services\SetupFinalizationService;
+use App\Modules\Setup\Services\SetupLockService;
 use App\Modules\Setup\Services\SystemCheckService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SetupWizardController extends Controller
 {
@@ -117,7 +120,8 @@ class SetupWizardController extends Controller
         $this->abortIfInstalled();
 
         $validated = $request->validate([
-            'deployment_profile' => 'required|string|in:shared_hosting,docker_vps',
+            'deployment_profile' => ['required', 'string', Rule::in($this->deploymentProfiles->keys())],
+            'public_path' => 'nullable|string|max:1024',
             'app_name' => 'required|string|max:255',
             'app_url' => 'required|url|max:255',
             'supported_locales' => 'required|array|min:1',
@@ -125,6 +129,9 @@ class SetupWizardController extends Controller
             'default_locale' => 'required|string|in:ru,en',
         ]);
 
+        if (! in_array($validated['default_locale'], $validated['supported_locales'], true)) {
+            return back()->withErrors(['default_locale' => 'Выберите язык из включенных языков.'])->withInput();
+        }
         $request->session()->put('setup.site', $validated);
 
         return redirect()->route('setup.step4');
@@ -163,35 +170,44 @@ class SetupWizardController extends Controller
         return redirect()->route('setup.step5');
     }
 
-    /**
-     * Step 5 — Finalize installation.
-     */
+    /** GET is a review screen; installation is a CSRF-protected POST. */
     public function step5(Request $request)
     {
         $this->abortIfInstalled();
-
-        $db = $request->session()->get('setup.db');
-        $site = $request->session()->get('setup.site');
-        $admin = $request->session()->get('setup.admin');
-
-        if (! $db || ! $site || ! $admin) {
+        if (! $request->session()->has('setup.db') || ! $request->session()->has('setup.site') || ! $request->session()->has('setup.admin')) {
             return redirect()->route('setup.step2');
         }
 
-        $auto = $this->systemCheck->autoDetect();
+        $publicRoot = (string) ($request->session()->get('setup.site.public_path') ?: config('setup.public_path') ?: $this->deploymentProfiles->resolve($request->session()->get('setup.site.deployment_profile'))['public_path']);
+        $publicRoot = str_starts_with($publicRoot, '/') ? $publicRoot : base_path($publicRoot);
 
-        $envData = array_merge($auto, $db, $site, $admin);
-        $result = $this->setupFinalizer->finalize($envData);
+        return view('setup.step5-review', [
+            'site' => $request->session()->get('setup.site'),
+            'admin' => $request->session()->get('setup.admin'),
+            'publicRoot' => app(InstallationIdentityService::class)->canonicalPath($publicRoot),
+        ]);
+    }
 
+    public function finalize(Request $request, SetupLockService $lock)
+    {
+        $this->abortIfInstalled();
+        $db = $request->session()->get('setup.db');
+        $site = $request->session()->get('setup.site');
+        $admin = $request->session()->get('setup.admin');
+        if (! $db || ! $site || ! $admin) {
+            return redirect()->route('setup.step2');
+        }
+        $envData = array_merge($this->systemCheck->autoDetect(), $db, $site, $admin);
+        $result = $lock->run(function () use ($envData): array {
+            $this->abortIfInstalled();
+
+            return $this->setupFinalizer->finalize($envData);
+        });
         if (! $result['hasErrors']) {
             $request->session()->forget('setup');
         }
 
-        $steps = $result['steps'];
-        $errors = $result['errors'];
-        $hasErrors = $result['hasErrors'];
-
-        return view('setup.step5-finish', compact('steps', 'errors', 'hasErrors'));
+        return view('setup.step5-finish', $result);
     }
 
     private function abortIfInstalled(): void

@@ -21,6 +21,8 @@ class User extends Authenticatable
 
     protected $guard_name = 'web';
 
+    protected $attributes = ['status' => 'active', 'auth_version' => 1];
+
     /**
      * @var list<string>
      */
@@ -40,6 +42,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'auth_version',
     ];
 
     /**
@@ -48,6 +51,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'auth_version' => 'integer',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'last_login_at' => 'datetime',

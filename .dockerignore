@@ -2,10 +2,15 @@
 .gitignore
 .env
 .env.*
+!.env.example
+!.env.docker.example
+!.env.hosting.example
+!.env.vps.example
 node_modules
 vendor
-storage/logs
-storage/framework/cache
-storage/framework/sessions
-storage/framework/views
+# Runtime data must never seed a clean image or newly created volumes.
+storage
+html_public/storage
+public/storage
+bootstrap/cache/*.php
 docker-compose.override.yml

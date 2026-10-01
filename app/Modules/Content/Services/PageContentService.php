@@ -5,13 +5,17 @@ namespace App\Modules\Content\Services;
 use App\Models\ContentTemplate;
 use App\Models\Page;
 use App\Models\User;
+use App\Modules\Caching\Services\PublicContentVersionService;
 use App\Modules\Content\Contracts\PageContentServiceContract;
 use App\Modules\Content\Support\LocalizedContentHelpers;
+use App\Modules\Content\Support\TranslationInputMappingHelpers;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PageContentService implements PageContentServiceContract
 {
     use LocalizedContentHelpers;
+    use TranslationInputMappingHelpers;
 
     public function __construct(
         private readonly PageTranslationNormalizer $translationNormalizer,
@@ -21,10 +25,18 @@ class PageContentService implements PageContentServiceContract
         private readonly SlugUniquenessService $slugUniqueness,
         private readonly PageTranslationPersisterService $translationPersister,
         private readonly ContentMutationFinalizerService $mutationFinalizer,
+        private readonly ContentPublicationGuard $publicationGuard,
+        private readonly TranslationUpdateService $translationUpdates,
+        private readonly PublicationTransitionService $publicationTransitions,
+        private readonly PublicContentVersionService $publicVersion,
     ) {}
 
     public function createFromValidated(array $validated, User $actor, array $context = []): Page
     {
+        $this->publicationGuard->assertCanMutate($actor, 'page', null, (string) ($validated['status'] ?? 'draft'));
+        if (($validated['status'] ?? '') === 'scheduled') {
+            throw ValidationException::withMessages(['status' => ['Create a draft and use the schedule action.']]);
+        }
         $translations = $this->normalizeTranslations($validated['translations'] ?? [], [
             'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
             'owner_id' => null,
@@ -33,6 +45,8 @@ class PageContentService implements PageContentServiceContract
         ]);
 
         $page = DB::transaction(function () use ($validated, $translations, $actor): Page {
+            app(ContentMutationGuard::class)->lockMedia();
+            app(AssetUsageService::class)->assertReferencesAvailable($validated + ['translations' => $translations]);
             $sanitizeCustomCode = ! array_key_exists('sanitize_custom_code', $validated)
                 || $this->boolFromMixed($validated['sanitize_custom_code']);
 
@@ -49,6 +63,7 @@ class PageContentService implements PageContentServiceContract
             ]);
 
             $this->translationPersister->upsert($page, $translations);
+            $this->publicVersion->bump();
 
             return $page;
         });
@@ -61,22 +76,32 @@ class PageContentService implements PageContentServiceContract
 
     public function updateFromValidated(Page $page, array $validated, User $actor, array $context = []): Page
     {
-        $translations = $this->normalizeTranslations($validated['translations'] ?? [], [
-            'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($validated['translations'] ?? []),
-            'owner_id' => (int) $page->id,
-            'assert_unique' => true,
-            'allow_custom_code' => $context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor),
-        ]);
-
-        DB::transaction(function () use ($page, $validated, $translations, $actor): void {
+        $page = DB::transaction(function () use ($page, $validated, $actor, $context): Page {
+            app(ContentMutationGuard::class)->lockMedia();
+            app(AssetUsageService::class)->assertReferencesAvailable($validated);
+            $page = Page::query()->lockForUpdate()->findOrFail($page->id);
+            $oldStatus = (string) $page->status;
+            $nextStatus = (string) ($validated['status'] ?? $oldStatus);
+            $this->publicationGuard->assertCanMutate($actor, 'page', $page, $nextStatus);
+            if ($nextStatus === 'scheduled') {
+                $this->publicationTransitions->assertScheduledState($page);
+            }
+            $merge = ($context['translation_mode'] ?? 'replace') === 'merge';
+            $translationInput = $this->translationUpdates->prepare($page, $validated, $actor, $merge);
+            $translations = $this->normalizeTranslations($translationInput, [
+                'require_default_locale' => $context['require_default_locale'] ?? $this->shouldRequireDefaultLocale($translationInput),
+                'owner_id' => (int) $page->id,
+                'assert_unique' => true,
+                // The merger checks submitted privileged fields; stored fields
+                // are preserved without granting permission to author new code.
+                'allow_custom_code' => $merge || ($context['allow_custom_code'] ?? $this->actorMayUseCustomCode($actor)),
+            ]);
             $sanitizeCustomCode = ! array_key_exists('sanitize_custom_code', $validated)
                 || $this->boolFromMixed($validated['sanitize_custom_code']);
-
             $page->fill([
                 'status' => $validated['status'] ?? $page->status,
                 'page_type' => $validated['page_type'] ?? $page->page_type,
             ]);
-
             if (array_key_exists('custom_code', $validated)) {
                 $page->custom_code = $sanitizeCustomCode
                     ? $this->customCodePolicy->prepare($validated['custom_code'], $actor)
@@ -86,9 +111,14 @@ class PageContentService implements PageContentServiceContract
             if ($page->status === 'published' && $page->published_at === null) {
                 $page->published_at = now();
             }
-
             $page->save();
             $this->translationPersister->upsert($page, $translations);
+            if (array_key_exists('status', $validated) && $oldStatus !== $nextStatus) {
+                $this->publicationTransitions->reconcileStatusChange($page, $oldStatus, $actor->id);
+            }
+            $this->publicVersion->bump();
+
+            return $page;
         });
 
         return $this->mutationFinalizer->finalize($page, 'page', ['translations'], $actor, $context + [

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ScheduleCancellationController;
 use App\Http\Controllers\Api\Admin\AssetController as AdminAssetController;
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\Admin\LlmController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\Content\AssetController as ContentAssetController;
 use App\Http\Controllers\Api\Content\CategoryController as ContentCategoryController;
 use App\Http\Controllers\Api\Content\PageController as ContentPageController;
 use App\Http\Controllers\Api\Content\PostController as ContentPostController;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Models\Asset;
 use App\Models\Category;
 use App\Models\Page;
@@ -31,7 +33,7 @@ Route::prefix('content/v1')
     });
 
 Route::prefix('admin/v1')
-    ->middleware(['auth:sanctum', 'throttle:admin-api'])
+    ->middleware(['auth:sanctum', EnsureActiveUser::class, 'throttle:admin-api'])
     ->group(function (): void {
         Route::get('/posts', [AdminPostController::class, 'index'])->middleware(['can:viewAny,'.Post::class, 'ability:posts:read']);
         Route::post('/posts', [AdminPostController::class, 'store'])->middleware(['can:create,'.Post::class, 'abilities:posts:write']);
@@ -41,6 +43,7 @@ Route::prefix('admin/v1')
         Route::post('/posts/{post}/publish', [AdminPostController::class, 'publish'])->middleware(['can:publish,post', 'abilities:posts:publish']);
         Route::post('/posts/{post}/unpublish', [AdminPostController::class, 'unpublish'])->middleware(['can:publish,post', 'abilities:posts:publish']);
         Route::post('/posts/{post}/schedule', [AdminPostController::class, 'schedule'])->middleware(['can:publish,post', 'abilities:posts:publish']);
+        Route::delete('/posts/{post}/schedules/{schedule}', [ScheduleCancellationController::class, 'apiPost'])->middleware(['can:publish,post', 'abilities:posts:publish']);
 
         Route::get('/pages', [AdminPageController::class, 'index'])->middleware(['can:viewAny,'.Page::class, 'ability:pages:read']);
         Route::post('/pages', [AdminPageController::class, 'store'])->middleware(['can:create,'.Page::class, 'abilities:pages:write']);
@@ -50,6 +53,7 @@ Route::prefix('admin/v1')
         Route::post('/pages/{page}/publish', [AdminPageController::class, 'publish'])->middleware(['can:publish,page', 'abilities:pages:publish']);
         Route::post('/pages/{page}/unpublish', [AdminPageController::class, 'unpublish'])->middleware(['can:publish,page', 'abilities:pages:publish']);
         Route::post('/pages/{page}/schedule', [AdminPageController::class, 'schedule'])->middleware(['can:publish,page', 'abilities:pages:publish']);
+        Route::delete('/pages/{page}/schedules/{schedule}', [ScheduleCancellationController::class, 'apiPage'])->middleware(['can:publish,page', 'abilities:pages:publish']);
 
         Route::get('/categories', [AdminCategoryController::class, 'index'])->middleware(['can:viewAny,'.Category::class, 'ability:categories:read']);
         Route::post('/categories', [AdminCategoryController::class, 'store'])->middleware(['can:create,'.Category::class, 'abilities:categories:write']);

@@ -1,20 +1,62 @@
 name: testocms-vps
 
 services:
+  db-env:
+    image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COMPOSER_INSTALL_FLAGS: "--no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader"
+    restart: "no"
+    entrypoint: ["php", "/var/www/html/docker/database-env.php"]
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - database_credentials:/run/cms-db
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB_FILE: /run/cms-db/database
+      POSTGRES_USER_FILE: /run/cms-db/user
+      POSTGRES_PASSWORD_FILE: /run/cms-db/password
+    depends_on:
+      db-env:
+        condition: service_completed_successfully
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - database_credentials:/run/cms-db:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$(cat /run/cms-db/user)\" -d \"$$(cat /run/cms-db/database)\""]
       interval: 10s
       timeout: 5s
       retries: 10
+
+  init:
+    image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COMPOSER_INSTALL_FLAGS: "--no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader"
+    restart: "no"
+    environment:
+      WAIT_FOR_DB: "1"
+      AUTO_SETUP: "1"
+      AUTO_STORAGE_LINK: "0"
+      ENTRYPOINT_ALLOW_DOCKER_ENV_BOOTSTRAP: "0"
+      ALLOW_RUNTIME_COMPOSER_INSTALL: "0"
+    command: ["php", "-r", "exit(0);"]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - storage_data:/var/www/html/storage
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      - modules_data:/var/www/html/modules
+      - module_public_assets:/var/www/html/html_public/modules
 
   app:
     image: ${TESTOCMS_APP_IMAGE:-ghcr.io/testocms/testocms-app:latest}
@@ -34,6 +76,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      init:
+        condition: service_completed_successfully
     volumes:
       - ./.env:/var/www/html/.env:ro
       - storage_data:/var/www/html/storage
@@ -69,6 +113,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      init:
+        condition: service_completed_successfully
       app:
         condition: service_started
     volumes:
@@ -92,6 +138,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      init:
+        condition: service_completed_successfully
       app:
         condition: service_started
     volumes:
@@ -102,6 +150,7 @@ services:
       - module_public_assets:/var/www/html/html_public/modules
 
 volumes:
+  database_credentials:
   postgres_data:
   storage_data:
   bootstrap_cache:

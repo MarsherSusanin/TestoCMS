@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -68,6 +70,10 @@ jobs:
           mkdir -p "$SHARED_PACKAGE_ROOT"
 
           rsync -a ./ "$SHARED_PACKAGE_ROOT"/ \
+            --exclude '.env' \
+            --exclude 'storage/installed' \
+            --exclude 'storage/app/private/' \
+            --exclude 'database/*.sqlite' \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude '.idea/' \
@@ -214,6 +220,22 @@ jobs:
           echo base64_encode(sodium_crypto_sign_detached($payload, $decoded));
           ' "${UPDATER_ZIP_PATH}" > "${UPDATER_SIG_PATH}"
 
+      - name: Verify signed updater ZIP with actual preflight
+        env:
+          CMS_UPDATE_PRIVATE_KEY: ${{ secrets.CMS_UPDATE_PRIVATE_KEY }}
+        run: php scripts/verify-release-package.php "${UPDATER_ZIP_PATH}" "${UPDATER_SIG_PATH}"
+
+      - name: Build signed updater bridge without new migrations
+        env:
+          CMS_UPDATE_PRIVATE_KEY: ${{ secrets.CMS_UPDATE_PRIVATE_KEY }}
+          CMS_UPDATER_BRIDGE_BASE_REF: ${{ vars.CMS_UPDATER_BRIDGE_BASE_REF || '3f6f1b463542b1311e1990fb64b645b87c8c02f9' }}
+        run: |
+          BRIDGE_ZIP_PATH="${RUNNER_TEMP}/testocms-v${VERSION}-updater-bridge.zip"
+          php scripts/build-updater-bridge.php --base-ref="$CMS_UPDATER_BRIDGE_BASE_REF" --version="${VERSION}-rc.1" --out="$BRIDGE_ZIP_PATH"
+          php scripts/verify-release-package.php "$BRIDGE_ZIP_PATH" "$BRIDGE_ZIP_PATH.sig"
+          echo "BRIDGE_ZIP_PATH=$BRIDGE_ZIP_PATH" >> "$GITHUB_ENV"
+          echo "BRIDGE_SIG_PATH=$BRIDGE_ZIP_PATH.sig" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -270,6 +292,8 @@ jobs:
             ${{ env.SHARED_ZIP_PATH }}
             ${{ env.UPDATER_ZIP_PATH }}
             ${{ env.UPDATER_SIG_PATH }}
+            ${{ env.BRIDGE_ZIP_PATH }}
+            ${{ env.BRIDGE_SIG_PATH }}
           draft: false
           prerelease: false
           generate_release_notes: true

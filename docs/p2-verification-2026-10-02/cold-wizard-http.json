@@ -1,0 +1,15 @@
+{
+  "step1": 200,
+  "missing_csrf_status": 419,
+  "database_step": 200,
+  "site_step": 200,
+  "admin_step": 200,
+  "review_absolute_root": true,
+  "finalize_status": 200,
+  "login_form": 200,
+  "login_redirect_target": "/admin",
+  "admin_dashboard": 200,
+  "setup_after_install": 404,
+  "csrf_enabled": true,
+  "authenticated_session": true
+}

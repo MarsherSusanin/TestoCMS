@@ -1,0 +1,13 @@
+{
+    "instance_id": "374e036c-b06f-40d9-8a39-d85b38b82436",
+    "identity_bound": true,
+    "admin_count": 1,
+    "admin_hash_fingerprint": "402d76bee53f1d113c8ac2dfe78bb6c8a3b8bda4c3e1b140b2f25cbd348afcae",
+    "provided_password_valid": true,
+    "env_sha256": "89109493ff1ba09b4f573baa7617fbf9bb36c0e081a3d804eedc06285b6997b0",
+    "app_environment": "local",
+    "deployment_profile": "local",
+    "public_root": "\/var\/www\/html\/html_public",
+    "private_local_keys": true,
+    "http_health": 200
+}

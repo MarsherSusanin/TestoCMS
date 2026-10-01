@@ -1,0 +1,8 @@
+{
+  "restart_state_identical": true,
+  "reset_new_uuid": true,
+  "readonly_redo_same_uuid": true,
+  "readonly_redo_preserved_password_hash": true,
+  "readonly_redo_different_bootstrap_password_not_applied": true,
+  "host_env_sentinel_unchanged": true
+}

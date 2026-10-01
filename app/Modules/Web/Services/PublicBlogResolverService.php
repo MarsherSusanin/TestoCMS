@@ -16,9 +16,11 @@ class PublicBlogResolverService
 
         $posts = Post::query()
             ->published()
+            ->whereHas('translations', fn ($q) => $q->where('locale', $locale))
             ->with(['translations' => fn ($q) => $q->where('locale', $locale)])
-            ->orderByDesc('published_at')
+            ->orderByDesc('published_at')->orderByDesc('id')
             ->paginate((int) config('cms.default_per_page', 20), ['*'], 'page', $page)
+            ->withPath(url('/'.trim($locale.'/'.$blogPrefix, '/')))
             ->withQueryString();
 
         $canonical = '/'.trim($locale.'/'.$blogPrefix, '/');

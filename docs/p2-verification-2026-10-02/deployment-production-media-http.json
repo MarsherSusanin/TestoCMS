@@ -1,0 +1,10 @@
+{
+    "upload_status": 201,
+    "public_get_status": 200,
+    "public_head_status": 200,
+    "range_status": 206,
+    "delete_status": 204,
+    "removed_public_status": 404,
+    "bytes_match_upload": true,
+    "database_and_disk_removed": true
+}
